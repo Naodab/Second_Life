@@ -38,10 +38,10 @@ public class AuthService {
     }
 
     Account account = Account.builder()
-      .email(request.getEmail())
-      .password(passwordEncoder.encode(request.getPassword()))
-      .authProvider(AuthProvider.LOCAL)
-      .build();
+        .email(request.getEmail())
+        .password(passwordEncoder.encode(request.getPassword()))
+        .authProvider(AuthProvider.LOCAL)
+        .build();
 
     account = accountRepository.save(account);
 
@@ -52,21 +52,20 @@ public class AuthService {
     accountRepository.save(account);
 
     return AuthResponse.builder()
-      .accessToken(accessToken)
-      .refreshToken(refreshToken)
-      .accountInfo(mapAccountToResponse(account))
-      .build();
+        .accessToken(accessToken)
+        .refreshToken(refreshToken)
+        .accountInfo(mapAccountToResponse(account))
+        .build();
   }
 
   @Transactional
   public AuthResponse login(LoginRequest request) {
     Authentication authentication = authenticationManager.authenticate(
-      new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-    );
+        new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
     String email = authentication.getName();
     Account account = accountRepository.findByEmail(email)
-      .orElseThrow(() -> new RuntimeException("Account not found"));
+        .orElseThrow(() -> new RuntimeException("Account not found"));
 
     String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail());
     String refreshToken = jwtTokenProvider.generateRefreshToken(account.getEmail());
@@ -75,10 +74,10 @@ public class AuthService {
     accountRepository.save(account);
 
     return AuthResponse.builder()
-      .accessToken(accessToken)
-      .refreshToken(refreshToken)
-      .accountInfo(mapAccountToResponse(account))
-      .build();
+        .accessToken(accessToken)
+        .refreshToken(refreshToken)
+        .accountInfo(mapAccountToResponse(account))
+        .build();
   }
 
   @Transactional
@@ -91,7 +90,7 @@ public class AuthService {
 
     String email = jwtTokenProvider.getEmailFromToken(refreshToken);
     Account account = accountRepository.findByEmail(email)
-      .orElseThrow(() -> new RuntimeException("Account not found"));
+        .orElseThrow(() -> new RuntimeException("Account not found"));
 
     if (!refreshToken.equals(account.getRefreshToken())) {
       throw new RuntimeException("Invalid refresh token");
@@ -104,18 +103,27 @@ public class AuthService {
     accountRepository.save(account);
 
     return AuthResponse.builder()
-      .accessToken(newAccessToken)
-      .refreshToken(newRefreshToken)
-      .accountInfo(mapAccountToResponse(account))
-      .build();
+        .accessToken(newAccessToken)
+        .refreshToken(newRefreshToken)
+        .accountInfo(mapAccountToResponse(account))
+        .build();
+  }
+
+  @Transactional
+  public void logout(String email) {
+    Account account = accountRepository.findByEmail(email)
+        .orElseThrow(() -> new RuntimeException("Account not found"));
+
+    account.setRefreshToken(null);
+    accountRepository.save(account);
   }
 
   private AccountInfo mapAccountToResponse(Account account) {
     return AccountInfo.builder()
-      .email(account.getEmail())
-      .role(account.getRole().name())
-      .provider(account.getAuthProvider().name())
-      .emailVerified(account.getEmailVerified())
-      .build();
+        .email(account.getEmail())
+        .role(account.getRole().name())
+        .provider(account.getAuthProvider().name())
+        .emailVerified(account.getEmailVerified())
+        .build();
   }
 }

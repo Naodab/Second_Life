@@ -1,0 +1,29 @@
+{
+  "properties": [
+    {
+      "name": "external.frontend_url",
+      "type": "java.lang.String",
+      "description": "Frontend URL"
+    },
+    {
+      "name": "app.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secret key for JWT"
+    },
+    {
+      "name": "app.jwt.expiration",
+      "type": "java.lang.Long",
+      "description": "Expiration time for JWT"
+    },
+    {
+      "name": "app.jwt.refresh-expiration",
+      "type": "java.lang.Long",
+      "description": "Expiration time for refresh token"
+    },
+    {
+      "name": "app.oauth2.authorized-redirect-uris",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Authorized redirect URIs for OAuth2"
+    }
+  ]
+}

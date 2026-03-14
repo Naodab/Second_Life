@@ -6,16 +6,16 @@ spring:
     username: ${MYSQL_USENAME}
     password: ${MYSQL_PASSWORD}
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     show-sql: true
     properties:
       hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.MySQLDialect
+        "[format_sql]": true
   jackson:
     serialization:
-      indent_output: true
+      "[indent_output]": true
     deserialization:
       fail-on-unknown-properties: false
   security:
@@ -44,8 +44,12 @@ app:
     authorized-redirect-uris:
       - http://localhost:3000/oauth2/redirect
       - http://localhost:8080/oauth2/redirect
+      - http://localhost:5500/test_login_google.html
+
+external:
+  frontend_url: http://localhost:5500
 
 logging:
   level:
-    com.example.authservice: DEBUG
-    org.springframework.security: DEBUG
+    "[com.example.authservice]": DEBUG
+    "[org.springframework.security]": DEBUG
