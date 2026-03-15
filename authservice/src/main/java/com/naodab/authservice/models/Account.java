@@ -21,13 +21,10 @@ import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
 @Entity
-@Table(
-  name = "accounts",
-  indexes = {
+@Table(name = "accounts", indexes = {
     @Index(name = "idx_email", columnList = "email", unique = true),
     @Index(name = "idx_provider_id", columnList = "provider_id")
-  }
-)
+})
 @Getter
 @Setter
 @Builder
@@ -66,6 +63,9 @@ public class Account extends BaseEntity {
   @Builder.Default
   @Column(nullable = false, name = "is_active")
   Boolean active = true;
+
+  @Column(name = "verification_token")
+  String verificationToken;
 
   public enum Role {
     USER, ADMIN

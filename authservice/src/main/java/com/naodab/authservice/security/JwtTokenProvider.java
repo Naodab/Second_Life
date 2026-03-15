@@ -30,6 +30,12 @@ public class JwtTokenProvider {
   @Value("${app.jwt.refresh-expiration}")
   Long jwtRefreshExpirationInMs;
 
+  @Value("${app.verification-token-expiration}")
+  Long verificationTokenExpirationInMs;
+
+  @Value("${app.forgot-password-token-expiration}")
+  Long forgotPasswordTokenExpirationInMs;
+
   private SecretKey getSecretKey() {
     byte[] keyBytes = jwtSecret.getBytes();
     return Keys.hmacShaKeyFor(keyBytes);
@@ -37,37 +43,55 @@ public class JwtTokenProvider {
 
   public String generateAccessToken(String email) {
     return Jwts.builder()
-      .subject(email)
-      .signWith(getSecretKey())
-      .issuedAt(new Date())
-      .expiration(new Date(System.currentTimeMillis() + jwtExpirationInMs))
-      .compact();
+        .subject(email)
+        .signWith(getSecretKey())
+        .issuedAt(new Date())
+        .expiration(new Date(System.currentTimeMillis() + jwtExpirationInMs))
+        .compact();
+  }
+
+  public String generateVerificationToken(String email) {
+    return Jwts.builder()
+        .subject(email)
+        .signWith(getSecretKey())
+        .issuedAt(new Date())
+        .expiration(new Date(System.currentTimeMillis() + verificationTokenExpirationInMs))
+        .compact();
   }
 
   public String generateRefreshToken(String email) {
     return Jwts.builder()
-      .subject(email)
-      .signWith(getSecretKey())
-      .issuedAt(new Date())
-      .expiration(new Date(System.currentTimeMillis() + jwtRefreshExpirationInMs))
-      .compact();
+        .subject(email)
+        .signWith(getSecretKey())
+        .issuedAt(new Date())
+        .expiration(new Date(System.currentTimeMillis() + jwtRefreshExpirationInMs))
+        .compact();
+  }
+
+  public String generateForgotPasswordToken(String email) {
+    return Jwts.builder()
+        .subject(email)
+        .signWith(getSecretKey())
+        .issuedAt(new Date())
+        .expiration(new Date(System.currentTimeMillis() + forgotPasswordTokenExpirationInMs))
+        .compact();
   }
 
   public String getEmailFromToken(String token) {
     return Jwts.parser()
-      .verifyWith(getSecretKey())
-      .build()
-      .parseSignedClaims(token)
-      .getPayload()
-      .getSubject();
+        .verifyWith(getSecretKey())
+        .build()
+        .parseSignedClaims(token)
+        .getPayload()
+        .getSubject();
   }
 
   public boolean validateToken(String token) {
     try {
       Jwts.parser()
-        .verifyWith(getSecretKey())
-        .build()
-        .parseSignedClaims(token);
+          .verifyWith(getSecretKey())
+          .build()
+          .parseSignedClaims(token);
       return true;
     } catch (MalformedJwtException e) {
       log.error("Invalid JWT token: {}", e.getMessage());
