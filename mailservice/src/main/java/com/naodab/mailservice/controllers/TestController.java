@@ -20,11 +20,9 @@ public class TestController {
   @GetMapping("/email-verification")
   public String getMethodName() {
     mailService.sendEmailVerification(EmailVerificationEvent.builder()
-      .toEmail("nguyenhobadoan@gmail.com")
-      .firstName("Doan")
-      .lastName("Nguyen Ho Ba")
-      .verificationToken("test-token")
-      .build());
+        .toEmail("nguyenhobadoan@gmail.com")
+        .verificationToken("test-token")
+        .build());
     return new String();
   }
 }

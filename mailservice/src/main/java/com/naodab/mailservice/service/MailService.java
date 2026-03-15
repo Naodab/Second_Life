@@ -13,7 +13,7 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import com.naodab.mailservice.dto.EmailVerificationEvent;
-import com.naodab.mailservice.dto.PasswordResetEvent;
+import com.naodab.mailservice.dto.ForgotPasswordEvent;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -47,10 +47,10 @@ public class MailService {
   public void sendEmailVerification(EmailVerificationEvent event) {
     String subject = "Please verify your email address";
     String link = (event.getVerificationLink() != null)
-      ? event.getVerificationLink()
-      : mailBaseUrl + "/verify-email?token=" + event.getVerificationToken();
+        ? event.getVerificationLink()
+        : mailBaseUrl + "/verify-email?token=" + event.getVerificationToken();
     Context context = new Context();
-    context.setVariable("username", event.getFirstName() + " " + event.getLastName());
+    context.setVariable("username", event.getUsername());
     context.setVariable("verificationLink", link);
     context.setVariable("baseUrl", mailBaseUrl);
 
@@ -59,13 +59,13 @@ public class MailService {
   }
 
   @Async
-  public void sendPasswordReset(PasswordResetEvent event) {
+  public void sendForgotPassword(ForgotPasswordEvent event) {
     String subject = "Password Reset Request";
-    String link = (event.getResetLink() != null)
-      ? event.getResetLink()
-      : mailBaseUrl + "/reset-password?token=" + event.getResetToken();
+    String link = (event.getResetPasswordLink() != null)
+        ? event.getResetPasswordLink()
+        : mailBaseUrl + "/reset-password?token=" + event.getResetPasswordToken();
     Context context = new Context();
-    context.setVariable("username", event.getFirstName() + " " + event.getLastName());
+    context.setVariable("username", event.getUsername());
     context.setVariable("resetLink", link);
     context.setVariable("baseUrl", mailBaseUrl);
 
@@ -73,14 +73,15 @@ public class MailService {
     sendHtml(event.getToEmail(), subject, htmlContent);
   }
 
+  @SuppressWarnings("null")
   private void sendHtml(String to, String subject, String htmlContent) {
     try {
       MimeMessage message = mailSender.createMimeMessage();
       var helper = new MimeMessageHelper(
-        message,
-        MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
-        StandardCharsets.UTF_8.name()
-      );
+          message,
+          MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
+          StandardCharsets.UTF_8.name());
+
       helper.setFrom(mailFrom, mailFromName);
       helper.setTo(to);
       helper.setSubject(subject);
