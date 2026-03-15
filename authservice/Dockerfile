@@ -1,15 +1,32 @@
-FROM maven:3.9.6-eclipse-temurin-17 AS build
+# ===== BUILD STAGE =====
+FROM maven:3.9.9-eclipse-temurin-21 AS builder
+WORKDIR /build
+
+# root pom
+COPY pom.xml .
+
+# copy module poms
+COPY commonjpa/pom.xml commonjpa/pom.xml
+COPY commonservice/pom.xml commonservice/pom.xml
+COPY authservice/pom.xml authservice/pom.xml
+COPY profileservice/pom.xml profileservice/pom.xml
+COPY mailservice/pom.xml mailservice/pom.xml
+
+# download dependencies
+RUN mvn -pl authservice -am dependency:go-offline
+
+# copy source code
+COPY commonjpa commonjpa
+COPY commonservice commonservice
+COPY authservice authservice
+
+# build
+RUN mvn -pl authservice -am clean package -DskipTests
+
+# ===== RUNTIME =====
+FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY . .
-RUN mvn -q -DskipTests clean package
 
-# ===== RUNTIME STAGE =====
-FROM eclipse-temurin:17-jdk-alpine
-WORKDIR /app
+COPY --from=builder /build/authservice/target/*.jar app.jar
 
-COPY --from=build /app/target/*.jar app.jar
-
-# ENV bắt buộc
-ENV JAVA_OPTS=""
-
-CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar --server.port=$PORT"]
+ENTRYPOINT ["java","-jar","app.jar"]

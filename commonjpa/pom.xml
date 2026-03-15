@@ -9,7 +9,12 @@
 	<name>commonjpa</name>
 	<description>Common JPA functionality</description>
 	<url/>
-	<licenses>
+	<parent>
+		<groupId>com.naodab</groupId>
+		<artifactId>second-life</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+	<licenses> 
 		<license/>
 	</licenses>
 	<developers>

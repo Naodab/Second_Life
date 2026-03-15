@@ -1,3 +1,6 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: mailservice
@@ -15,12 +18,32 @@ spring:
             required: true
           ssl:
             trust: smtp.gmail.com
+  kafka:
+    listener:
+      missing-topics-fatal: false
+      ack-mode: record
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:mailservice-consumer}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      properties:
+        "[spring.json.trusted.packages]": "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    topics:
+      email-verification: "mail.email-verification"
+      forgot-password: "mail.forgot-password"
 
 app:
   mail:
     from: noreply@gmail.com
     from-name: Second Life
     base-url: http://localhost:8080
+  frontend:
+    url: http://localhost:3000
 
 logging:
   file:
@@ -30,5 +53,5 @@ logging:
       file-name-pattern: mailservice-%d{yyyy-MM-dd}.log
       max-file-size: 10MB
   level:
-    com.naodab.mailservice: DEBUG
-    org.springframework.kafka: INFO
+    "[com.naodab.mailservice]": DEBUG
+    "[org.springframework.kafka]": INFO
