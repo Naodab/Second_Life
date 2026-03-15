@@ -1,0 +1,32 @@
+{"properties": [
+  {
+    "name": "app.mail.from",
+    "type": "java.lang.String",
+    "description": "The email address to send emails from"
+  },
+  {
+    "name": "app.mail.from-name",
+    "type": "java.lang.String",
+    "description": "The name of the sender"
+  },
+  {
+    "name": "app.mail.base-url",
+    "type": "java.lang.String",
+    "description": "The base URL of the application"
+  },
+  {
+    "name": "app.frontend.url",
+    "type": "java.lang.String",
+    "description": "The URL of the frontend application"
+  },
+  {
+    "name": "spring.kafka.topics.email-verification",
+    "type": "java.lang.String",
+    "description": "The topic to send email verification events to"
+  },
+  {
+    "name": "spring.kafka.topics.forgot-password",
+    "type": "java.lang.String",
+    "description": "The topic to send forgot password events to"  
+  }
+]}

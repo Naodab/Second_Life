@@ -34,6 +34,21 @@ spring:
             token-uri: https://oauth2.googleapis.com/token
             user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
             user-name-attribute: sub
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:authservice-consumer}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      properties:
+        "[spring.json.trusted.packages]": "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    topics:
+      email-verification: "mail.email-verification"
+      forgot-password: "mail.forgot-password"
 
 app:
   jwt:
@@ -45,9 +60,11 @@ app:
       - http://localhost:3000/oauth2/redirect
       - http://localhost:8080/oauth2/redirect
       - http://localhost:5500/test_login_google.html
+  verification-token-expiration: 180000
+  forgot-password-token-expiration: 60000
 
 external:
-  frontend_url: http://localhost:5500
+  frontend_url: http://localhost:8080
 
 logging:
   level:
