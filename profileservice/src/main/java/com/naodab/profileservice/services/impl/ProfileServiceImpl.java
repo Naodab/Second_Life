@@ -113,6 +113,13 @@ public class ProfileServiceImpl implements ProfileService {
 
   @Override
   public void createProfileFromEvent(CreateProfileEvent event) {
+    if (event == null) return;
+
+    if (profileRepository.existsByEmail(event.getEmail())) {
+      log.debug("Profile already exists for email {}, skipping create from event", event.getEmail());
+      return;
+    }
+
     Profile profile = profileMapper.toProfile(event);
     profileRepository.save(profile);
   }

@@ -79,8 +79,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         .emailVerified(true)
         .build();
 
+    account = accountRepository.save(account);
     createProfileFromEvent(userInfo);
-    return accountRepository.save(account);
+
+    return account;
   }
 
   private void createProfileFromEvent(OAuth2UserInfo userInfo) {
