@@ -2,6 +2,7 @@ package com.naodab.profileservice.mappers;
 
 import org.springframework.stereotype.Component;
 
+import com.naodab.profileservice.dto.event.CreateProfileEvent;
 import com.naodab.profileservice.dto.request.ProfileCreateRequest;
 import com.naodab.profileservice.dto.request.ProfileUpdateRequest;
 import com.naodab.profileservice.dto.response.ProfileResponse;
@@ -39,6 +40,21 @@ public class ProfileMapper {
     profile.setPhoneNumber(profileCreateRequest.getPhoneNumber());
     profile.setFirstName(profileCreateRequest.getFirstName());
     profile.setLastName(profileCreateRequest.getLastName());
+
+    return profile;
+  }
+
+  public Profile toProfile(CreateProfileEvent createProfileEvent) {
+    if (createProfileEvent == null) {
+      return null;
+    }
+
+    Profile profile = new Profile();
+    profile.setEmail(createProfileEvent.getEmail());
+    profile.setPhoneNumber(createProfileEvent.getPhoneNumber());
+    profile.setFirstName(createProfileEvent.getFirstName());
+    profile.setLastName(createProfileEvent.getLastName());
+    profile.setAvatarUrl(createProfileEvent.getAvatarUrl());
 
     return profile;
   }

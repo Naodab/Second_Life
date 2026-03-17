@@ -12,6 +12,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import com.naodab.authservice.dto.event.CreateProfileEvent;
+import com.naodab.authservice.kafka.CreateProfileProducer;
 import com.naodab.authservice.models.Account;
 import com.naodab.authservice.models.AuthProvider;
 import com.naodab.authservice.repositories.AccountRepository;
@@ -24,6 +26,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
   AccountRepository accountRepository;
+  CreateProfileProducer createProfileProducer;
 
   @Override
   public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -41,18 +44,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     Account account = upsertAccount(userInfo, registrationId);
     return new DefaultOAuth2User(
-      List.of(new SimpleGrantedAuthority("ROLE_" + account.getRole().name())),
-      oAuth2User.getAttributes(),
-      "email"
-    );
+        List.of(new SimpleGrantedAuthority("ROLE_" + account.getRole().name())),
+        oAuth2User.getAttributes(),
+        "email");
   }
 
   private Account upsertAccount(OAuth2UserInfo userInfo, String provider) {
     AuthProvider authProvider = AuthProvider.valueOf(provider.toUpperCase());
     Optional<Account> accountOptional = accountRepository.findByAuthProviderAndProviderId(
-      authProvider,
-      userInfo.getId()
-    );
+        authProvider,
+        userInfo.getId());
 
     if (accountOptional.isPresent()) {
       return accountOptional.get();
@@ -63,20 +64,34 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
       Account account = existingByEmail.get();
       if (account.getAuthProvider() != authProvider) {
         throw new OAuth2AuthenticationException(
-          "An account with this email already exists but is registered with a different provider"
-        );
+            "An account with this email already exists but is registered with a different provider");
       }
       account.setProviderId(userInfo.getId());
       account.setAuthProvider(authProvider);
+      account.setEmailVerified(true);
       return accountRepository.save(account);
     }
 
     Account account = Account.builder()
-      .email(userInfo.getEmail())
-      .authProvider(authProvider)
-      .providerId(userInfo.getId())
-      .build();
+        .email(userInfo.getEmail())
+        .authProvider(authProvider)
+        .providerId(userInfo.getId())
+        .emailVerified(true)
+        .build();
 
+    createProfileFromEvent(userInfo);
     return accountRepository.save(account);
+  }
+
+  private void createProfileFromEvent(OAuth2UserInfo userInfo) {
+    CreateProfileEvent event = CreateProfileEvent.builder()
+        .email(userInfo.getEmail())
+        .firstName(userInfo.getGivenName())
+        .lastName(userInfo.getFamilyName())
+        .avatarUrl(userInfo.getAvatarUrl())
+        .phoneNumber(userInfo.getPhoneNumber())
+        .build();
+    
+    createProfileProducer.sendCreateProfileEvent(event);
   }
 }

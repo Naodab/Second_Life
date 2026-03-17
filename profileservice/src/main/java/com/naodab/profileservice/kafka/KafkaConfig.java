@@ -1,75 +1,37 @@
-package com.naodab.authservice.config;
+package com.naodab.profileservice.kafka;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
-import org.springframework.kafka.core.DefaultKafkaProducerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.naodab.authservice.dto.event.CreateProfileEvent;
-import com.naodab.authservice.dto.event.EmailVerificationEvent;
-import com.naodab.authservice.dto.event.ForgotPasswordEvent;
+import com.naodab.profileservice.dto.event.CreateProfileEvent;
 
 @Configuration
 public class KafkaConfig {
-
+  
   @Value("${spring.kafka.bootstrap-servers}")
   private String bootstrapServers;
+
+  @Value("${spring.kafka.consumer.group-id}")
+  private String consumerGroupId;
 
   private ObjectMapper objectMapper() {
     ObjectMapper objectMapper = new ObjectMapper();
     objectMapper.registerModule(new JavaTimeModule());
     objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     return objectMapper;
-  }
-
-  private <T> ProducerFactory<String, T> producerFactory(Class<T> type) {
-    Map<String, Object> config = new HashMap<>();
-    config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-
-    JsonSerializer<T> serializer = new JsonSerializer<>(objectMapper());
-    serializer.setAddTypeInfo(false);
-
-    return new DefaultKafkaProducerFactory<>(
-        config,
-        new StringSerializer(),
-        serializer);
-  }
-
-  private <T> KafkaTemplate<String, T> kafkaTemplate(Class<T> type) {
-    return new KafkaTemplate<>(producerFactory(type));
-  }
-
-  @Bean
-  public KafkaTemplate<String, EmailVerificationEvent> emailVerificationKafkaTemplate() {
-    return kafkaTemplate(EmailVerificationEvent.class);
-  }
-
-  @Bean
-  public KafkaTemplate<String, ForgotPasswordEvent> forgotPasswordKafkaTemplate() {
-    return kafkaTemplate(ForgotPasswordEvent.class);
-  }
-
-  @Bean
-  public KafkaTemplate<String, CreateProfileEvent> createProfileKafkaTemplate() {
-    return kafkaTemplate(CreateProfileEvent.class);
   }
 
   public <T> ConsumerFactory<String, T> consumerFactory(Class<T> type, String groupId) {
@@ -87,10 +49,15 @@ public class KafkaConfig {
   }
 
   public <T> ConcurrentKafkaListenerContainerFactory<String, T> kafkaListenerContainerFactory(
-      Class<T> type,
-      String groupId) {
+    Class<T> type,
+    String groupId) {
     ConcurrentKafkaListenerContainerFactory<String, T> factory = new ConcurrentKafkaListenerContainerFactory<>();
     factory.setConsumerFactory(consumerFactory(type, groupId));
     return factory;
+  }
+
+  @Bean
+  public ConcurrentKafkaListenerContainerFactory<String, CreateProfileEvent> createProfileKafkaListenerContainerFactory() {
+    return kafkaListenerContainerFactory(CreateProfileEvent.class, consumerGroupId);
   }
 }

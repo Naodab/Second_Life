@@ -1,6 +1,4 @@
-package com.naodab.mailservice.dto;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+package com.naodab.authservice.dto.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,12 +12,11 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties(ignoreUnknown = true)
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class EmailVerificationEvent {
-  String toEmail;
-  String username;
-  String verificationToken;
-  String verificationLink;
-
+public class CreateProfileEvent {
+  String email;
+  String phoneNumber;
+  String firstName;
+  String lastName;
+  String avatarUrl;
 }
