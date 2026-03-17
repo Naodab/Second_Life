@@ -1,0 +1,6 @@
+{"properties": [{
+  "name": "spring.kafka.topics.create-profile",
+  "type": "java.lang.String",
+  "description": "Create profile topic"
+} 
+]}
