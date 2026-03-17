@@ -43,5 +43,10 @@
     "name": "app.forgot-password-token-expiration",
     "type": "java.lang.Long",
     "description": "Forgot password token expiration in seconds"
+  },
+  {
+    "name": "spring.kafka.topics.create-profile",
+    "type": "java.lang.String",
+    "description": "Create profile topic"
   }
 ]}
