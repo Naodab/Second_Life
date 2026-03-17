@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
+import com.naodab.profileservice.dto.event.CreateProfileEvent;
 import com.naodab.profileservice.dto.request.ProfileCreateRequest;
 import com.naodab.profileservice.dto.request.ProfileUpdateRequest;
 import com.naodab.profileservice.dto.response.ProfileResponse;
@@ -108,5 +109,18 @@ public class ProfileServiceImpl implements ProfileService {
     if (id == null || id.isBlank()) return;
 
     profileRepository.deleteById(id);
+  }
+
+  @Override
+  public void createProfileFromEvent(CreateProfileEvent event) {
+    if (event == null) return;
+
+    if (profileRepository.existsByEmail(event.getEmail())) {
+      log.debug("Profile already exists for email {}, skipping create from event", event.getEmail());
+      return;
+    }
+
+    Profile profile = profileMapper.toProfile(event);
+    profileRepository.save(profile);
   }
 }

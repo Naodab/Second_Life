@@ -49,6 +49,7 @@ spring:
     topics:
       email-verification: "mail.email-verification"
       forgot-password: "mail.forgot-password"
+      create-profile: "profile.create"
 
 app:
   jwt:
