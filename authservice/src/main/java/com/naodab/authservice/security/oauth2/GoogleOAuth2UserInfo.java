@@ -37,7 +37,6 @@ public class GoogleOAuth2UserInfo extends OAuth2UserInfo {
     return (String) attributes.get("family_name");
   }
 
-  /** Google userinfo không trả về SĐT trong scope chuẩn; có thể null, user cập nhật sau. */
   @Override
   public String getPhoneNumber() {
     return (String) attributes.get("phone_number");
