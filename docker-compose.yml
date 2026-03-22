@@ -6,6 +6,7 @@ services:
     ports:
       - 9092:9092
     environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
@@ -20,6 +21,16 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     volumes:
       - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 45s
     networks:
       - second_life_network
 
@@ -33,7 +44,8 @@ services:
       KAFKA_CLUSTERS_0_NAME: second-life
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - second_life_network
 
@@ -48,21 +60,18 @@ services:
     volumes:
       - redis-data:/data
 
-  # db:
-  #   image: mysql:8.0
-  #   container_name: db
-  #   restart: unless-stopped
-  #   ports:
-  #     - 3306:3306
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: root
-  #     MYSQL_DATABASE: defaultdb
-  #     MYSQL_USER: doannhb
-  #     MYSQL_PASSWORD: doannhb123
-  #   volumes:
-  #     - mysql-data:/var/lib/mysql
-  #   networks:
-  #     - second_life_network
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "9080:8080"
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml
+    networks:
+      - second_life_network
 
   auth-service:
     image: auth-service:latest
@@ -76,12 +85,17 @@ services:
       - .env
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SERVER_PORT: 8081
     depends_on:
-      - kafka
-      - redis
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_started
       # - db
     networks:
       - second_life_network
+    labels:
+      - "traefik.enable=true"
 
   mail-service:
     image: mail-service:latest
@@ -89,14 +103,18 @@ services:
     build:
       context: .
       dockerfile: mailservice/Dockerfile
-    ports:
-      - 8082:8082
     env_file:
       - .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SERVER_PORT: 8082
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - second_life_network
+    labels:
+      - "traefik.enable=true"
 
   profile-service:
     image: profile-service:latest
@@ -108,11 +126,17 @@ services:
       - 8083:8083
     env_file:
       - .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SERVER_PORT: 8083
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
       # - db
     networks:
       - second_life_network
+    labels:
+      - "traefik.enable=true"
 
 volumes:
   kafka-data:
