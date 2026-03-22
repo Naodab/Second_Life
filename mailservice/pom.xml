@@ -69,6 +69,11 @@
 			<artifactId>kafka</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.naodab</groupId>
+			<artifactId>commonservice</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 
 	<build>

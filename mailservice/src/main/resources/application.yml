@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8082
 
 spring:
   application:
@@ -30,6 +30,7 @@ spring:
       auto-offset-reset: earliest
       properties:
         "[spring.json.trusted.packages]": "*"
+        socket.connection.setup.timeout.max.ms: 60000
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
