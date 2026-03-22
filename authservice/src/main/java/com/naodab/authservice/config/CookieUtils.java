@@ -8,6 +8,9 @@ import java.util.Optional;
 
 import org.springframework.util.SerializationUtils;
 
+import com.naodab.commonservice.exception.AppException;
+import com.naodab.commonservice.exception.ErrorCode;
+
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,7 +19,8 @@ public final class CookieUtils {
 
   private static final int COOKIE_MAX_AGE_DELETE = 0;
 
-  private CookieUtils() {}
+  private CookieUtils() {
+  }
 
   public static Optional<Cookie> getCookie(HttpServletRequest request, String name) {
     Cookie[] cookies = request.getCookies();
@@ -34,7 +38,7 @@ public final class CookieUtils {
     try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(decoded))) {
       return (T) ois.readObject();
     } catch (Exception e) {
-      throw new IllegalArgumentException("Failed to deserialize cookie value", e);
+      throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
     }
   }
 

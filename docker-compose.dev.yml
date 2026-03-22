@@ -1,0 +1,67 @@
+# Dev: tự rebuild image khi đổi code (Docker Compose Watch).
+#
+# Chạy:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build --watch
+#
+# Yêu cầu Docker Compose v2.22+ (lệnh `docker compose version`).
+
+services:
+  auth-service:
+    develop:
+      watch:
+        - action: rebuild
+          path: ./pom.xml
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./commonjpa
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./commonservice
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./authservice
+          ignore:
+            - "**/target/**"
+
+  mail-service:
+    develop:
+      watch:
+        - action: rebuild
+          path: ./pom.xml
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./commonjpa
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./commonservice
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./mailservice
+          ignore:
+            - "**/target/**"
+
+  profile-service:
+    develop:
+      watch:
+        - action: rebuild
+          path: ./pom.xml
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./commonjpa
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./commonservice
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./profileservice
+          ignore:
+            - "**/target/**"

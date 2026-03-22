@@ -14,6 +14,8 @@ import com.naodab.authservice.models.Account;
 import com.naodab.authservice.properties.OAuth2Properties;
 import com.naodab.authservice.repositories.AccountRepository;
 import com.naodab.authservice.security.JwtTokenProvider;
+import com.naodab.commonservice.exception.AppException;
+import com.naodab.commonservice.exception.ErrorCode;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -63,11 +65,11 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     String email = oauth2User.getAttribute("email");
 
     if (targetUrl != null && !isAuthorizedRedirectUri(targetUrl)) {
-      throw new IllegalArgumentException("Unauthorized Redirect URI: " + targetUrl);
+      throw new AppException(ErrorCode.INVALID_REDIRECT_URI);
     }
 
     Account account = accountRepository.findByEmail(email)
-        .orElseThrow(() -> new RuntimeException("User not found: " + email));
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
     String accessToken = tokenProvider.generateAccessToken(email);
     String refreshToken = tokenProvider.generateRefreshToken(email);

@@ -1,0 +1,21 @@
+# Git & IDE
+.git
+.gitignore
+**/.idea
+**/.vscode
+**/*.iml
+
+# Build output (host) — tránh invalidating cache và watch loop
+**/target
+
+# Docs & misc
+**/README.md
+**/docs
+*.md
+
+# Env secrets không cần trong image (compose vẫn mount env_file)
+.env
+.env.*
+
+# OS
+.DS_Store
