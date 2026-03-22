@@ -17,6 +17,8 @@ import com.naodab.authservice.kafka.CreateProfileProducer;
 import com.naodab.authservice.models.Account;
 import com.naodab.authservice.models.AuthProvider;
 import com.naodab.authservice.repositories.AccountRepository;
+import com.naodab.commonservice.exception.AppException;
+import com.naodab.commonservice.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -39,7 +41,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     OAuth2UserInfo userInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(registrationId, oAuth2User.getAttributes());
 
     if (!StringUtils.hasText(userInfo.getEmail())) {
-      throw new OAuth2AuthenticationException("Email not found from OAuth2 provider");
+      throw new AppException(ErrorCode.INVALID_EMAIL_FROM_OAUTH2_PROVIDER);
     }
 
     Account account = upsertAccount(userInfo, registrationId);
@@ -63,8 +65,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     if (existingByEmail.isPresent()) {
       Account account = existingByEmail.get();
       if (account.getAuthProvider() != authProvider) {
-        throw new OAuth2AuthenticationException(
-            "An account with this email already exists but is registered with a different provider");
+        throw new AppException(ErrorCode.USER_ALREADY_EXISTS_WITH_DIFFERENT_PROVIDER);
       }
       account.setProviderId(userInfo.getId());
       account.setAuthProvider(authProvider);
@@ -93,7 +94,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         .avatarUrl(userInfo.getAvatarUrl())
         .phoneNumber(userInfo.getPhoneNumber())
         .build();
-    
+
     createProfileProducer.sendCreateProfileEvent(event);
   }
 }

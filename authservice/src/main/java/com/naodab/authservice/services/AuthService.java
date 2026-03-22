@@ -19,6 +19,8 @@ import com.naodab.authservice.models.Account;
 import com.naodab.authservice.models.AuthProvider;
 import com.naodab.authservice.repositories.AccountRepository;
 import com.naodab.authservice.security.JwtTokenProvider;
+import com.naodab.commonservice.exception.AppException;
+import com.naodab.commonservice.exception.ErrorCode;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +47,7 @@ public class AuthService {
   @Transactional
   public AuthResponse register(RegisterRequest request) {
     if (accountRepository.existsByEmail(request.getEmail())) {
-      throw new RuntimeException("Email already exists");
+      throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
     }
 
     Account account = Account.builder()
@@ -64,10 +66,10 @@ public class AuthService {
   public AuthResponse login(LoginRequest request) {
     String email = request.getEmail();
     Account account = accountRepository.findByEmail(email)
-        .orElseThrow(() -> new RuntimeException("Account not found"));
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
     if (!passwordEncoder.matches(request.getPassword(), account.getPassword())) {
-      throw new RuntimeException("Invalid password");
+      throw new AppException(ErrorCode.USER_NOT_FOUND);
     }
 
     if (!Boolean.TRUE.equals(account.getEmailVerified())) {
@@ -93,15 +95,15 @@ public class AuthService {
     String refreshToken = request.getRefreshToken();
 
     if (!jwtTokenProvider.validateToken(refreshToken)) {
-      throw new RuntimeException("Invalid refresh token");
+      throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
     }
 
     String email = jwtTokenProvider.getEmailFromToken(refreshToken);
     Account account = accountRepository.findByEmail(email)
-        .orElseThrow(() -> new RuntimeException("Account not found"));
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
     if (!refreshToken.equals(account.getRefreshToken())) {
-      throw new RuntimeException("Invalid refresh token");
+      throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
     }
 
     String newAccessToken = jwtTokenProvider.generateAccessToken(email);
@@ -120,12 +122,12 @@ public class AuthService {
   @Transactional
   public AuthResponse verifyEmail(String verificationToken) {
     if (!jwtTokenProvider.validateToken(verificationToken)) {
-      throw new RuntimeException("Invalid verification token");
+      throw new AppException(ErrorCode.INVALID_VERIFICATION_TOKEN);
     }
 
     String email = jwtTokenProvider.getEmailFromToken(verificationToken);
     Account account = accountRepository.findByEmail(email)
-        .orElseThrow(() -> new RuntimeException("Account not found"));
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
     String accessToken = jwtTokenProvider.generateAccessToken(email);
     String refreshToken = jwtTokenProvider.generateRefreshToken(email);
@@ -145,7 +147,7 @@ public class AuthService {
   @Transactional
   public void forgotPassword(ForgotPasswordRequest request) {
     Account account = accountRepository.findByEmail(request.getEmail())
-        .orElseThrow(() -> new RuntimeException("Account not found"));
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
     String resetPasswordToken = jwtTokenProvider.generateForgotPasswordToken(account.getEmail());
     ForgotPasswordEvent event = ForgotPasswordEvent.builder()
@@ -160,10 +162,10 @@ public class AuthService {
   @Transactional
   public void resetPassword(String email, ResetPasswordRequest request) {
     Account account = accountRepository.findByEmail(email)
-        .orElseThrow(() -> new RuntimeException("Account not found"));
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
     if (!passwordEncoder.matches(request.getOldPassword(), account.getPassword())) {
-      throw new RuntimeException("Invalid old password");
+      throw new AppException(ErrorCode.INVALID_OLD_PASSWORD);
     }
 
     account.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -173,7 +175,7 @@ public class AuthService {
   @Transactional
   public void logout(String email) {
     Account account = accountRepository.findByEmail(email)
-        .orElseThrow(() -> new RuntimeException("Account not found"));
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
     account.setRefreshToken(null);
     accountRepository.save(account);
