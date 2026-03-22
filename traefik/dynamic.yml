@@ -1,0 +1,46 @@
+http:
+  middlewares:
+    gateway-jwt:
+      forwardAuth:
+        address: "http://auth-service:8081/api/v1/auth/forward-auth"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-User-Email"
+          - "X-User-Sub"
+        authRequestHeaders:
+          - "Authorization"
+
+  routers:
+    auth-api:
+      rule: "PathPrefix(`/api/v1/auth`) || PathPrefix(`/oauth2`) || PathPrefix(`/login/oauth2`)"
+      service: auth-service
+      entryPoints:
+        - web
+    profile-api:
+      rule: "PathPrefix(`/api/profiles`)"
+      service: profile-service
+      entryPoints:
+        - web
+      middlewares:
+        - gateway-jwt
+    mail-api:
+      rule: "PathPrefix(`/api/test`)"
+      service: mail-service
+      entryPoints:
+        - web
+      middlewares:
+        - gateway-jwt
+
+  services:
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:8081"
+    profile-service:
+      loadBalancer:
+        servers:
+          - url: "http://profile-service:8083"
+    mail-service:
+      loadBalancer:
+        servers:
+          - url: "http://mail-service:8082"

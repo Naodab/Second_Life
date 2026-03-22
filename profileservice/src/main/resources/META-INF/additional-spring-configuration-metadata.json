@@ -1,6 +1,19 @@
-{"properties": [{
-  "name": "spring.kafka.topics.create-profile",
-  "type": "java.lang.String",
-  "description": "Create profile topic"
-} 
-]}
+{
+  "properties": [
+    {
+      "name": "spring.kafka.topics.create-profile",
+      "type": "java.lang.String",
+      "description": "Create profile topic"
+    },
+    {
+      "name": "spring.kafka.topics.update-avatar",
+      "type": "java.lang.String",
+      "description": "Update avatar topic"
+    },
+    {
+      "name": "spring.kafka.topics.upload-avatar",
+      "type": "java.lang.String",
+      "description": "Upload avatar topic"
+    }
+  ]
+}

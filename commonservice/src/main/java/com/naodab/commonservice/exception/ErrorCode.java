@@ -16,7 +16,20 @@ public enum ErrorCode {
   INVALID_PASSWORD(1005, "Password length must be between {min} and {max} characters", HttpStatus.BAD_REQUEST),
   INVALID_FIRST_NAME(1006, "First name can not contain numbers or special characters", HttpStatus.BAD_REQUEST),
   INVALID_LAST_NAME(1007, "Last name can not contain numbers or special characters", HttpStatus.BAD_REQUEST),
-  INVALID_PHONE_NUMBER(1008, "Phone number must start with +84 or 0 and followed by 9 digits", HttpStatus.BAD_REQUEST)
+  INVALID_PHONE_NUMBER(1008, "Phone number must start with +84 or 0 and followed by 9 digits", HttpStatus.BAD_REQUEST),
+  USER_NOT_FOUND(1009, "User not found", HttpStatus.NOT_FOUND),
+  INVALID_REDIRECT_URI(1010, "Invalid redirect URI", HttpStatus.BAD_REQUEST),
+  EMAIL_ALREADY_EXISTS(1011, "Email already exists", HttpStatus.BAD_REQUEST),
+  INVALID_REFRESH_TOKEN(1012, "Invalid refresh token", HttpStatus.BAD_REQUEST),
+  INVALID_VERIFICATION_TOKEN(1013, "Invalid verification token", HttpStatus.BAD_REQUEST),
+  INVALID_OLD_PASSWORD(1014, "Invalid old password", HttpStatus.BAD_REQUEST),
+  FAIL_TO_SEND_EMAIL(1015, "Fail to send email", HttpStatus.INTERNAL_SERVER_ERROR),
+  INVALID_EMAIL_FROM_OAUTH2_PROVIDER(1016, "Email not found from OAuth2 provider", HttpStatus.BAD_REQUEST),
+  USER_ALREADY_EXISTS_WITH_DIFFERENT_PROVIDER(1017,
+      "An account with this email already exists but is registered with a different provider", HttpStatus.BAD_REQUEST),
+  INVALID_OAUTH2_PROVIDER(1018, "Invalid OAuth2 provider", HttpStatus.BAD_REQUEST),
+  UNAUTHORIZED(1019, "Unauthorized", HttpStatus.UNAUTHORIZED),
+  AVATAR_IS_NULL(1020, "Avatar is null", HttpStatus.BAD_REQUEST),
   ;
 
   private int code;
