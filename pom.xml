@@ -21,5 +21,6 @@
 		<module>authservice</module>
 		<module>profileservice</module>
 		<module>mailservice</module>
+		<module>uploadservice</module>
 	</modules>
 </project>
