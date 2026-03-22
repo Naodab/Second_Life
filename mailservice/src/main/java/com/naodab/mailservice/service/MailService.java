@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
+import com.naodab.commonservice.exception.AppException;
+import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.mailservice.dto.EmailVerificationEvent;
 import com.naodab.mailservice.dto.ForgotPasswordEvent;
 
@@ -93,7 +95,7 @@ public class MailService {
       mailSender.send(message);
     } catch (MessagingException | UnsupportedEncodingException e) {
       log.error("[MAIL] Fail to send email to {}: {}", to, e.getMessage());
-      throw new RuntimeException("Fail to send email: " + e.getMessage(), e);
+      throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
     }
   }
 }

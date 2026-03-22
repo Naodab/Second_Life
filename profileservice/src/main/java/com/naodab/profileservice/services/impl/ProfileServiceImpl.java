@@ -10,28 +10,31 @@ import org.springframework.stereotype.Service;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.profileservice.dto.event.CreateProfileEvent;
+import com.naodab.profileservice.dto.event.UpdateAvatarEvent;
+import com.naodab.profileservice.dto.event.UploadAvatarEvent;
 import com.naodab.profileservice.dto.request.ProfileCreateRequest;
 import com.naodab.profileservice.dto.request.ProfileUpdateRequest;
+import com.naodab.profileservice.dto.request.UploadAvatarRequest;
 import com.naodab.profileservice.dto.response.ProfileResponse;
 import com.naodab.profileservice.entities.Profile;
+import com.naodab.profileservice.kafka.producers.UploadAvatarProducer;
 import com.naodab.profileservice.mappers.ProfileMapper;
 import com.naodab.profileservice.repositories.ProfileRepository;
 import com.naodab.profileservice.services.ProfileService;
 
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class ProfileServiceImpl implements ProfileService {
   ProfileRepository profileRepository;
   ProfileMapper profileMapper;
-
-  public ProfileServiceImpl(ProfileRepository profileRepository, ProfileMapper profileMapper) {
-    this.profileRepository = profileRepository;
-    this.profileMapper = profileMapper;
-  }
+  UploadAvatarProducer uploadAvatarProducer;
 
   @Override
   public ProfileResponse createProfile(ProfileCreateRequest request) {
@@ -55,10 +58,9 @@ public class ProfileServiceImpl implements ProfileService {
   @Override
   public List<ProfileResponse> getAllProfiles(int page, int pageSize) {
     Pageable pageable = PageRequest.of(
-            page,
-            pageSize,
-            Sort.by(Sort.Direction.DESC, "createdAt")
-    );
+        page,
+        pageSize,
+        Sort.by(Sort.Direction.DESC, "createdAt"));
 
     return profileRepository.findByDeletedAtIsNull(pageable)
         .stream()
@@ -106,14 +108,16 @@ public class ProfileServiceImpl implements ProfileService {
 
   @Override
   public void deleteProfile(String id) {
-    if (id == null || id.isBlank()) return;
+    if (id == null || id.isBlank())
+      return;
 
     profileRepository.deleteById(id);
   }
 
   @Override
   public void createProfileFromEvent(CreateProfileEvent event) {
-    if (event == null) return;
+    if (event == null)
+      return;
 
     if (profileRepository.existsByEmail(event.getEmail())) {
       log.debug("Profile already exists for email {}, skipping create from event", event.getEmail());
@@ -122,5 +126,42 @@ public class ProfileServiceImpl implements ProfileService {
 
     Profile profile = profileMapper.toProfile(event);
     profileRepository.save(profile);
+  }
+
+  @Override
+  @Transactional
+  public void updateAvatarFromEvent(UpdateAvatarEvent event) {
+    if (event == null)
+      return;
+
+    profileRepository.findByEmail(event.getEmail())
+        .ifPresent(profile -> {
+          profile.setAvatarUrl(event.getAvatarUrl());
+          profileRepository.save(profile);
+        });
+  }
+
+  @Override
+  @Transactional
+  public void uploadAvatarFromEvent(UploadAvatarRequest request) {
+    if (request == null)
+      return;
+
+    if (request.getEmail() == null || request.getEmail().isBlank()) {
+      log.error("User email is null or blank");
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    if (request.getAvatar() == null) {
+      log.error("Avatar is null or blank");
+      throw new AppException(ErrorCode.AVATAR_IS_NULL);
+    }
+
+    UploadAvatarEvent event = UploadAvatarEvent.builder()
+        .email(request.getEmail())
+        .avatar(request.getAvatar())
+        .build();
+
+    uploadAvatarProducer.sendUploadAvatarEvent(event);
   }
 }
