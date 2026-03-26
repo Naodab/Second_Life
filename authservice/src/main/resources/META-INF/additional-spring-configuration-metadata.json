@@ -1,57 +1,69 @@
-{"properties": [
-  {
-    "name": "external.frontend_url",
-    "type": "java.lang.String",
-    "description": "Frontend URL"
-  },
-  {
-    "name": "app.jwt.secret",
-    "type": "java.lang.String",
-    "description": "Secret key for JWT"
-  },
-  {
-    "name": "app.jwt.expiration",
-    "type": "java.lang.Long",
-    "description": "Expiration time for JWT"
-  },
-  {
-    "name": "app.jwt.refresh-expiration",
-    "type": "java.lang.Long",
-    "description": "Expiration time for refresh token"
-  },
-  {
-    "name": "app.oauth2.authorized-redirect-uris",
-    "type": "java.util.List<java.lang.String>",
-    "description": "Authorized redirect URIs for OAuth2"
-  },
-  {
-    "name": "spring.kafka.topics.email-verification",
-    "type": "java.lang.String",
-    "description": "Email verification topic"
-  },
-  {
-    "name": "app.verification-token-expiration",
-    "type": "java.lang.Long",
-    "description": "Verification token expiration in seconds"
-  },
-  {
-    "name": "spring.kafka.topics.forgot-password",
-    "type": "java.lang.String",
-    "description": "Forgot password topic"
-  },
-  {
-    "name": "app.forgot-password-token-expiration",
-    "type": "java.lang.Long",
-    "description": "Forgot password token expiration in seconds"
-  },
-  {
-    "name": "spring.kafka.topics.create-profile",
-    "type": "java.lang.String",
-    "description": "Create profile topic"
-  },
-  {
-    "name": "spring.kafka.topics.account-profile-linked",
-    "type": "java.lang.String",
-    "description": "Profile created; link profile id to account"
-  }
-]}
+{
+  "properties": [
+    {
+      "name": "external.frontend_url",
+      "type": "java.lang.String",
+      "description": "Frontend URL"
+    },
+    {
+      "name": "app.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secret key for JWT"
+    },
+    {
+      "name": "app.jwt.expiration",
+      "type": "java.lang.Long",
+      "description": "Expiration time for JWT"
+    },
+    {
+      "name": "app.jwt.refresh-expiration",
+      "type": "java.lang.Long",
+      "description": "Expiration time for refresh token"
+    },
+    {
+      "name": "app.oauth2.authorized-redirect-uris",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Authorized redirect URIs for OAuth2"
+    },
+    {
+      "name": "spring.kafka.topics.email-verification",
+      "type": "java.lang.String",
+      "description": "Email verification topic"
+    },
+    {
+      "name": "app.verification-token-expiration",
+      "type": "java.lang.Long",
+      "description": "Verification token expiration in seconds"
+    },
+    {
+      "name": "spring.kafka.topics.forgot-password",
+      "type": "java.lang.String",
+      "description": "Forgot password topic"
+    },
+    {
+      "name": "app.forgot-password-token-expiration",
+      "type": "java.lang.Long",
+      "description": "Forgot password token expiration in seconds"
+    },
+    {
+      "name": "spring.kafka.topics.create-profile",
+      "type": "java.lang.String",
+      "description": "Create profile topic"
+    },
+    {
+      "name": "spring.kafka.topics.account-profile-linked",
+      "type": "java.lang.String",
+      "description": "Profile created; link profile id to account"
+    },
+    {
+      "name": "server.servlet.multipart.max-file-size",
+      "type": "java.lang.String",
+      "description": "Max file size"
+    },
+    {
+      "name": "server.servlet.multipart.max-request-size",
+      "type": "java.lang.String",
+      "description": "Max request size"
+    }
+  ]
+}

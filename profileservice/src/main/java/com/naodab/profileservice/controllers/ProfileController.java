@@ -28,16 +28,15 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.multipart.MultipartFile;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
-@RequestMapping("/api/v1/profiles")
+@RequestMapping("/profiles")
+@RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class ProfileController {
 
   ProfileService profileService;
-
-  public ProfileController(ProfileService profileService) {
-    this.profileService = profileService;
-  }
 
   @PostMapping
   public ResponseEntity<ApiResponse<ProfileResponse>> create(@RequestBody @Validated ProfileCreateRequest request) {

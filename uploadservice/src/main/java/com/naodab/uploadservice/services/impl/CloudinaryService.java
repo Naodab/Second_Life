@@ -34,9 +34,8 @@ public class CloudinaryService implements UploadService {
   Long maxSize;
 
   Set<String> ALLOWED_CONTENT_TYPES = Set.of(
-    "image/jpeg", "image/png", "image/gif", "image/webp",
-    "image/svg+xml", "video/mp4", "video/webm", "application/pdf"
-  );
+      "image/jpeg", "image/png", "image/gif", "image/webp",
+      "image/svg+xml", "video/mp4", "video/webm", "application/pdf");
 
   @Override
   public String upload(MultipartFile file) {
@@ -56,7 +55,8 @@ public class CloudinaryService implements UploadService {
 
   @Override
   public String uploadFromUrl(String fileUrl) {
-    if (fileUrl == null || fileUrl.isBlank()) return null;
+    if (fileUrl == null || fileUrl.isBlank())
+      return null;
     try {
       Map<?, ?> result = cloudinary.uploader().upload(fileUrl, ObjectUtils.emptyMap());
       return (String) result.get("secure_url");
@@ -67,7 +67,8 @@ public class CloudinaryService implements UploadService {
 
   @Override
   public String uploadBase64(String base64) {
-    if (base64 == null || base64.isBlank()) return null;
+    if (base64 == null || base64.isBlank())
+      return null;
 
     String dataUri = base64.startsWith("data:") ? base64 : "data:applicaion/octet-stream;base64" + base64;
     try {
@@ -92,7 +93,8 @@ public class CloudinaryService implements UploadService {
 
   @Override
   public Boolean delete(String url) {
-    if (url == null || url.isBlank()) return false;
+    if (url == null || url.isBlank())
+      return false;
 
     String publicId = extractPublicId(url);
     try {
@@ -100,13 +102,14 @@ public class CloudinaryService implements UploadService {
       String status = (String) result.get("result");
       return "ok".equalsIgnoreCase(status) || "not found".equalsIgnoreCase(status);
     } catch (IOException e) {
-        throw new AppException(ErrorCode.CLOUDINARY_UPLOAD_FAIL);
+      throw new AppException(ErrorCode.CLOUDINARY_UPLOAD_FAIL);
     }
   }
 
   @Override
   public Boolean delete(List<String> urls) {
-    if (urls == null || urls.isEmpty()) return false;
+    if (urls == null || urls.isEmpty())
+      return false;
 
     Boolean allDeleted = true;
     for (String url : urls) {
@@ -126,7 +129,8 @@ public class CloudinaryService implements UploadService {
 
   @Override
   public String getUrl(String publicId) {
-    if (publicId == null || publicId.isBlank()) return null;
+    if (publicId == null || publicId.isBlank())
+      return null;
 
     return cloudinary.url().secure(true).generate(publicId);
   }
@@ -137,7 +141,7 @@ public class CloudinaryService implements UploadService {
       throw new AppException(ErrorCode.FILE_IS_EMPTY);
     }
 
-    if (file.getSize() > maxSize) {
+    if (file.getSize() > maxSize * 1024 * 1024) {
       throw new AppException(ErrorCode.FILE_TOO_LARGE);
     }
 
@@ -150,10 +154,12 @@ public class CloudinaryService implements UploadService {
   private String extractPublicId(String url) {
     String marker = "/upload";
     int idx = url.indexOf(marker);
-    if (idx == -1) throw new IllegalArgumentException("Not a valid Cloudinary URL: " + url);
+    if (idx == -1)
+      throw new IllegalArgumentException("Not a valid Cloudinary URL: " + url);
 
     String path = url.substring(idx + marker.length());
-    if (path.matches("v\\d+/.*")) path = path.substring(path.indexOf('/') + 1);
+    if (path.matches("v\\d+/.*"))
+      path = path.substring(path.indexOf('/') + 1);
 
     int dot = path.lastIndexOf('.');
     return (dot != -1) ? path.substring(0, dot) : path;

@@ -23,7 +23,7 @@ public class ForwardAuthController {
 
   private final JwtTokenProvider jwtTokenProvider;
 
-  @RequestMapping("/api/v1/auth/forward-auth")
+  @RequestMapping("/auth/forward-auth")
   public ResponseEntity<Void> forwardAuth(
       @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
 

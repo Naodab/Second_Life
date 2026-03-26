@@ -1,5 +1,10 @@
 server:
-  port: 8082
+  port: 8083
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+    context-path: /api/v1
 
 spring:
   application:
@@ -30,7 +35,7 @@ spring:
       auto-offset-reset: earliest
       properties:
         "[spring.json.trusted.packages]": "*"
-        socket.connection.setup.timeout.max.ms: 60000
+        "[socket.connection.setup.timeout.max.ms]": 60000
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer

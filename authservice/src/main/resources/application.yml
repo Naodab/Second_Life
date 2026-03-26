@@ -1,3 +1,11 @@
+server:
+  port: 8081
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+    context-path: /api/v1
+
 spring:
   application:
     name: authservice

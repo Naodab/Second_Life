@@ -8,6 +8,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
@@ -21,6 +22,7 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.naodab.uploadservice.dto.events.UpdateAvatarEvent;
 
 @Configuration
 public class KafkaConfig {
@@ -51,6 +53,11 @@ public class KafkaConfig {
 
   private <T> KafkaTemplate<String, T> kafkaTemplate(Class<T> type) {
     return new KafkaTemplate<>(producerFactory(type));
+  }
+
+  @Bean
+  public KafkaTemplate<String, UpdateAvatarEvent> updateAvatarKafkaTemplate() {
+    return kafkaTemplate(UpdateAvatarEvent.class);
   }
 
   public <T> ConsumerFactory<String, T> consumerFactory(Class<T> type, String groupId) {
