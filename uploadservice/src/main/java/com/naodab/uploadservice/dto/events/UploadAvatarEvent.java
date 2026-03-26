@@ -1,6 +1,7 @@
-package com.naodab.authservice.dto.response;
+package com.naodab.uploadservice.dto.events;
 
-import lombok.AccessLevel;
+import org.springframework.web.multipart.MultipartFile;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,11 +14,8 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-public class AccountInfo {
-  String email;
-  String role;
-  String provider;
-  Boolean emailVerified;
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE)
+public class UploadAvatarEvent {
   String profileId;
+  MultipartFile avatar;
 }

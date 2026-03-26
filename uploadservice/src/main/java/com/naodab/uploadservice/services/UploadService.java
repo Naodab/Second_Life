@@ -19,7 +19,6 @@ public interface UploadService {
   String replace(String oldUrl, MultipartFile newFile);
 
   String getUrl(String publicId);
-  String getSignedUrl(String publicId, long expireTime);
 
   void validate(MultipartFile file);
 }

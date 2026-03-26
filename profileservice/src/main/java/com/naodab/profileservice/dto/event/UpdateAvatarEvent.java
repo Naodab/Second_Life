@@ -1,5 +1,6 @@
 package com.naodab.profileservice.dto.event;
 
+import io.micrometer.common.lang.NonNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,6 +15,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class UpdateAvatarEvent {
-  String email;
+  @NonNull
+  String profileId;
   String avatarUrl;
 }

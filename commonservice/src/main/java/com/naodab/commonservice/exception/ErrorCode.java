@@ -30,6 +30,11 @@ public enum ErrorCode {
   INVALID_OAUTH2_PROVIDER(1018, "Invalid OAuth2 provider", HttpStatus.BAD_REQUEST),
   UNAUTHORIZED(1019, "Unauthorized", HttpStatus.UNAUTHORIZED),
   AVATAR_IS_NULL(1020, "Avatar is null", HttpStatus.BAD_REQUEST),
+  CLOUDINARY_UPLOAD_FAIL(1021, "Fail to upload images", HttpStatus.BAD_REQUEST),
+  FILE_IS_EMPTY(1022, "File is empty", HttpStatus.BAD_REQUEST),
+  FILE_TOO_LARGE(1023, "File size < 10 MB", HttpStatus.BAD_REQUEST),
+  NOT_ALLOWED_CONTENT_FILE(1024, "Content file is not allowed", HttpStatus.BAD_REQUEST),
+  PROFILE_NOT_LINKED_TO_ACCOUNT(1025, "Profile is not linked to account yet", HttpStatus.BAD_REQUEST)
   ;
 
   private int code;

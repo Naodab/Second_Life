@@ -11,6 +11,8 @@ import com.naodab.authservice.models.AuthProvider;
 @Repository
 public interface AccountRepository extends JpaRepository<Account, String> {
   Optional<Account> findByEmail(String email);
+
+  Optional<Account> findByProfileId(String profileId);
   Optional<Account> findByAuthProviderAndProviderId(AuthProvider authProvider, String providerId);
   boolean existsByEmail(String email);
   boolean existsByAuthProviderAndProviderId(AuthProvider authProvider, String providerId);

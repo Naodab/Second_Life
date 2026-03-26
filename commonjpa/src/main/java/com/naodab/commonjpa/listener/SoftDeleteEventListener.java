@@ -14,7 +14,6 @@ public class SoftDeleteEventListener implements PreDeleteEventListener {
   @Override
   public boolean onPreDelete(PreDeleteEvent event) {
     Object entity = event.getEntity();
-    System.out.println("SoftDelete triggered: " + entity.getClass());
 
     if (!entity.getClass().isAnnotationPresent(SoftDelete.class)) {
       return false;

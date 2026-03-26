@@ -74,4 +74,5 @@ public class KafkaConfig {
     factory.setConsumerFactory(consumerFactory(type, groupId));
     return factory;
   }
+
 }

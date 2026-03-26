@@ -71,7 +71,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     Account account = accountRepository.findByEmail(email)
         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-    String accessToken = tokenProvider.generateAccessToken(email);
+    String accessToken = tokenProvider.generateAccessToken(email, account.getProfileId());
     String refreshToken = tokenProvider.generateRefreshToken(email);
 
     account.setRefreshToken(refreshToken);

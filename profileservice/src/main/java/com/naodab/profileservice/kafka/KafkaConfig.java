@@ -23,7 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.naodab.profileservice.dto.event.CreateProfileEvent;
+import com.naodab.profileservice.dto.event.ProfileLinkedToAccountEvent;
 import com.naodab.profileservice.dto.event.UpdateAvatarEvent;
+import com.naodab.profileservice.dto.event.UploadAvatarEvent;
 
 @Configuration
 public class KafkaConfig {
@@ -89,5 +91,15 @@ public class KafkaConfig {
   @Bean
   public ConcurrentKafkaListenerContainerFactory<String, UpdateAvatarEvent> updateAvatarKafkaListenerContainerFactory() {
     return kafkaListenerContainerFactory(UpdateAvatarEvent.class, consumerGroupId);
+  }
+
+  @Bean
+  public KafkaTemplate<String, UploadAvatarEvent> uploadAvatarKafkaTemplate() {
+    return kafkaTemplate(UploadAvatarEvent.class);
+  }
+
+  @Bean
+  public KafkaTemplate<String, ProfileLinkedToAccountEvent> profileLinkedToAccountKafkaTemplate() {
+    return kafkaTemplate(ProfileLinkedToAccountEvent.class);
   }
 }

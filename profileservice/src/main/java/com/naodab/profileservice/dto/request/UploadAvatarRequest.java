@@ -16,6 +16,6 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class UploadAvatarRequest {
-  String email;
+  String profileId;
   MultipartFile avatar;
 }

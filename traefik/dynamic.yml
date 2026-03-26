@@ -5,6 +5,7 @@ http:
         address: "http://auth-service:8081/api/v1/auth/forward-auth"
         trustForwardHeader: true
         authResponseHeaders:
+          - "X-Profile-Id"
           - "X-User-Email"
           - "X-User-Sub"
         authRequestHeaders:

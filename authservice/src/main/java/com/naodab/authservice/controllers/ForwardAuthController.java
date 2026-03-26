@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.naodab.authservice.security.JwtTokenProvider;
+import com.naodab.commonservice.constant.AppConstants;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ForwardAuthController {
 
-  public static final String HEADER_USER_EMAIL = "X-User-Email";
   public static final String HEADER_USER_SUB = "X-User-Sub";
 
   private final JwtTokenProvider jwtTokenProvider;
@@ -37,10 +37,15 @@ public class ForwardAuthController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    return ResponseEntity.ok()
-        .header(HEADER_USER_EMAIL, subject)
-        .header(HEADER_USER_SUB, subject)
-        .build();
+    var response = ResponseEntity.ok()
+        .header(AppConstants.HEADER_USER_EMAIL, subject);
+
+    String profileId = jwtTokenProvider.getProfileIdFromToken(jwt);
+    if (StringUtils.hasText(profileId)) {
+      response = response.header(AppConstants.HEADER_PROFILE_ID, profileId);
+    }
+
+    return response.build();
   }
 
   private static String extractBearer(String authorization) {

@@ -50,6 +50,7 @@ spring:
       email-verification: "mail.email-verification"
       forgot-password: "mail.forgot-password"
       create-profile: "profile.create"
+      account-profile-linked: "auth.account-profile-linked"
 
 app:
   jwt:

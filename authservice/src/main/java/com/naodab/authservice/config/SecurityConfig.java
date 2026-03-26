@@ -16,6 +16,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.naodab.commonservice.constant.AppConstants;
+
 import com.naodab.authservice.security.CustomUserDetailsService;
 import com.naodab.authservice.security.JwtAuthenticationFilter;
 import com.naodab.authservice.security.oauth2.CustomOAuth2UserService;
@@ -103,7 +105,8 @@ public class SecurityConfig {
     CorsConfiguration configuration = new CorsConfiguration();
     configuration.setAllowedOrigins(List.of(frontendUrl));
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-    configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+    configuration.setAllowedHeaders(
+        List.of("Authorization", "Content-Type", AppConstants.HEADER_PROFILE_ID));
     var source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);
     return source;
