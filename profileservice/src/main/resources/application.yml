@@ -36,4 +36,5 @@ spring:
     topics:
       create-profile: "profile.create"
       update-avatar: "profile.update-avatar"
-      upload-avatar: "profile.upload-avatar"
+      upload-avatar: "upload.upload-avatar"
+      account-profile-linked: "auth.account-profile-linked"

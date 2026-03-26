@@ -48,5 +48,10 @@
     "name": "spring.kafka.topics.create-profile",
     "type": "java.lang.String",
     "description": "Create profile topic"
+  },
+  {
+    "name": "spring.kafka.topics.account-profile-linked",
+    "type": "java.lang.String",
+    "description": "Profile created; link profile id to account"
   }
 ]}

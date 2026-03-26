@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
@@ -17,6 +18,8 @@ import com.naodab.profileservice.dto.request.ProfileUpdateRequest;
 import com.naodab.profileservice.dto.request.UploadAvatarRequest;
 import com.naodab.profileservice.dto.response.ProfileResponse;
 import com.naodab.profileservice.entities.Profile;
+import com.naodab.profileservice.dto.event.ProfileLinkedToAccountEvent;
+import com.naodab.profileservice.kafka.producers.ProfileLinkedToAccountProducer;
 import com.naodab.profileservice.kafka.producers.UploadAvatarProducer;
 import com.naodab.profileservice.mappers.ProfileMapper;
 import com.naodab.profileservice.repositories.ProfileRepository;
@@ -35,6 +38,7 @@ public class ProfileServiceImpl implements ProfileService {
   ProfileRepository profileRepository;
   ProfileMapper profileMapper;
   UploadAvatarProducer uploadAvatarProducer;
+  ProfileLinkedToAccountProducer profileLinkedToAccountProducer;
 
   @Override
   public ProfileResponse createProfile(ProfileCreateRequest request) {
@@ -51,6 +55,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     profile = profileRepository.save(profile);
+    publishProfileLinkedToAccount(profile);
 
     return profileMapper.toProfileResponse(profile);
   }
@@ -119,13 +124,30 @@ public class ProfileServiceImpl implements ProfileService {
     if (event == null)
       return;
 
+    if (!StringUtils.hasText(event.getEmail())) {
+      log.warn("Skip create profile from event because email is empty");
+      return;
+    }
+
     if (profileRepository.existsByEmail(event.getEmail())) {
-      log.debug("Profile already exists for email {}, skipping create from event", event.getEmail());
+      profileRepository.findByEmail(event.getEmail()).ifPresent(this::publishProfileLinkedToAccount);
+      log.debug("Profile already exists for email {}, re-publishing profile link event", event.getEmail());
       return;
     }
 
     Profile profile = profileMapper.toProfile(event);
-    profileRepository.save(profile);
+    profile = profileRepository.save(profile);
+    publishProfileLinkedToAccount(profile);
+  }
+
+  private void publishProfileLinkedToAccount(Profile profile) {
+    if (profile == null || profile.getEmail() == null || profile.getId() == null) {
+      return;
+    }
+    profileLinkedToAccountProducer.send(ProfileLinkedToAccountEvent.builder()
+        .email(profile.getEmail())
+        .profileId(profile.getId())
+        .build());
   }
 
   @Override
@@ -134,7 +156,10 @@ public class ProfileServiceImpl implements ProfileService {
     if (event == null)
       return;
 
-    profileRepository.findByEmail(event.getEmail())
+    if (event.getProfileId() == null)
+      return;
+
+    profileRepository.findById(event.getProfileId())
         .ifPresent(profile -> {
           profile.setAvatarUrl(event.getAvatarUrl());
           profileRepository.save(profile);
@@ -147,8 +172,7 @@ public class ProfileServiceImpl implements ProfileService {
     if (request == null)
       return;
 
-    if (request.getEmail() == null || request.getEmail().isBlank()) {
-      log.error("User email is null or blank");
+    if (request.getProfileId() == null || request.getProfileId().isBlank()) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
 
@@ -158,7 +182,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     UploadAvatarEvent event = UploadAvatarEvent.builder()
-        .email(request.getEmail())
+        .profileId(request.getProfileId())
         .avatar(request.getAvatar())
         .build();
 

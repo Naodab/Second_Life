@@ -17,7 +17,11 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
     topics:
-      email-verification: "profile.avatar"
+      update-avatar: "profile.update-avatar"
+      upload-avatar: "upload.upload-avatar"
+
+file:
+  max-size: 10 # in mb
 
 cloudinary:
   id: ${CLOUDINARY_ID}

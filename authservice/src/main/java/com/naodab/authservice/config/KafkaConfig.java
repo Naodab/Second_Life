@@ -25,12 +25,16 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.naodab.authservice.dto.event.CreateProfileEvent;
 import com.naodab.authservice.dto.event.EmailVerificationEvent;
 import com.naodab.authservice.dto.event.ForgotPasswordEvent;
+import com.naodab.authservice.dto.event.ProfileLinkedToAccountEvent;
 
 @Configuration
 public class KafkaConfig {
 
   @Value("${spring.kafka.bootstrap-servers}")
   private String bootstrapServers;
+
+  @Value("${spring.kafka.consumer.group-id}")
+  private String consumerGroupId;
 
   private ObjectMapper objectMapper() {
     ObjectMapper objectMapper = new ObjectMapper();
@@ -92,5 +96,10 @@ public class KafkaConfig {
     ConcurrentKafkaListenerContainerFactory<String, T> factory = new ConcurrentKafkaListenerContainerFactory<>();
     factory.setConsumerFactory(consumerFactory(type, groupId));
     return factory;
+  }
+
+  @Bean
+  public ConcurrentKafkaListenerContainerFactory<String, ProfileLinkedToAccountEvent> profileLinkedToAccountKafkaListenerContainerFactory() {
+    return kafkaListenerContainerFactory(ProfileLinkedToAccountEvent.class, consumerGroupId);
   }
 }

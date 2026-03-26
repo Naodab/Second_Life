@@ -1,4 +1,4 @@
-package com.naodab.authservice.dto.response;
+package com.naodab.profileservice.dto.event;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -14,10 +14,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AccountInfo {
+public class ProfileLinkedToAccountEvent {
   String email;
-  String role;
-  String provider;
-  Boolean emailVerified;
   String profileId;
 }

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.naodab.commonservice.constant.AppConstants;
 import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.profileservice.dto.request.ProfileCreateRequest;
 import com.naodab.profileservice.dto.request.ProfileUpdateRequest;
@@ -31,7 +32,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/profiles")
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class ProfileController {
-  static final String HEADER_USER_EMAIL = "X-User-Email";
 
   ProfileService profileService;
 
@@ -87,19 +87,19 @@ public class ProfileController {
 
   @PutMapping("/upload-avatar")
   public ResponseEntity<ApiResponse<Void>> uploadAvatar(
-      @RequestHeader(value = HEADER_USER_EMAIL, required = false) String userEmail,
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileId,
       @RequestParam MultipartFile avatar) {
 
-    if (!StringUtils.hasText(userEmail)) {
+    if (!StringUtils.hasText(profileId)) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
           .body(ApiResponse.<Void>builder()
               .data(null)
-              .message("Missing authenticated user; gateway must send " + HEADER_USER_EMAIL)
+              .message("Missing authenticated user; gateway must send " + AppConstants.HEADER_PROFILE_ID)
               .build());
     }
 
     UploadAvatarRequest request = UploadAvatarRequest.builder()
-        .email(userEmail.trim())
+        .profileId(profileId.trim())
         .avatar(avatar)
         .build();
 

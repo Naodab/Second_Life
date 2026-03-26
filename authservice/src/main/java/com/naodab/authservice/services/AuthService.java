@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.naodab.authservice.dto.event.EmailVerificationEvent;
 import com.naodab.authservice.dto.event.ForgotPasswordEvent;
+import com.naodab.authservice.dto.event.CreateProfileEvent;
 import com.naodab.authservice.dto.request.ForgotPasswordRequest;
 import com.naodab.authservice.dto.request.LoginRequest;
 import com.naodab.authservice.dto.request.RefreshTokenRequest;
@@ -15,6 +16,7 @@ import com.naodab.authservice.dto.response.AccountInfo;
 import com.naodab.authservice.dto.response.AuthResponse;
 import com.naodab.authservice.kafka.EmailProducerService;
 import com.naodab.authservice.kafka.ForgotPasswordProducer;
+import com.naodab.authservice.kafka.CreateProfileProducer;
 import com.naodab.authservice.models.Account;
 import com.naodab.authservice.models.AuthProvider;
 import com.naodab.authservice.repositories.AccountRepository;
@@ -38,6 +40,7 @@ public class AuthService {
 
   ForgotPasswordProducer forgotPasswordProducer;
   EmailProducerService emailProducerService;
+  CreateProfileProducer createProfileProducer;
   JwtTokenProvider jwtTokenProvider;
 
   @NonFinal
@@ -57,6 +60,7 @@ public class AuthService {
         .build();
 
     account = accountRepository.save(account);
+    sendCreateProfileEvent(account);
     sendEmailVerification(account);
 
     return emptyAuthResponse();
@@ -77,7 +81,7 @@ public class AuthService {
       return emptyAuthResponse();
     }
 
-    String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail());
+    String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail(), account.getProfileId());
     String refreshToken = jwtTokenProvider.generateRefreshToken(account.getEmail());
 
     account.setRefreshToken(refreshToken);
@@ -106,7 +110,7 @@ public class AuthService {
       throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
     }
 
-    String newAccessToken = jwtTokenProvider.generateAccessToken(email);
+    String newAccessToken = jwtTokenProvider.generateAccessToken(account.getEmail(), account.getProfileId());
     String newRefreshToken = jwtTokenProvider.generateRefreshToken(email);
 
     account.setRefreshToken(refreshToken);
@@ -129,7 +133,11 @@ public class AuthService {
     Account account = accountRepository.findByEmail(email)
         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-    String accessToken = jwtTokenProvider.generateAccessToken(email);
+    if (account.getProfileId() == null || account.getProfileId().isBlank()) {
+      throw new AppException(ErrorCode.PROFILE_NOT_LINKED_TO_ACCOUNT);
+    }
+
+    String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail(), account.getProfileId());
     String refreshToken = jwtTokenProvider.generateRefreshToken(email);
 
     account.setEmailVerified(true);
@@ -187,6 +195,7 @@ public class AuthService {
         .role(account.getRole().name())
         .provider(account.getAuthProvider().name())
         .emailVerified(account.getEmailVerified())
+        .profileId(account.getProfileId())
         .build();
   }
 
@@ -204,6 +213,13 @@ public class AuthService {
         .build();
 
     emailProducerService.sendEmailVerificationEvent(event);
+  }
+
+  private void sendCreateProfileEvent(Account account) {
+    CreateProfileEvent event = CreateProfileEvent.builder()
+        .email(account.getEmail())
+        .build();
+    createProfileProducer.sendCreateProfileEvent(event);
   }
 
   private String buildVerificationUrl(String verificationToken) {

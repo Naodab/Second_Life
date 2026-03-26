@@ -23,7 +23,8 @@ import lombok.experimental.FieldDefaults;
 @Entity
 @Table(name = "accounts", indexes = {
     @Index(name = "idx_email", columnList = "email", unique = true),
-    @Index(name = "idx_provider_id", columnList = "provider_id")
+    @Index(name = "idx_provider_id", columnList = "provider_id"),
+    @Index(name = "idx_profile_id", columnList = "profile_id", unique = true)
 })
 @Getter
 @Setter
@@ -59,6 +60,9 @@ public class Account extends BaseEntity {
 
   @Column(name = "refresh_token")
   String refreshToken;
+
+  @Column(name = "profile_id")
+  String profileId;
 
   @Builder.Default
   @Column(nullable = false, name = "is_active")
