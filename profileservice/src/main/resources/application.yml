@@ -1,5 +1,10 @@
 server:
   port: 8082
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+    context-path: /api/v1
 
 spring:
   application:
@@ -38,3 +43,6 @@ spring:
       update-avatar: "profile.update-avatar"
       upload-avatar: "upload.upload-avatar"
       account-profile-linked: "auth.account-profile-linked"
+
+upload-service:
+  url: ${UPLOAD_SERVICE_URL:http://localhost:8084/api/v1}

@@ -64,13 +64,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>com.naodab</groupId>
 			<artifactId>commonjpa</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
-
 		<dependency>
 			<groupId>com.naodab</groupId>
 			<artifactId>commonservice</artifactId>

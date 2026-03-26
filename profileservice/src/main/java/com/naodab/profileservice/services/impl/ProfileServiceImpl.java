@@ -10,9 +10,9 @@ import org.springframework.util.StringUtils;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
+import com.naodab.profileservice.clients.UploadFileClient;
 import com.naodab.profileservice.dto.event.CreateProfileEvent;
 import com.naodab.profileservice.dto.event.UpdateAvatarEvent;
-import com.naodab.profileservice.dto.event.UploadAvatarEvent;
 import com.naodab.profileservice.dto.request.ProfileCreateRequest;
 import com.naodab.profileservice.dto.request.ProfileUpdateRequest;
 import com.naodab.profileservice.dto.request.UploadAvatarRequest;
@@ -20,7 +20,6 @@ import com.naodab.profileservice.dto.response.ProfileResponse;
 import com.naodab.profileservice.entities.Profile;
 import com.naodab.profileservice.dto.event.ProfileLinkedToAccountEvent;
 import com.naodab.profileservice.kafka.producers.ProfileLinkedToAccountProducer;
-import com.naodab.profileservice.kafka.producers.UploadAvatarProducer;
 import com.naodab.profileservice.mappers.ProfileMapper;
 import com.naodab.profileservice.repositories.ProfileRepository;
 import com.naodab.profileservice.services.ProfileService;
@@ -37,8 +36,8 @@ import lombok.extern.slf4j.Slf4j;
 public class ProfileServiceImpl implements ProfileService {
   ProfileRepository profileRepository;
   ProfileMapper profileMapper;
-  UploadAvatarProducer uploadAvatarProducer;
   ProfileLinkedToAccountProducer profileLinkedToAccountProducer;
+  UploadFileClient uploadFileClient;
 
   @Override
   public ProfileResponse createProfile(ProfileCreateRequest request) {
@@ -181,11 +180,6 @@ public class ProfileServiceImpl implements ProfileService {
       throw new AppException(ErrorCode.AVATAR_IS_NULL);
     }
 
-    UploadAvatarEvent event = UploadAvatarEvent.builder()
-        .profileId(request.getProfileId())
-        .avatar(request.getAvatar())
-        .build();
-
-    uploadAvatarProducer.sendUploadAvatarEvent(event);
+    uploadFileClient.uploadAvatar(request.getProfileId(), request.getAvatar());
   }
 }

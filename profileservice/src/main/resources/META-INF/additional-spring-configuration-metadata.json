@@ -19,6 +19,21 @@
       "name": "spring.kafka.topics.account-profile-linked",
       "type": "java.lang.String",
       "description": "Profile created; link profile id to account"
+    },
+    {
+      "name": "upload-service.url",
+      "type": "java.lang.String",
+      "description": "Upload service URL"
+    },
+    {
+      "name": "server.servlet.multipart.max-file-size",
+      "type": "java.lang.String",
+      "description": "Max file size"
+    },
+    {
+      "name": "server.servlet.multipart.max-request-size",
+      "type": "java.lang.String",
+      "description": "Max request size"
     }
   ]
 }
