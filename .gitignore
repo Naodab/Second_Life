@@ -91,3 +91,6 @@ kafka-logs/
 ######################################
 *.db
 *.sqlite
+
+.pnpm-store/**
+!pnpm-workspace.yaml
