@@ -1,0 +1,339 @@
+# Project: Second Life Marketplace UI
+
+## Overview
+Design and implement a modern, responsive UI for a marketplace platform called **Second Life**, where users can **buy and rent second-hand items**.
+
+⚠️ IMPORTANT:
+- FRONTEND ONLY (no backend implementation, no proxy setup)
+- Assume APIs already exist
+- Focus on UI/UX, component structure, and interaction flows
+
+---
+
+## 🎨 Design System
+
+### Style
+- Clean, modern, slightly cute
+- Rounded corners everywhere
+- Use **pastel green + white** as primary colors
+- Use **soft gradients** across components
+- Background: white with subtle illustrated icons (bags, furniture, etc.)
+- Soft shadows and glassmorphism where appropriate
+
+### UX Requirements
+- Fully responsive (Desktop + Mobile)
+- Smooth animations (hover, modal, transitions)
+- Skeleton loading states
+- Empty states for lists
+
+---
+
+## 👥 Roles
+
+- Guest (not logged in)
+- User (logged in)
+
+---
+
+## 🔐 Authentication UI
+
+### Login
+- Email + password
+- Toggle show/hide password
+- JWT stored in cookies (handled externally)
+
+### Register
+- Email + password
+- After submit → show:
+  "Please verify your email. Check spam if not found. Link valid for 24 hours."
+
+### Edge Case
+- If login returns empty token:
+  → Show email verification notice again
+
+---
+
+## 🌐 Global Header
+
+### Left
+- Logo + "Second Life"
+
+### Center
+- Search bar
+- Tabs below:
+  - Buy
+  - Buy & Rent
+  - Rent
+
+### Right
+
+#### Guest
+- Login / Register buttons
+
+#### User
+- Avatar (circle) + Full Name
+- Dropdown:
+  - Profile
+  - Account settings
+  - My orders
+  - Viewed history
+  - Logout
+
+- Icons:
+  - Notifications (badge count)
+  - Messages (badge count)
+  - Cart (badge count)
+  - My Listings
+
+---
+
+## 🏠 Home Page
+
+### 1. Categories
+- Horizontal scroll
+- Show subcategories only
+- Arrows on both sides
+
+### 2. "Recommended for You"
+- Use user location (or fallback API)
+- Grid layout:
+  - 8 items per row
+  - At least 8 rows
+- Guest:
+  → Show "Login to see more"
+- User:
+  → Pagination
+
+### 3. About Section
+Create a rich content section:
+- Policies
+- Trust & safety
+- Rental rules
+- Community guidelines
+- Benefits of Second Life
+
+### 4. Footer
+- Full detailed footer (links, policies, contact, socials)
+
+---
+
+## 🔍 Search Page
+
+### Filters (Left Sidebar)
+- Location (Province + Ward - Vietnam)
+- Sort:
+  - Price
+  - Distance
+- Category
+
+### Listing Type
+- all
+- buy
+- rent
+- both
+
+### Product Grid
+Each product card:
+- Image (mainImageUrl)
+- Name
+- Description
+- Rent price
+- Buy price
+- Buttons:
+  - Buy Now
+  - Rent Now
+
+### Pagination
+
+---
+
+## 📄 Product Detail Page
+
+### Product Info
+- Image gallery (slider + thumbnails)
+- Name
+- Description
+- Rent price + AI suggested price
+- Buy price + AI suggested price
+- Rating
+- Stock
+
+### Actions
+- Buy Now → quantity modal
+- Rent Now → date range modal
+  - Validate availability
+- Add to Cart
+
+---
+
+### Shop Info (Facility)
+- Avatar
+- Name
+- Address (province + ward)
+- Stats:
+  - Total orders
+  - Joined time
+- Buttons:
+  - Chat
+  - View shop
+
+---
+
+### Reviews
+- Average rating
+- User reviews:
+  - Avatar + name
+  - Stars
+  - Images/videos (click to zoom slider)
+  - Comment
+
+---
+
+### Recommended Products
+- 2-row slider
+
+---
+
+## 🏪 Shop Page
+
+- Shop info (same as above)
+- Category slider
+- Product list
+
+---
+
+## 🛒 Cart Page
+
+### Group by date added
+
+### Product Row
+- Checkbox (enable selection)
+- Buy-only:
+  - Quantity input (validate stock)
+- Rent:
+  - Date range picker
+- Both:
+  - Separate controls
+
+### Checkout Bar
+
+---
+
+## 💳 Checkout Page
+
+- List items
+- Show pricing
+- Deposit policy: 30%
+
+### Flow
+- Call backend → redirect to PayOS
+- After success:
+  - Show success message
+  - Redirect to Home
+
+---
+
+## 📦 Orders Page
+
+Tabs:
+- Completed
+- Pending
+- Processing
+- Shipping
+- Awaiting confirmation
+
+### Actions
+- Confirm received
+- Review (modal):
+  - Stars (1–5)
+  - Upload images/videos
+  - Comment
+
+---
+
+## 💬 Messaging Page
+
+- Chat per shop (not user-to-user)
+- Separate:
+  - Shop chats
+  - Customer chats
+
+---
+
+## 🧑‍💼 My Listings (Management)
+
+### Layout Change
+- Hide search bar
+- Show sidebar
+
+### Sidebar
+
+#### Dashboard
+- Revenue (monthly/yearly)
+- Orders count
+
+#### Facilities
+- Expandable list
+- Search facility
+
+#### Facility View
+- Shop-like UI + admin controls
+- Add product button
+
+---
+
+### Add Product Flow
+Fields:
+- Name
+- Description
+- Color
+- Material
+- Type (buy / rent / both)
+- Quantity
+- Upload:
+  - Cover image
+  - Max 10 images/videos
+
+### After Submit
+- Show loading modal:
+  "Uploading and pricing, please wait..."
+
+- Notify when done
+
+### Draft Products
+- Set price
+- Publish
+
+---
+
+### Product Management
+- Disable buy/rent buttons
+- Add:
+  - Disable listing
+  - Rental schedule table
+
+---
+
+## 🔔 Real-time
+
+- WebSocket connection for logged-in users
+- Notifications
+- Messages
+
+---
+
+## ⚙️ Tech Notes
+
+- Use component-based architecture
+- Use reusable UI components
+- State management (React recommended)
+- Modular folder structure
+
+---
+
+## 🎯 Goal
+
+Generate a **complete, production-ready UI** with:
+- Clean UX
+- Scalable components
+- Real marketplace feel
