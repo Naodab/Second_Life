@@ -64,6 +64,11 @@
       "name": "server.servlet.multipart.max-request-size",
       "type": "java.lang.String",
       "description": "Max request size"
+    },
+    {
+      "name": "external.cors_allowed_origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated; CORS for SPA (Vite 5173) + optional gateway/static host"
     }
   ]
 }

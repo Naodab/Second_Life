@@ -338,21 +338,19 @@ function CartItemCard({
   );
 }
 
-/* ── Main Cart page ─────────────────────────────────────────── */
 export default function Cart() {
   const [, setLocation] = useLocation();
   const { cartItems, removeFromCart, clearCart } = useCart();
   const [itemStates, setItemStates] = useState<Record<string, ItemState>>({});
   const [selection, setSelection] = useState<Set<ModeKey>>(new Set());
 
-  // Init state for new cart items
   useEffect(() => {
     setItemStates(prev => {
       const next = { ...prev };
       for (const item of cartItems) {
         if (!next[item.cartItemId]) next[item.cartItemId] = defaultState(item);
       }
-      // Remove stale
+
       for (const k of Object.keys(next)) {
         if (!cartItems.find(i => i.cartItemId === k)) delete next[k];
       }
@@ -478,8 +476,12 @@ export default function Cart() {
     return (
       <div className="min-h-[70vh] flex items-center justify-center bg-gray-50/30">
         <div className="text-center">
-          <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShoppingBag className="w-16 h-16 text-primary/40" />
+          <div className="w-70 h-70 flex items-center justify-center mx-auto mb-6">
+            <img 
+                src={`${import.meta.env.BASE_URL}images/empty-cart.png`} 
+                alt="Mọi người trao đổi đồ dùng" 
+                className="relative z-10 w-full h-auto drop-shadow-2xl object-contain"
+              />
           </div>
           <h2 className="text-3xl font-display font-bold mb-3">Giỏ hàng của bạn đang trống</h2>
           <p className="text-muted-foreground mb-8">Có vẻ bạn chưa thêm sản phẩm nào vào giỏ hàng.</p>

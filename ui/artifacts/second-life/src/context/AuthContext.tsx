@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import Cookies from 'js-cookie';
+import { login as apiLogin, refreshToken as apiRefreshToken, getCurrentProfile } from '@workspace/api-client-react';
+import { setAuthTokenGetter } from '@workspace/api-client-react';
 
 interface User {
   id: string;
@@ -10,7 +13,9 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
-  login: (email: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  /** Tokens from OAuth redirect (?token=&refresh_token=); not authorization code exchange. */
+  loginWithGoogle: (accessToken: string, refreshToken: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -22,38 +27,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage on mount
-    const stored = localStorage.getItem('second_life_user');
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch (e) {
-        // ignore
-      }
-    }
-    setIsLoading(false);
+    setAuthTokenGetter(() => Cookies.get('accessToken') || null);
   }, []);
 
-  const login = async (email: string) => {
-    // Mock login delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const mockUser = {
-      id: "u123",
-      name: email.split('@')[0],
-      email: email,
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"
+  const refreshTokenAndFetchUser = async () => {
+    const refreshToken = Cookies.get('refreshToken');
+    if (refreshToken) {
+      try {
+        const { accessToken, refreshToken: newRefreshToken } = await apiRefreshToken({ refreshToken });
+        Cookies.set('accessToken', accessToken, { expires: 1 }); // 1 day
+        Cookies.set('refreshToken', newRefreshToken, { expires: 7 }); // 7 days
+        const profile = await getCurrentProfile();
+        const user: User = {
+          id: profile.id,
+          name: `${profile.firstName} ${profile.lastName}`,
+          email: profile.email,
+          avatar: profile.avatar || null,
+        };
+        setUser(user);
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        Cookies.remove('accessToken');
+        Cookies.remove('refreshToken');
+      }
+    }
+  };
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = Cookies.get('accessToken');
+      if (token) {
+        try {
+          const profile = await getCurrentProfile();
+          const user: User = {
+            id: profile.id,
+            name: `${profile.firstName} ${profile.lastName}`,
+            email: profile.email,
+            avatar: profile.avatar || null,
+          };
+          setUser(user);
+        } catch (error) {
+          console.error('Failed to fetch profile with existing token, attempting refresh:', error);
+          await refreshTokenAndFetchUser();
+        }
+      }
+      setIsLoading(false);
     };
-    setUser(mockUser);
-    localStorage.setItem('second_life_user', JSON.stringify(mockUser));
+
+    checkAuth();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const { accessToken, refreshToken } = await apiLogin({ email, password });
+    
+    Cookies.set('accessToken', accessToken, { expires: 1 }); // 1 day
+    Cookies.set('refreshToken', refreshToken, { expires: 7 }); // 7 days
+    
+    const profile = await getCurrentProfile();
+    const user: User = {
+      id: profile.id,
+      name: `${profile.firstName} ${profile.lastName}`,
+      email: profile.email,
+      avatar: profile.avatar || null,
+    };
+    setUser(user);
+  };
+
+  const loginWithGoogle = async (accessToken: string, refreshToken: string) => {
+    Cookies.set('accessToken', accessToken, { expires: 1 });
+    Cookies.set('refreshToken', refreshToken, { expires: 7 });
+
+    const profile = await getCurrentProfile();
+    const user: User = {
+      id: profile.id,
+      name: `${profile.firstName} ${profile.lastName}`,
+      email: profile.email,
+      avatar: profile.avatar || null,
+    };
+    setUser(user);
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('second_life_user');
+    Cookies.remove('accessToken');
+    Cookies.remove('refreshToken');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{user, isLoggedIn: !!user, login, loginWithGoogle, logout, isLoading}}>
       {children}
     </AuthContext.Provider>
   );

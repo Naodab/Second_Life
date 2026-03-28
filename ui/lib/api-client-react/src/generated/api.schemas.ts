@@ -8,3 +8,49 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType?: string;
+  accountInfo: AccountInfo;
+}
+
+export interface RefreshRequest {
+  refreshToken: string;
+}
+
+export interface RefreshResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType?: string;
+  accountInfo: AccountInfo;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string | null;
+}
+
+export interface ProfileResponse {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+  bio?: string;
+  address?: string;
+}
+
+export type GoogleOAuthCallbackParams = {
+  code: string;
+  state?: string;
+};
