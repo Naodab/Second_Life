@@ -6,6 +6,8 @@ import NotFound from "@/pages/not-found";
 import { AuthProvider } from "@/context/AuthContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { setBaseUrl } from "@workspace/api-client-react";
 
 // Pages
 import Home from "@/pages/Home";
@@ -19,6 +21,7 @@ import Messages from "@/pages/Messages";
 import Listings from "@/pages/Listings";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import OAuthCallback from "@/pages/OAuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -34,11 +37,12 @@ function Router() {
           <Route path="/shop/:id" component={Shop} />
           <Route path="/cart" component={Cart} />
           <Route path="/checkout" component={Checkout} />
-          <Route path="/orders" component={Orders} />
-          <Route path="/messages" component={Messages} />
-          <Route path="/listings" component={Listings} />
+          <ProtectedRoute path="/orders" component={Orders} />
+          <ProtectedRoute path="/messages" component={Messages} />
+          <ProtectedRoute path="/listings" component={Listings} />
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
+          <Route path="/oauth2/callback/google" component={OAuthCallback} />
           <Route component={NotFound} />
         </Switch>
       </main>
@@ -48,6 +52,8 @@ function Router() {
 }
 
 function App() {
+  setBaseUrl(import.meta.env.VITE_BACKEND_URL || "http://localhost:8080");
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

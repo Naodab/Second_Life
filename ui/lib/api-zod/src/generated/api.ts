@@ -14,3 +14,69 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Authenticate user and return tokens
+ * @summary Login
+ */
+export const LoginBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string(),
+});
+
+export const loginResponseTokenTypeDefault = `Bearer`;
+
+export const LoginResponse = zod.object({
+  accessToken: zod.string(),
+  refreshToken: zod.string(),
+  tokenType: zod.string().default(loginResponseTokenTypeDefault),
+  accountInfo: zod.unknown(),
+});
+
+/**
+ * @summary Refresh access token
+ */
+export const RefreshTokenBody = zod.object({
+  refreshToken: zod.string(),
+});
+
+export const refreshTokenResponseTokenTypeDefault = `Bearer`;
+
+export const RefreshTokenResponse = zod.object({
+  accessToken: zod.string(),
+  refreshToken: zod.string(),
+  tokenType: zod.string().default(refreshTokenResponseTokenTypeDefault),
+  accountInfo: zod.unknown(),
+});
+
+/**
+ * Handle Google OAuth2 callback and return tokens
+ * @summary Google OAuth2 callback
+ */
+export const GoogleOAuthCallbackQueryParams = zod.object({
+  code: zod.coerce.string(),
+  state: zod.coerce.string().optional(),
+});
+
+export const googleOAuthCallbackResponseTokenTypeDefault = `Bearer`;
+
+export const GoogleOAuthCallbackResponse = zod.object({
+  accessToken: zod.string(),
+  refreshToken: zod.string(),
+  tokenType: zod.string().default(googleOAuthCallbackResponseTokenTypeDefault),
+  accountInfo: zod.unknown(),
+});
+
+/**
+ * @summary Get current user profile
+ */
+export const GetCurrentProfileResponse = zod.object({
+  id: zod.string(),
+  firstName: zod.string(),
+  lastName: zod.string(),
+  email: zod.string(),
+  phone: zod.string().optional(),
+  avatar: zod.string().optional(),
+  bio: zod.string().optional(),
+  address: zod.string().optional(),
+});

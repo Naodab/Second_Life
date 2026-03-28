@@ -5,18 +5,29 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  GoogleOAuthCallbackParams,
+  HealthStatus,
+  LoginRequest,
+  LoginResponse,
+  ProfileResponse,
+  RefreshRequest,
+  RefreshResponse,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -92,6 +103,431 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Authenticate user and return tokens
+ * @summary Login
+ */
+export const getLoginUrl = () => {
+  return `/api/api/v1/auth/login`;
+};
+
+export const login = async (
+  loginRequest: LoginRequest,
+  options?: RequestInit,
+): Promise<LoginResponse> => {
+  return customFetch<LoginResponse>(getLoginUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(loginRequest),
+  });
+};
+
+export const getLoginMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof login>>,
+    TError,
+    { data: BodyType<LoginRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof login>>,
+  TError,
+  { data: BodyType<LoginRequest> },
+  TContext
+> => {
+  const mutationKey = ["login"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof login>>,
+    { data: BodyType<LoginRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return login(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof login>>
+>;
+export type LoginMutationBody = BodyType<LoginRequest>;
+export type LoginMutationError = ErrorType<void>;
+
+/**
+ * @summary Login
+ */
+export const useLogin = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof login>>,
+    TError,
+    { data: BodyType<LoginRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof login>>,
+  TError,
+  { data: BodyType<LoginRequest> },
+  TContext
+> => {
+  return useMutation(getLoginMutationOptions(options));
+};
+
+/**
+ * @summary Refresh access token
+ */
+export const getRefreshTokenUrl = () => {
+  return `/api/api/v1/auth/refresh-token`;
+};
+
+export const refreshToken = async (
+  refreshRequest: RefreshRequest,
+  options?: RequestInit,
+): Promise<RefreshResponse> => {
+  return customFetch<RefreshResponse>(getRefreshTokenUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(refreshRequest),
+  });
+};
+
+export const getRefreshTokenMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof refreshToken>>,
+    TError,
+    { data: BodyType<RefreshRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof refreshToken>>,
+  TError,
+  { data: BodyType<RefreshRequest> },
+  TContext
+> => {
+  const mutationKey = ["refreshToken"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof refreshToken>>,
+    { data: BodyType<RefreshRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return refreshToken(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RefreshTokenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof refreshToken>>
+>;
+export type RefreshTokenMutationBody = BodyType<RefreshRequest>;
+export type RefreshTokenMutationError = ErrorType<void>;
+
+/**
+ * @summary Refresh access token
+ */
+export const useRefreshToken = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof refreshToken>>,
+    TError,
+    { data: BodyType<RefreshRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof refreshToken>>,
+  TError,
+  { data: BodyType<RefreshRequest> },
+  TContext
+> => {
+  return useMutation(getRefreshTokenMutationOptions(options));
+};
+
+/**
+ * Redirect to Google OAuth2 authorization page
+ * @summary Authorize with Google OAuth2
+ */
+export const getAuthorizeGoogleUrl = () => {
+  return `/api/oauth2/authorization/google`;
+};
+
+export const authorizeGoogle = async (
+  options?: RequestInit,
+): Promise<unknown> => {
+  return customFetch<unknown>(getAuthorizeGoogleUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAuthorizeGoogleQueryKey = () => {
+  return [`/api/oauth2/authorization/google`] as const;
+};
+
+export const getAuthorizeGoogleQueryOptions = <
+  TData = Awaited<ReturnType<typeof authorizeGoogle>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof authorizeGoogle>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAuthorizeGoogleQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof authorizeGoogle>>> = ({
+    signal,
+  }) => authorizeGoogle({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof authorizeGoogle>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AuthorizeGoogleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof authorizeGoogle>>
+>;
+export type AuthorizeGoogleQueryError = ErrorType<void>;
+
+/**
+ * @summary Authorize with Google OAuth2
+ */
+
+export function useAuthorizeGoogle<
+  TData = Awaited<ReturnType<typeof authorizeGoogle>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof authorizeGoogle>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAuthorizeGoogleQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Handle Google OAuth2 callback and return tokens
+ * @summary Google OAuth2 callback
+ */
+export const getGoogleOAuthCallbackUrl = (
+  params: GoogleOAuthCallbackParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/oauth2/callback/google?${stringifiedParams}`
+    : `/api/oauth2/callback/google`;
+};
+
+export const googleOAuthCallback = async (
+  params: GoogleOAuthCallbackParams,
+  options?: RequestInit,
+): Promise<LoginResponse> => {
+  return customFetch<LoginResponse>(getGoogleOAuthCallbackUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGoogleOAuthCallbackQueryKey = (
+  params?: GoogleOAuthCallbackParams,
+) => {
+  return [`/api/oauth2/callback/google`, ...(params ? [params] : [])] as const;
+};
+
+export const getGoogleOAuthCallbackQueryOptions = <
+  TData = Awaited<ReturnType<typeof googleOAuthCallback>>,
+  TError = ErrorType<void>,
+>(
+  params: GoogleOAuthCallbackParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof googleOAuthCallback>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGoogleOAuthCallbackQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof googleOAuthCallback>>
+  > = ({ signal }) =>
+    googleOAuthCallback(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof googleOAuthCallback>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GoogleOAuthCallbackQueryResult = NonNullable<
+  Awaited<ReturnType<typeof googleOAuthCallback>>
+>;
+export type GoogleOAuthCallbackQueryError = ErrorType<void>;
+
+/**
+ * @summary Google OAuth2 callback
+ */
+
+export function useGoogleOAuthCallback<
+  TData = Awaited<ReturnType<typeof googleOAuthCallback>>,
+  TError = ErrorType<void>,
+>(
+  params: GoogleOAuthCallbackParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof googleOAuthCallback>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGoogleOAuthCallbackQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get current user profile
+ */
+export const getGetCurrentProfileUrl = () => {
+  return `/api/api/profiles/me`;
+};
+
+export const getCurrentProfile = async (
+  options?: RequestInit,
+): Promise<ProfileResponse> => {
+  return customFetch<ProfileResponse>(getGetCurrentProfileUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCurrentProfileQueryKey = () => {
+  return [`/api/api/profiles/me`] as const;
+};
+
+export const getGetCurrentProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCurrentProfile>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentProfile>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCurrentProfileQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCurrentProfile>>
+  > = ({ signal }) => getCurrentProfile({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentProfile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCurrentProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCurrentProfile>>
+>;
+export type GetCurrentProfileQueryError = ErrorType<void>;
+
+/**
+ * @summary Get current user profile
+ */
+
+export function useGetCurrentProfile<
+  TData = Awaited<ReturnType<typeof getCurrentProfile>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCurrentProfile>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCurrentProfileQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
