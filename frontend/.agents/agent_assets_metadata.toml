@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "TZQMr29A8lEInRQJ8lrY6"
+uri = "file://HUONG-DAN-XAY-DUNG.md"
+type = "text"
+title = "Hướng dẫn xây dựng Second Life Marketplace"
