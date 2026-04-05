@@ -10,7 +10,7 @@ import jakarta.persistence.criteria.Predicate;
 
 @Component
 public class SpecificationHelper {
-  public <T> void equal(List<Predicate> predicates, CriteriaBuilder criteriaBuilder, Root<T> root,
+  public <T> void equalsStringPattern(List<Predicate> predicates, CriteriaBuilder criteriaBuilder, Root<T> root,
       String field, String value) {
     if (value != null) {
       predicates.add(criteriaBuilder.equal(root.get(field), value));
