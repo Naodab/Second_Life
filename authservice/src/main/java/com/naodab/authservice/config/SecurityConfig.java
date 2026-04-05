@@ -1,5 +1,6 @@
 package com.naodab.authservice.config;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -42,18 +43,14 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 public class SecurityConfig {
   CustomUserDetailsService customUserDetailsService;
   CustomOAuth2UserService customOAuth2Service;
+  HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
   OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
   OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
   JwtAuthenticationFilter jwtAuthenticationFilter;
 
   @NonFinal
-  @Value("${external.frontend_url}")
-  String frontendUrl;
-
-  @Bean
-  public HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository() {
-    return new HttpCookieOAuth2AuthorizationRequestRepository();
-  }
+  @Value("${external.cors_allowed_origins:${external.frontend_url}}")
+  String corsAllowedOrigins;
 
   @Bean
   public PasswordEncoder passwordEncoder() {
@@ -79,16 +76,15 @@ public class SecurityConfig {
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/v1/auth/reset-password").authenticated()
-            .requestMatchers("/api/v1/auth/**").permitAll()
-            .requestMatchers("/api/v1/auth/oauth2/**").permitAll()
+            .requestMatchers("/auth/reset-password").authenticated()
+            .requestMatchers("/auth/**").permitAll()
             .requestMatchers("/oauth2/**").permitAll()
             .requestMatchers("/login/oauth2/**").permitAll()
             .anyRequest().authenticated())
         .oauth2Login(oauth2 -> oauth2
             .authorizationEndpoint(endpoint -> endpoint
                 .baseUri("/oauth2/authorize")
-                .authorizationRequestRepository(authorizationRequestRepository()))
+                .authorizationRequestRepository(authorizationRequestRepository))
             .redirectionEndpoint(endpoint -> endpoint
                 .baseUri("/login/oauth2/code/*"))
             .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2Service))
@@ -103,7 +99,11 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(List.of(frontendUrl));
+    List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .toList();
+    configuration.setAllowedOrigins(origins);
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
     configuration.setAllowedHeaders(
         List.of("Authorization", "Content-Type", AppConstants.HEADER_PROFILE_ID));

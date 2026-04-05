@@ -16,10 +16,10 @@ public class ProfileUpdateRequest {
   @Pattern(regexp = "^(\\+84|0)\\d{9}$", message = "INVALID_PHONE_NUMBER")
   String phoneNumber;
 
-  @Pattern(regexp = "^[A-Za-z\\s]+$", message = "INVALID_FIRST_NAME")
+  @Pattern(regexp = "^[\\p{L}\\s]+$", message = "INVALID_FIRST_NAME")
   String firstName;
 
-  @Pattern(regexp = "^[A-Za-z\\s]+$", message = "INVALID_LAST_NAME")
+  @Pattern(regexp = "^[\\p{L}\\s]+$", message = "INVALID_LAST_NAME")
   String lastName;
 
   String avatarUrl;

@@ -5,11 +5,15 @@ info:
   version: 0.1.0
   description: API specification
 servers:
-  - url: /api
-    description: Base API path
+  - url: /
+    description: Gateway API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: oauth
+    description: OAuth operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      description: Authenticate user and return tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+  /api/v1/auth/refresh-token:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshResponse"
+        "401":
+          description: Invalid refresh token
+  /oauth2/authorization/google:
+    get:
+      operationId: authorizeGoogle
+      tags: [oauth]
+      summary: Authorize with Google OAuth2
+      description: Redirect to Google OAuth2 authorization page
+      responses:
+        "302":
+          description: Redirect to Google OAuth2
+  /oauth2/callback/google:
+    get:
+      operationId: googleOAuthCallback
+      tags: [oauth]
+      summary: Google OAuth2 callback
+      description: Handle Google OAuth2 callback and return tokens
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OAuth successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: OAuth failed
+  /api/v1/profiles/me:
+    get:
+      operationId: getCurrentProfile
+      tags: [profiles]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profile info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+        "401":
+          description: Unauthorized
 components:
   schemas:
     HealthStatus:
@@ -33,4 +129,95 @@ components:
           type: string
       required:
         - status
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          default: Bearer
+        profile:
+          $ref: "#/components/schemas/ProfileResponse"
+      required:
+        - accessToken
+        - refreshToken
+        - profile
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required:
+        - refreshToken
+    RefreshResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          default: Bearer
+        profile:
+          $ref: "#/components/schemas/ProfileResponse"
+      required:
+        - accessToken
+        - refreshToken
+        - profile
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        avatar:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - email
+    ProfileResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phoneNumber:
+          type: string
+        avatarUrl:
+          type: string
+      required:
+        - id
+        - firstName
+        - lastName
+        - email
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 

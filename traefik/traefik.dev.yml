@@ -1,0 +1,27 @@
+# Traefik — môi trường development
+# - Log DEBUG + access log để debug route/upstream
+# - File provider watch: sửa dynamic.yml → Traefik tự nạp lại (không cần restart container)
+#
+# Dùng với: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build --watch
+# Backend rebuild khi đổi code: xem develop.watch trong docker-compose.dev.yml
+
+global:
+  checkNewVersion: false
+
+log:
+  level: DEBUG
+
+accessLog: {}
+
+entryPoints:
+  web:
+    address: :80
+
+api:
+  dashboard: true
+  insecure: true
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true

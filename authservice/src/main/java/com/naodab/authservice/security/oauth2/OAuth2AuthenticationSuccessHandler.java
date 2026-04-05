@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.naodab.authservice.config.CookieUtils;
@@ -33,6 +34,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
   JwtTokenProvider tokenProvider;
   AccountRepository accountRepository;
   OAuth2Properties oAuth2Properties;
+  HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
   @Override
   public void onAuthenticationSuccess(
@@ -47,6 +49,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     }
 
     clearAuthenticationAttributes(request);
+    authorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
     getRedirectStrategy().sendRedirect(request, response, targetUrl);
   }
 
@@ -68,6 +71,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
       throw new AppException(ErrorCode.INVALID_REDIRECT_URI);
     }
 
+    awaitProfileLinkedIfNeeded(email);
+
     Account account = accountRepository.findByEmail(email)
         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
@@ -86,5 +91,21 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
   private boolean isAuthorizedRedirectUri(String uri) {
     return oAuth2Properties.getAuthorizedRedirectUris().stream()
         .anyMatch(authorizedUri -> authorizedUri.equalsIgnoreCase(uri));
+  }
+
+  private void awaitProfileLinkedIfNeeded(String email) {
+    long deadline = System.currentTimeMillis() + 10_000L;
+    while (System.currentTimeMillis() < deadline) {
+      Account account = accountRepository.findByEmail(email).orElse(null);
+      if (account != null && StringUtils.hasText(account.getProfileId())) {
+        return;
+      }
+      try {
+        Thread.sleep(150L);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return;
+      }
+    }
   }
 }
