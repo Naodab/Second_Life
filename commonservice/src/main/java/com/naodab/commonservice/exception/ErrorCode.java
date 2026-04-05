@@ -48,6 +48,8 @@ public enum ErrorCode {
   BANK_ACCOUNT_NOT_LINKED_TO_PROFILE(1034, "Bank account is not linked to profile yet", HttpStatus.BAD_REQUEST),
   BANK_ACCOUNT_ALREADY_LINKED_TO_PROFILE(1035, "Bank account is already linked to profile", HttpStatus.BAD_REQUEST),
   BANK_ACCOUNT_NOT_LINKED_TO_BANK(1036, "Bank account is not linked to bank yet", HttpStatus.BAD_REQUEST),
+  PROVINCE_NOT_FOUND(1037, "Province not found", HttpStatus.NOT_FOUND),
+  WARD_NOT_FOUND(1038, "Ward not found", HttpStatus.NOT_FOUND),
   ;
 
   private int code;
