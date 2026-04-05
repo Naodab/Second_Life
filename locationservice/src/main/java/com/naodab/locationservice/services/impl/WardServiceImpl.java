@@ -46,7 +46,7 @@ public class WardServiceImpl implements WardService {
     Pageable pageable = PageRequest.of(page, pageSize, Sort.by(Sort.Direction.ASC, "code"));
     return wardRepository.findAll(specification, pageable)
         .stream()
-        .map(wardMapper::toWardResponse)
+        .map(ward -> wardMapper.toWardResponse(ward, false))
         .toList();
   }
 
@@ -55,7 +55,7 @@ public class WardServiceImpl implements WardService {
     List<GisWard> gisWards = gisWardRepository.findWithinRadius(lat, lon, radiusMeters);
     return gisWards.stream()
         .map(gisWard -> gisWard.getWard())
-        .map(wardMapper::toWardResponse)
+        .map(ward -> wardMapper.toWardResponse(ward, false))
         .toList();
   }
 
@@ -64,7 +64,7 @@ public class WardServiceImpl implements WardService {
     List<GisWard> gisWards = gisWardRepository.findByLonAndLat(lon, lat);
     return gisWards.stream()
         .map(gisWard -> gisWard.getWard())
-        .map(wardMapper::toWardResponse)
+        .map(ward -> wardMapper.toWardResponse(ward, false))
         .toList();
   }
 
@@ -73,7 +73,7 @@ public class WardServiceImpl implements WardService {
     List<GisWard> gisWards = gisWardRepository.findByLonAndLat(lon, lat);
     return gisWards.stream()
         .map(gisWard -> gisWard.getWard())
-        .map(wardMapper::toWardResponse)
+        .map(ward -> wardMapper.toWardResponse(ward, false))
         .toList();
   }
 
@@ -82,7 +82,7 @@ public class WardServiceImpl implements WardService {
     Specification<Ward> specification = wardSpecification.build(request);
     return wardRepository.findAll(specification, Sort.by(Sort.Direction.ASC, "code"))
         .stream()
-        .map(wardMapper::toWardResponse)
+        .map(ward -> wardMapper.toWardResponse(ward, false))
         .toList();
   }
 
