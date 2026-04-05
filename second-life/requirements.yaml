@@ -1,0 +1,27 @@
+packages:
+  "framer-motion": "For smooth page transitions and interactive animations"
+  "date-fns": "For date formatting and manipulation in the rental calendar"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility for merging tailwind classes without style conflicts"
+
+images:
+  - path: "artifacts/second-life/public/images/logo-leaf.png"
+    description: "A cute, modern, minimalist line-art logo of a stylized green leaf forming an infinity symbol, isolated on transparent background, soft pastel green colors."
+    aspect_ratio: "1:1"
+  - path: "artifacts/second-life/public/images/hero-illustration.png"
+    description: "A cute, flat vector illustration in pastel colors showing happy people exchanging boxes, clothing, and small furniture in a sunny park setting. Soft rounded shapes, clean modern style."
+    aspect_ratio: "16:9"
+  - path: "artifacts/second-life/public/images/empty-cart.png"
+    description: "A cute, soft 3D or flat vector illustration of an empty shopping basket with a small sad leaf inside, pastel green and white."
+    aspect_ratio: "1:1"
+  - path: "artifacts/second-life/public/images/empty-messages.png"
+    description: "A cute illustration of two floating speech bubbles that are blank, surrounded by tiny stars, soft pastel green palette."
+    aspect_ratio: "1:1"
+  - path: "artifacts/second-life/public/images/auth-bg.png"
+    description: "Abstract soft gradient background with flowing organic shapes in pale mint green, soft white, and light cream."
+    aspect_ratio: "3:4"
+
+notes:
+  - "Since there is no actual backend, all API calls are mocked using a custom hook `use-mock-api.ts` with local state and timeouts to simulate network requests."
+  - "Using wouter for routing."
+  - "Using a custom mock AuthContext to handle login/logout state globally."

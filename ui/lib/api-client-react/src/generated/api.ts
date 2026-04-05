@@ -40,7 +40,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * @summary Health check
  */
 export const getHealthCheckUrl = () => {
-  return `/api/healthz`;
+  return `/healthz`;
 };
 
 export const healthCheck = async (
@@ -53,7 +53,7 @@ export const healthCheck = async (
 };
 
 export const getHealthCheckQueryKey = () => {
-  return [`/api/healthz`] as const;
+  return [`/healthz`] as const;
 };
 
 export const getHealthCheckQueryOptions = <
@@ -111,12 +111,8 @@ export function useHealthCheck<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * Authenticate user and return tokens
- * @summary Login
- */
 export const getLoginUrl = () => {
-  return `/api/api/v1/auth/login`;
+  return `/api/v1/auth/login`;
 };
 
 export const login = async (
@@ -202,7 +198,7 @@ export const useLogin = <
  * @summary Refresh access token
  */
 export const getRefreshTokenUrl = () => {
-  return `/api/api/v1/auth/refresh-token`;
+  return `/api/v1/auth/refresh-token`;
 };
 
 export const refreshToken = async (
@@ -289,7 +285,7 @@ export const useRefreshToken = <
  * @summary Authorize with Google OAuth2
  */
 export const getAuthorizeGoogleUrl = () => {
-  return `/api/oauth2/authorization/google`;
+  return `/oauth2/authorization/google`;
 };
 
 export const authorizeGoogle = async (
@@ -302,7 +298,7 @@ export const authorizeGoogle = async (
 };
 
 export const getAuthorizeGoogleQueryKey = () => {
-  return [`/api/oauth2/authorization/google`] as const;
+  return [`/oauth2/authorization/google`] as const;
 };
 
 export const getAuthorizeGoogleQueryOptions = <
@@ -378,8 +374,8 @@ export const getGoogleOAuthCallbackUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/oauth2/callback/google?${stringifiedParams}`
-    : `/api/oauth2/callback/google`;
+    ? `/oauth2/callback/google?${stringifiedParams}`
+    : `/oauth2/callback/google`;
 };
 
 export const googleOAuthCallback = async (
@@ -395,7 +391,7 @@ export const googleOAuthCallback = async (
 export const getGoogleOAuthCallbackQueryKey = (
   params?: GoogleOAuthCallbackParams,
 ) => {
-  return [`/api/oauth2/callback/google`, ...(params ? [params] : [])] as const;
+  return [`/oauth2/callback/google`, ...(params ? [params] : [])] as const;
 };
 
 export const getGoogleOAuthCallbackQueryOptions = <
@@ -420,7 +416,7 @@ export const getGoogleOAuthCallbackQueryOptions = <
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof googleOAuthCallback>>
   > = ({ signal }) =>
-    googleOAuthCallback(params, { signal, ...requestOptions });
+      googleOAuthCallback(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof googleOAuthCallback>>,
@@ -465,7 +461,7 @@ export function useGoogleOAuthCallback<
  * @summary Get current user profile
  */
 export const getGetCurrentProfileUrl = () => {
-  return `/api/api/profiles/me`;
+  return `/api/v1/profiles/me`;
 };
 
 export const getCurrentProfile = async (
@@ -478,7 +474,7 @@ export const getCurrentProfile = async (
 };
 
 export const getGetCurrentProfileQueryKey = () => {
-  return [`/api/api/profiles/me`] as const;
+  return [`/api/v1/profiles/me`] as const;
 };
 
 export const getGetCurrentProfileQueryOptions = <

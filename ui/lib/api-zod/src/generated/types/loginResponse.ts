@@ -5,11 +5,11 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { AccountInfo } from "./accountInfo";
+import type { ProfileResponse } from "./profileResponse";
 
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
   tokenType?: string;
-  accountInfo: AccountInfo;
+  profile: ProfileResponse;
 }

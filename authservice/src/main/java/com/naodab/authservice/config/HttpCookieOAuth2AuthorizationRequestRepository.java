@@ -13,6 +13,9 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
 
   private static final String OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME = "oauth2_auth_request";
   public static final String REDIRECT_URI_PARAM_COOKIE_NAME = "redirect_uri";
+  /** Query param on /oauth2/authorize/... and cookie: {@code login} | {@code register} */
+  public static final String OAUTH_ENTRY_PARAM_NAME = "oauth_entry";
+  public static final String OAUTH_ENTRY_COOKIE_NAME = "oauth_entry";
   private static final int COOKIE_EXPIRE_SECONDS = 180;
 
   @Override
@@ -30,6 +33,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
     if (authorizationRequest == null) {
       CookieUtils.deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
       CookieUtils.deleteCookie(request, response, REDIRECT_URI_PARAM_COOKIE_NAME);
+      CookieUtils.deleteCookie(request, response, OAUTH_ENTRY_COOKIE_NAME);
       return;
     }
 
@@ -40,6 +44,14 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
     if (redirectUriAfterLogin != null && !redirectUriAfterLogin.isBlank()) {
       CookieUtils.addCookie(response, REDIRECT_URI_PARAM_COOKIE_NAME,
           redirectUriAfterLogin, COOKIE_EXPIRE_SECONDS);
+    }
+
+    String oauthEntry = request.getParameter(OAUTH_ENTRY_PARAM_NAME);
+    if (oauthEntry != null && !oauthEntry.isBlank()) {
+      String normalized = oauthEntry.trim().toLowerCase();
+      if ("login".equals(normalized) || "register".equals(normalized)) {
+        CookieUtils.addCookie(response, OAUTH_ENTRY_COOKIE_NAME, normalized, COOKIE_EXPIRE_SECONDS);
+      }
     }
   }
 
@@ -55,5 +67,6 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
       HttpServletResponse response) {
     CookieUtils.deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
     CookieUtils.deleteCookie(request, response, REDIRECT_URI_PARAM_COOKIE_NAME);
+    CookieUtils.deleteCookie(request, response, OAUTH_ENTRY_COOKIE_NAME);
   }
 }

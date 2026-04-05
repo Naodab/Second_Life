@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: ${SERVER_PORT_AUTH_SERVICE:8081}
   servlet:
     multipart:
       max-file-size: 10MB
@@ -71,13 +71,16 @@ app:
       - http://localhost:5173/oauth2/callback/google
       - http://localhost:8080/oauth2/redirect
       - http://localhost:5500/test_login_google.html
-  verification-token-expiration: 180000
-  forgot-password-token-expiration: 60000
+  verification-token-expiration: 86400000
+  forgot-password-token-expiration: 8640000
 
 external:
-  frontend_url: http://localhost:8080
-  # Comma-separated; CORS for SPA (Vite 5173) + optional gateway/static host
+  frontend_url: http://localhost:5173
+  auth_service_public_base_url: ${AUTH_SERVICE_PUBLIC_BASE_URL:http://localhost:8081/api/v1}
   cors_allowed_origins: http://localhost:5173,http://localhost:8080
+
+profile-service:
+  url: ${PROFILE_SERVICE_URL:http://localhost:8082/api/v1}
 
 logging:
   level:

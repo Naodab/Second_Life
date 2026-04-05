@@ -131,7 +131,6 @@ function SuccessScreen({ subOrderCount }: { subOrderCount: number }) {
   );
 }
 
-/* ── Main Checkout ───────────────────────────────────────────── */
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { cartItems, clearCart } = useCart();
@@ -140,11 +139,9 @@ export default function Checkout() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [expandedShops, setExpandedShops] = useState<Record<string, boolean>>({});
 
-  // Resolve items: pending checkout selection → fallback to full cart
   const [items, setItems] = useState<CheckoutSelection[]>(() => {
     const pending = getPendingCheckout();
     if (pending.length > 0) return pending;
-    // Fallback: convert all cart items
     return cartItems.map(ci => ({
       cartItemId: ci.cartItemId,
       productId: ci.productId,

@@ -51,6 +51,7 @@ public class KafkaConfig {
         serializer);
   }
 
+  @SuppressWarnings("null")
   private <T> KafkaTemplate<String, T> kafkaTemplate(Class<T> type) {
     return new KafkaTemplate<>(producerFactory(type));
   }
@@ -74,6 +75,7 @@ public class KafkaConfig {
         deserializer);
   }
 
+  @SuppressWarnings("null")
   public <T> ConcurrentKafkaListenerContainerFactory<String, T> kafkaListenerContainerFactory(
       Class<T> type,
       String groupId) {

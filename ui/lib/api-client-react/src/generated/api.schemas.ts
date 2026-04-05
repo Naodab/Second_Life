@@ -14,11 +14,20 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface ProfileResponse {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  avatarUrl?: string;
+}
+
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
   tokenType?: string;
-  accountInfo: AccountInfo;
+  profile: ProfileResponse;
 }
 
 export interface RefreshRequest {
@@ -29,7 +38,7 @@ export interface RefreshResponse {
   accessToken: string;
   refreshToken: string;
   tokenType?: string;
-  accountInfo: AccountInfo;
+  profile: ProfileResponse;
 }
 
 export interface User {
@@ -37,17 +46,6 @@ export interface User {
   name: string;
   email: string;
   avatar?: string | null;
-}
-
-export interface ProfileResponse {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  avatar?: string;
-  bio?: string;
-  address?: string;
 }
 
 export type GoogleOAuthCallbackParams = {

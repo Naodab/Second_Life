@@ -80,12 +80,9 @@ services:
       context: .
       dockerfile: authservice/Dockerfile
     ports:
-      - 8081:8081
+      - "${SERVER_PORT_AUTH_SERVICE}:${SERVER_PORT_AUTH_SERVICE}"
     env_file:
       - .env
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SERVER_PORT: 8081
     depends_on:
       kafka:
         condition: service_healthy
@@ -103,11 +100,10 @@ services:
     build:
       context: .
       dockerfile: mailservice/Dockerfile
+    ports:
+      - "${SERVER_PORT_MAIL_SERVICE}:${SERVER_PORT_MAIL_SERVICE}"
     env_file:
       - .env
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SERVER_PORT: 8082
     depends_on:
       kafka:
         condition: service_healthy
@@ -123,16 +119,31 @@ services:
       context: .
       dockerfile: profileservice/Dockerfile
     ports:
-      - 8083:8083
+      - "${SERVER_PORT_PROFILE_SERVICE}:${SERVER_PORT_PROFILE_SERVICE}"
     env_file:
       - .env
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SERVER_PORT: 8083
     depends_on:
       kafka:
         condition: service_healthy
       # - db
+    networks:
+      - second_life_network
+    labels:
+      - "traefik.enable=true"
+
+  upload-service:
+    image: upload-service:latest
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: uploadservice/Dockerfile
+    ports:
+      - "${SERVER_PORT_UPLOAD_SERVICE}:${SERVER_PORT_UPLOAD_SERVICE}"
+    env_file:
+      - .env
+    depends_on:
+      kafka:
+        condition: service_healthy
     networks:
       - second_life_network
     labels:

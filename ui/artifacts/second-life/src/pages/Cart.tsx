@@ -14,7 +14,6 @@ import { MOCK_SHOPS } from "@/lib/mock-data";
 import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 import { vi } from "date-fns/locale";
 
-/* ── Types ─────────────────────────────────────────────────── */
 type ModeKey = `${string}:buy` | `${string}:rent`;
 
 interface ItemState {
@@ -402,7 +401,6 @@ export default function Cart() {
     }
   };
 
-  // Compute totals for selected items
   let selectedTotal = 0;
   let selectedCount = 0;
   const canCheckout = selection.size > 0;
@@ -477,11 +475,11 @@ export default function Cart() {
       <div className="min-h-[70vh] flex items-center justify-center bg-gray-50/30">
         <div className="text-center">
           <div className="w-70 h-70 flex items-center justify-center mx-auto mb-6">
-            <img 
-                src={`${import.meta.env.BASE_URL}images/empty-cart.png`} 
-                alt="Mọi người trao đổi đồ dùng" 
-                className="relative z-10 w-full h-auto drop-shadow-2xl object-contain"
-              />
+            <img
+              src={`${import.meta.env.BASE_URL}images/empty-cart.png`}
+              alt="Mọi người trao đổi đồ dùng"
+              className="relative z-10 w-full h-auto drop-shadow-2xl object-contain"
+            />
           </div>
           <h2 className="text-3xl font-display font-bold mb-3">Giỏ hàng của bạn đang trống</h2>
           <p className="text-muted-foreground mb-8">Có vẻ bạn chưa thêm sản phẩm nào vào giỏ hàng.</p>
