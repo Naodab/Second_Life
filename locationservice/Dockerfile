@@ -17,21 +17,21 @@ COPY locationservice/pom.xml locationservice/pom.xml
 
 # download dependencies (persist ~/.m2 across builds via BuildKit cache)
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -pl authservice -am dependency:go-offline -B
+    mvn -pl locationservice -am dependency:go-offline -B
 
 # copy source code
 COPY commonjpa commonjpa
 COPY commonservice commonservice
-COPY authservice authservice
+COPY locationservice locationservice
 
 # build
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -pl authservice -am clean package -DskipTests -B
+    mvn -pl locationservice -am clean package -DskipTests -B
 
 # ===== RUNTIME =====
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-COPY --from=builder /build/authservice/target/*.jar app.jar
+COPY --from=builder /build/locationservice/target/*.jar app.jar
 
 ENTRYPOINT ["java","-jar","app.jar"]
