@@ -112,9 +112,9 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
               <div className={cn(
                 "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5",
                 notif.type === 'payment' ? "bg-green-50" :
-                notif.type === 'order' ? "bg-amber-50" :
-                notif.type === 'message' ? "bg-blue-50" :
-                notif.type === 'delivery' ? "bg-purple-50" : "bg-primary/10"
+                  notif.type === 'order' ? "bg-amber-50" :
+                    notif.type === 'message' ? "bg-blue-50" :
+                      notif.type === 'delivery' ? "bg-purple-50" : "bg-primary/10"
               )}>
                 {NOTIF_ICONS[notif.type]}
               </div>
@@ -184,8 +184,8 @@ export function Header() {
           </div>
 
           {/* Search Bar */}
-          <div className="flex-1 max-w-2xl hidden md:flex flex-col">
-            <div className="relative group">
+          <div className="flex-1 max-w-2xl hidden md:flex">
+            <div className="relative w-full group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
                 placeholder="Tìm kiếm điện tử, quần áo, nội thất..."
@@ -194,11 +194,6 @@ export function Header() {
               <Button className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full px-6" size="sm">
                 Tìm
               </Button>
-            </div>
-            <div className="flex gap-6 mt-2 ml-4 text-sm font-medium text-muted-foreground">
-              <Link href="/search?type=buy" className="hover:text-primary transition-colors">Mua</Link>
-              <Link href="/search" className="hover:text-primary transition-colors">Mua & Thuê</Link>
-              <Link href="/search?type=rent" className="hover:text-primary transition-colors">Thuê</Link>
             </div>
           </div>
 
@@ -296,6 +291,17 @@ export function Header() {
                 </Link>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Listing row below main header */}
+      <div className="flex items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="hidden md:flex gap-6 text-sm font-medium text-muted-foreground py-2">
+            <Link href="/search?type=buy" className="hover:text-primary transition-colors">Mua</Link>
+            <Link href="/search" className="hover:text-primary transition-colors">Mua & Thuê</Link>
+            <Link href="/search?type=rent" className="hover:text-primary transition-colors">Thuê</Link>
           </div>
         </div>
       </div>

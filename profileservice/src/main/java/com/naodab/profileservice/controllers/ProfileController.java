@@ -56,7 +56,44 @@ public class ProfileController {
             .build());
   }
 
-  @GetMapping("/{id}")
+  @GetMapping("/me")
+  public ResponseEntity<ApiResponse<ProfileResponse>> getCurrentProfile(
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
+      @RequestHeader(value = AppConstants.HEADER_USER_EMAIL, required = false) String userEmail) {
+    ProfileResponse data;
+    if (StringUtils.hasText(profileIdHeader)) {
+      data = profileService.getProfileById(profileIdHeader.trim());
+    } else if (StringUtils.hasText(userEmail)) {
+      data = profileService.getProfileByEmail(userEmail.trim());
+    } else {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+    return ResponseEntity.ok(
+        ApiResponse.<ProfileResponse>builder()
+            .data(data)
+            .build());
+  }
+
+  @PutMapping("/me")
+  public ResponseEntity<ApiResponse<ProfileResponse>> updateCurrentProfile(
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
+      @RequestHeader(value = AppConstants.HEADER_USER_EMAIL, required = false) String userEmail,
+      @RequestBody @Validated ProfileUpdateRequest request) {
+    String id;
+    if (StringUtils.hasText(profileIdHeader)) {
+      id = profileIdHeader.trim();
+    } else if (StringUtils.hasText(userEmail)) {
+      id = profileService.getProfileByEmail(userEmail.trim()).getId();
+    } else {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+    return ResponseEntity.ok(
+        ApiResponse.<ProfileResponse>builder()
+            .data(profileService.updateProfile(id, request))
+            .build());
+  }
+
+  @GetMapping("/{id:[0-9a-fA-F-]{36}}")
   public ResponseEntity<ApiResponse<ProfileResponse>> getById(@PathVariable String id) {
     return ResponseEntity.ok(
         ApiResponse.<ProfileResponse>builder()
@@ -64,7 +101,7 @@ public class ProfileController {
             .build());
   }
 
-  @PutMapping("/{id}")
+  @PutMapping("/{id:[0-9a-fA-F-]{36}}")
   public ResponseEntity<ApiResponse<ProfileResponse>> update(
       @PathVariable String id,
       @RequestBody @Validated ProfileUpdateRequest request) {
@@ -74,7 +111,7 @@ public class ProfileController {
             .build());
   }
 
-  @DeleteMapping("/{id}")
+  @DeleteMapping("/{id:[0-9a-fA-F-]{36}}")
   public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String id) {
     profileService.deleteProfile(id);
     return ResponseEntity.ok(

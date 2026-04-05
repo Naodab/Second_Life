@@ -17,12 +17,9 @@ import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
 @Entity
-@Table(
-  name = "profiles",
-  indexes = {
+@Table(name = "profiles", indexes = {
     @Index(name = "idx_email", columnList = "email", unique = true)
-  }
-)
+})
 @Getter
 @Setter
 @NoArgsConstructor

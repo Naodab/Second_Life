@@ -13,17 +13,31 @@ http:
 
   routers:
     auth-api:
-      rule: "PathPrefix(`/api/v1/auth`) || PathPrefix(`/oauth2`) || PathPrefix(`/login/oauth2`)"
+      rule: "PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`) || PathPrefix(`/oauth2`) || PathPrefix(`/login/oauth2`)"
       service: auth-service
       entryPoints:
         - web
+    # CORS preflight (OPTIONS) does not send Authorization; ForwardAuth would always 401 without this bypass.
+    profile-api-options:
+      rule: "PathPrefix(`/api/v1/profiles`) && Method(`OPTIONS`)"
+      service: profile-service
+      entryPoints:
+        - web
+      priority: 100
     profile-api:
-      rule: "PathPrefix(`/api/profiles`)"
+      rule: "PathPrefix(`/api/v1/profiles`)"
       service: profile-service
       entryPoints:
         - web
       middlewares:
         - gateway-jwt
+      priority: 1
+    mail-api-options:
+      rule: "PathPrefix(`/api/test`) && Method(`OPTIONS`)"
+      service: mail-service
+      entryPoints:
+        - web
+      priority: 100
     mail-api:
       rule: "PathPrefix(`/api/test`)"
       service: mail-service
@@ -31,6 +45,7 @@ http:
         - web
       middlewares:
         - gateway-jwt
+      priority: 1
 
   services:
     auth-service:
@@ -40,8 +55,8 @@ http:
     profile-service:
       loadBalancer:
         servers:
-          - url: "http://profile-service:8083"
+          - url: "http://profile-service:8082"
     mail-service:
       loadBalancer:
         servers:
-          - url: "http://mail-service:8082"
+          - url: "http://mail-service:8083"

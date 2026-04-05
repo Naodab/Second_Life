@@ -64,6 +64,21 @@
       "name": "server.servlet.multipart.max-request-size",
       "type": "java.lang.String",
       "description": "Max request size"
+    },
+    {
+      "name": "external.cors_allowed_origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated; CORS for SPA (Vite 5173) + optional gateway/static host"
+    },
+    {
+      "name": "profile-service.url",
+      "type": "java.lang.String",
+      "description": "Profile service URL"
+    },
+    {
+      "name": "external.auth_service_public_base_url",
+      "type": "java.lang.String",
+      "description": "Auth service public base URL"
     }
   ]
 }

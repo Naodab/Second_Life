@@ -6,14 +6,15 @@ import org.springframework.stereotype.Service;
 
 import com.naodab.authservice.dto.event.EmailVerificationEvent;
 import com.naodab.authservice.dto.event.ForgotPasswordEvent;
+import com.naodab.authservice.clients.ProfileClient;
 import com.naodab.authservice.dto.event.CreateProfileEvent;
 import com.naodab.authservice.dto.request.ForgotPasswordRequest;
 import com.naodab.authservice.dto.request.LoginRequest;
 import com.naodab.authservice.dto.request.RefreshTokenRequest;
 import com.naodab.authservice.dto.request.RegisterRequest;
 import com.naodab.authservice.dto.request.ResetPasswordRequest;
-import com.naodab.authservice.dto.response.AccountInfo;
 import com.naodab.authservice.dto.response.AuthResponse;
+import com.naodab.authservice.dto.response.ProfileResponse;
 import com.naodab.authservice.kafka.EmailProducerService;
 import com.naodab.authservice.kafka.ForgotPasswordProducer;
 import com.naodab.authservice.kafka.CreateProfileProducer;
@@ -23,6 +24,8 @@ import com.naodab.authservice.repositories.AccountRepository;
 import com.naodab.authservice.security.JwtTokenProvider;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
+
+import java.util.Optional;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -42,14 +45,23 @@ public class AuthService {
   EmailProducerService emailProducerService;
   CreateProfileProducer createProfileProducer;
   JwtTokenProvider jwtTokenProvider;
+  ProfileClient profileClient;
 
   @NonFinal
   @Value("${external.frontend_url}")
   String frontendUrl;
 
+  @NonFinal
+  @Value("${external.auth_service_public_base_url}")
+  String authServicePublicBaseUrl;
+
   @Transactional
   public AuthResponse register(RegisterRequest request) {
-    if (accountRepository.existsByEmail(request.getEmail())) {
+    Optional<Account> existing = accountRepository.findByEmail(request.getEmail());
+    if (existing.isPresent()) {
+      if (existing.get().getAuthProvider() == AuthProvider.GOOGLE) {
+        throw new AppException(ErrorCode.EMAIL_REGISTERED_WITH_GOOGLE);
+      }
       throw new AppException(ErrorCode.EMAIL_ALREADY_EXISTS);
     }
 
@@ -72,7 +84,12 @@ public class AuthService {
     Account account = accountRepository.findByEmail(email)
         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-    if (!passwordEncoder.matches(request.getPassword(), account.getPassword())) {
+    if (account.getAuthProvider() != AuthProvider.LOCAL) {
+      throw new AppException(ErrorCode.SIGN_IN_WITH_GOOGLE);
+    }
+
+    if (account.getPassword() == null
+        || !passwordEncoder.matches(request.getPassword(), account.getPassword())) {
       throw new AppException(ErrorCode.USER_NOT_FOUND);
     }
 
@@ -80,6 +97,9 @@ public class AuthService {
       sendEmailVerification(account);
       return emptyAuthResponse();
     }
+
+    ProfileResponse profile = profileClient.getProfileById(account.getProfileId())
+        .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
 
     String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail(), account.getProfileId());
     String refreshToken = jwtTokenProvider.generateRefreshToken(account.getEmail());
@@ -90,7 +110,7 @@ public class AuthService {
     return AuthResponse.builder()
         .accessToken(accessToken)
         .refreshToken(refreshToken)
-        .accountInfo(mapAccountToResponse(account))
+        .profile(profile)
         .build();
   }
 
@@ -106,6 +126,9 @@ public class AuthService {
     Account account = accountRepository.findByEmail(email)
         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+    ProfileResponse profile = profileClient.getProfileById(account.getProfileId())
+        .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
+
     if (!refreshToken.equals(account.getRefreshToken())) {
       throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
     }
@@ -113,13 +136,13 @@ public class AuthService {
     String newAccessToken = jwtTokenProvider.generateAccessToken(account.getEmail(), account.getProfileId());
     String newRefreshToken = jwtTokenProvider.generateRefreshToken(email);
 
-    account.setRefreshToken(refreshToken);
+    account.setRefreshToken(newRefreshToken);
     accountRepository.save(account);
 
     return AuthResponse.builder()
         .accessToken(newAccessToken)
         .refreshToken(newRefreshToken)
-        .accountInfo(mapAccountToResponse(account))
+        .profile(profile)
         .build();
   }
 
@@ -145,10 +168,13 @@ public class AuthService {
     account.setRefreshToken(refreshToken);
     accountRepository.save(account);
 
+    ProfileResponse profile = profileClient.getProfileById(account.getProfileId())
+        .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
+
     return AuthResponse.builder()
         .accessToken(accessToken)
         .refreshToken(refreshToken)
-        .accountInfo(mapAccountToResponse(account))
+        .profile(profile)
         .build();
   }
 
@@ -189,16 +215,6 @@ public class AuthService {
     accountRepository.save(account);
   }
 
-  private AccountInfo mapAccountToResponse(Account account) {
-    return AccountInfo.builder()
-        .email(account.getEmail())
-        .role(account.getRole().name())
-        .provider(account.getAuthProvider().name())
-        .emailVerified(account.getEmailVerified())
-        .profileId(account.getProfileId())
-        .build();
-  }
-
   private void sendEmailVerification(Account account) {
     String verificationToken = jwtTokenProvider.generateVerificationToken(account.getEmail());
 
@@ -223,7 +239,7 @@ public class AuthService {
   }
 
   private String buildVerificationUrl(String verificationToken) {
-    return frontendUrl + "/api/v1/auth/verify-email?verificationToken=" + verificationToken;
+    return authServicePublicBaseUrl + "/auth/verify-email?verificationToken=" + verificationToken;
   }
 
   private String buildResetPasswordUrl(String resetPasswordToken) {

@@ -21,5 +21,5 @@ public class AuthResponse {
   @Builder.Default
   String tokenType = "Bearer";
 
-  AccountInfo accountInfo;
+  ProfileResponse profile;
 }

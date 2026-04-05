@@ -14,7 +14,7 @@
 		<artifactId>second-life</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
-	<licenses> 
+	<licenses>
 		<license/>
 	</licenses>
 	<developers>
@@ -50,6 +50,7 @@
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
+			<version>${lombok.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>jakarta.persistence</groupId>
