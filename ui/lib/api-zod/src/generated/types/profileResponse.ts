@@ -11,8 +11,6 @@ export interface ProfileResponse {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
-  avatar?: string;
-  bio?: string;
-  address?: string;
+  phoneNumber?: string;
+  avatarUrl?: string;
 }

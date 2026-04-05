@@ -30,7 +30,14 @@ export const LoginResponse = zod.object({
   accessToken: zod.string(),
   refreshToken: zod.string(),
   tokenType: zod.string().default(loginResponseTokenTypeDefault),
-  accountInfo: zod.unknown(),
+  profile: zod.object({
+    id: zod.string(),
+    firstName: zod.string(),
+    lastName: zod.string(),
+    email: zod.string(),
+    phoneNumber: zod.string().optional(),
+    avatarUrl: zod.string().optional(),
+  }),
 });
 
 /**
@@ -46,7 +53,14 @@ export const RefreshTokenResponse = zod.object({
   accessToken: zod.string(),
   refreshToken: zod.string(),
   tokenType: zod.string().default(refreshTokenResponseTokenTypeDefault),
-  accountInfo: zod.unknown(),
+  profile: zod.object({
+    id: zod.string(),
+    firstName: zod.string(),
+    lastName: zod.string(),
+    email: zod.string(),
+    phoneNumber: zod.string().optional(),
+    avatarUrl: zod.string().optional(),
+  }),
 });
 
 /**
@@ -64,7 +78,14 @@ export const GoogleOAuthCallbackResponse = zod.object({
   accessToken: zod.string(),
   refreshToken: zod.string(),
   tokenType: zod.string().default(googleOAuthCallbackResponseTokenTypeDefault),
-  accountInfo: zod.unknown(),
+  profile: zod.object({
+    id: zod.string(),
+    firstName: zod.string(),
+    lastName: zod.string(),
+    email: zod.string(),
+    phoneNumber: zod.string().optional(),
+    avatarUrl: zod.string().optional(),
+  }),
 });
 
 /**
@@ -75,8 +96,6 @@ export const GetCurrentProfileResponse = zod.object({
   firstName: zod.string(),
   lastName: zod.string(),
   email: zod.string(),
-  phone: zod.string().optional(),
-  avatar: zod.string().optional(),
-  bio: zod.string().optional(),
-  address: zod.string().optional(),
+  phoneNumber: zod.string().optional(),
+  avatarUrl: zod.string().optional(),
 });

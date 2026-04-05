@@ -12,6 +12,7 @@ COPY commonservice/pom.xml commonservice/pom.xml
 COPY authservice/pom.xml authservice/pom.xml
 COPY profileservice/pom.xml profileservice/pom.xml
 COPY mailservice/pom.xml mailservice/pom.xml
+COPY uploadservice/pom.xml uploadservice/pom.xml
 
 # download dependencies (persist ~/.m2 across builds via BuildKit cache)
 RUN --mount=type=cache,target=/root/.m2 \

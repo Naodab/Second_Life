@@ -9,11 +9,10 @@ export function ProtectedRoute({ component: Component, ...rest }: ProtectedRoute
   const { isLoggedIn, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div>Loading...</div>; // You can replace with a proper loading component
+    return <div>Loading...</div>;
   }
 
   if (!isLoggedIn) {
-    // Redirect to login or show unauthorized message
     window.location.href = '/login';
     return null;
   }

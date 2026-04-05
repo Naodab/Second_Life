@@ -56,7 +56,7 @@ public class MailService {
     context.setVariable("verificationLink", link);
     context.setVariable("baseUrl", mailBaseUrl);
 
-    String htmlContent = templateEngine.process("/email/email-verification.html", context);
+    String htmlContent = templateEngine.process("email/email-verification", context);
     sendHtml(event.getToEmail(), subject, htmlContent);
   }
 
@@ -71,7 +71,7 @@ public class MailService {
     context.setVariable("resetLink", link);
     context.setVariable("baseUrl", mailBaseUrl);
 
-    String htmlContent = templateEngine.process("/email/password-reset.html", context);
+    String htmlContent = templateEngine.process("email/password-reset", context);
     sendHtml(event.getToEmail(), subject, htmlContent);
   }
 

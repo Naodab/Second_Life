@@ -1,4 +1,5 @@
 # Dev: tự rebuild image khi đổi code (Docker Compose Watch).
+# Traefik: traefik.dev.yml (DEBUG + access log + watch dynamic.yml).
 #
 # Chạy:
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build --watch
@@ -6,6 +7,11 @@
 # Yêu cầu Docker Compose v2.22+ (lệnh `docker compose version`).
 
 services:
+  traefik:
+    volumes:
+      - ./traefik/traefik.dev.yml:/etc/traefik/traefik.yml
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml
+
   auth-service:
     develop:
       watch:
@@ -63,5 +69,21 @@ services:
             - "**/target/**"
         - action: rebuild
           path: ./profileservice
+          ignore:
+            - "**/target/**"
+
+  upload-service:
+    develop:
+      watch:
+        - action: rebuild
+          path: ./pom.xml
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./commonservice
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./uploadservice
           ignore:
             - "**/target/**"

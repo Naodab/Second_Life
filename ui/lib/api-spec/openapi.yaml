@@ -104,7 +104,7 @@ paths:
                 $ref: "#/components/schemas/LoginResponse"
         "400":
           description: OAuth failed
-  /api/profiles/me:
+  /api/v1/profiles/me:
     get:
       operationId: getCurrentProfile
       tags: [profiles]
@@ -150,12 +150,12 @@ components:
         tokenType:
           type: string
           default: Bearer
-        accountInfo:
-          $ref: "#/components/schemas/AccountInfo"
+        profile:
+          $ref: "#/components/schemas/ProfileResponse"
       required:
         - accessToken
         - refreshToken
-        - accountInfo
+        - profile
     RefreshRequest:
       type: object
       properties:
@@ -173,12 +173,12 @@ components:
         tokenType:
           type: string
           default: Bearer
-        accountInfo:
-          $ref: "#/components/schemas/AccountInfo"
+        profile:
+          $ref: "#/components/schemas/ProfileResponse"
       required:
         - accessToken
         - refreshToken
-        - accountInfo
+        - profile
     User:
       type: object
       properties:
@@ -206,13 +206,9 @@ components:
           type: string
         email:
           type: string
-        phone:
+        phoneNumber:
           type: string
-        avatar:
-          type: string
-        bio:
-          type: string
-        address:
+        avatarUrl:
           type: string
       required:
         - id

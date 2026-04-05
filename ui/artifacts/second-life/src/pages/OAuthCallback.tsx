@@ -1,47 +1,74 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import { appHref } from "@/api";
+
+function formatOAuthCallbackError(raw: string): string {
+  const lower = raw.toLowerCase();
+  if (lower.includes("access_denied") || lower.includes("access denied")) {
+    return "Bạn đã hủy hoặc từ chối quyền truy cập với Google.";
+  }
+  if (raw.length > 220) {
+    return `${raw.slice(0, 217)}…`;
+  }
+  return raw;
+}
 
 export default function OAuthCallback() {
   const [, setLocation] = useLocation();
   const { loginWithGoogle } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const handledRef = useRef(false);
 
   useEffect(() => {
     const handleCallback = async () => {
+      if (handledRef.current) {
+        return;
+      }
       try {
         const urlParams = new URLSearchParams(window.location.search);
-        const accessToken = urlParams.get('token');
-        const refreshToken = urlParams.get('refresh_token');
-        const err = urlParams.get('error');
+        const accessToken = urlParams.get("token");
+        const refreshToken = urlParams.get("refresh_token");
+        const errCode = urlParams.get("error")?.trim() ?? "";
+        const errDesc = urlParams.get("error_description")?.trim() ?? "";
 
-        if (err) {
-          setError(`OAuth error: ${err}`);
+        if (errCode || errDesc) {
+          const detail = formatOAuthCallbackError(
+            errDesc || errCode || "Đã có lỗi xảy ra khi đăng nhập Google.",
+          );
+          toast({
+            title: "Đăng nhập Google thất bại",
+            description: detail,
+            variant: "destructive",
+          });
+          setError(detail);
           setIsLoading(false);
           return;
         }
 
         if (!accessToken || !refreshToken) {
-          setError('Không nhận được token từ máy chủ đăng nhập');
+          setError("Không nhận được token từ máy chủ đăng nhập");
           setIsLoading(false);
           return;
         }
 
-        await loginWithGoogle(accessToken, refreshToken);
-        const path = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
-        window.history.replaceState({}, '', path);
-        setLocation('/');
+        handledRef.current = true;
+        const needsSetup = await loginWithGoogle(accessToken, refreshToken);
+        const path = needsSetup ? appHref("/profile/setup") : appHref("/");
+        window.location.replace(`${window.location.origin}${path}`);
       } catch (callbackErr) {
-        console.error('OAuth callback failed:', callbackErr);
-        setError('Failed to complete authentication');
+        handledRef.current = false;
+        console.error("OAuth callback failed:", callbackErr);
+        setError("Failed to complete authentication");
         setIsLoading(false);
       }
     };
 
-    handleCallback();
-  }, [loginWithGoogle, setLocation]);
+    void handleCallback();
+  }, [loginWithGoogle]);
 
   if (isLoading) {
     return (

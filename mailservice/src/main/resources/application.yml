@@ -1,5 +1,5 @@
 server:
-  port: 8083
+  port: ${SERVER_PORT_MAIL_SERVICE:8083}
   servlet:
     multipart:
       max-file-size: 10MB
@@ -47,9 +47,9 @@ app:
   mail:
     from: noreply@gmail.com
     from-name: Second Life
-    base-url: http://localhost:8080
+    base-url: ${GATEWAY_URL:http://localhost:8080}
   frontend:
-    url: http://localhost:3000
+    url: ${FRONTEND_URL:http://localhost:3000}
 
 logging:
   file:
