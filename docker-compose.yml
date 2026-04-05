@@ -149,6 +149,21 @@ services:
     labels:
       - "traefik.enable=true"
 
+  location-service:
+    image: location-service:latest
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: locationservice/Dockerfile
+    ports:
+      - "${SERVER_PORT_LOCATION_SERVICE}:${SERVER_PORT_LOCATION_SERVICE}"
+    env_file:
+      - .env
+    networks:
+      - second_life_network
+    labels:
+      - "traefik.enable=true"
+
 volumes:
   kafka-data:
   mysql-data:

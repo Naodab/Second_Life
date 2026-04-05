@@ -17,7 +17,6 @@ http:
       service: auth-service
       entryPoints:
         - web
-    # CORS preflight (OPTIONS) does not send Authorization; ForwardAuth would always 401 without this bypass.
     profile-api-options:
       rule: "PathPrefix(`/api/v1/profiles`) && Method(`OPTIONS`)"
       service: profile-service
@@ -46,6 +45,20 @@ http:
       middlewares:
         - gateway-jwt
       priority: 1
+    location-api-options:
+      rule: "PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`) && Method(`OPTIONS`)"
+      service: location-service
+      entryPoints:
+        - web
+      priority: 100
+    location-api:
+      rule: "PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`)"
+      service: location-service
+      entryPoints:
+        - web
+      middlewares:
+        - gateway-jwt
+      priority: 1
 
   services:
     auth-service:
@@ -60,3 +73,11 @@ http:
       loadBalancer:
         servers:
           - url: "http://mail-service:8083"
+    location-service:
+      loadBalancer:
+        servers:
+          - url: "http://location-service:8085"
+    upload-service:
+      loadBalancer:
+        servers:
+          - url: "http://upload-service:8084"
