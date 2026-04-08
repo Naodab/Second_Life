@@ -50,6 +50,10 @@ public enum ErrorCode {
   BANK_ACCOUNT_NOT_LINKED_TO_BANK(1036, "Bank account is not linked to bank yet", HttpStatus.BAD_REQUEST),
   PROVINCE_NOT_FOUND(1037, "Province not found", HttpStatus.NOT_FOUND),
   WARD_NOT_FOUND(1038, "Ward not found", HttpStatus.NOT_FOUND),
+  CATEGORY_ALREADY_EXISTS(1039, "Category already exists", HttpStatus.BAD_REQUEST),
+  CATEGORY_NOT_FOUND(1040, "Category not found", HttpStatus.NOT_FOUND),
+  SUB_CATEGORY_ALREADY_EXISTS(1041, "Sub category already exists", HttpStatus.BAD_REQUEST),
+  SUB_CATEGORY_NOT_FOUND(1042, "Sub category not found", HttpStatus.NOT_FOUND),
   ;
 
   private int code;

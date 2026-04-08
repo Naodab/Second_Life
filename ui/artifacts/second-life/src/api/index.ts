@@ -4,3 +4,4 @@ export * from "./types";
 export * from "./profile";
 export * from "./auth";
 export * from "./oauth";
+export * from "./location";

@@ -2,6 +2,7 @@ package com.naodab.locationservice.services.impl;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
+import com.naodab.locationservice.config.CacheNames;
 import com.naodab.locationservice.dto.request.ProvinceSearchRequest;
 import com.naodab.locationservice.dto.response.ProvinceResponse;
 import com.naodab.locationservice.mapper.ProvinceMapper;
@@ -33,6 +35,7 @@ public class ProvinceServiceImpl implements ProvinceService {
   GisProvinceRepository gisProvinceRepository;
 
   @Override
+  @Cacheable(cacheNames = CacheNames.PROVINCES, key = "'code:' + #code")
   public ProvinceResponse getProvince(String code) {
     return provinceRepository.findByCode(code)
         .map(provinceMapper::toProvinceResponse)
@@ -40,6 +43,7 @@ public class ProvinceServiceImpl implements ProvinceService {
   }
 
   @Override
+  @Cacheable(cacheNames = CacheNames.PROVINCES, key = "'page:' + #page + ':' + #pageSize + ':' + (#request.name == null ? 'all' : #request.name)")
   public List<ProvinceResponse> getProvinces(ProvinceSearchRequest request, int page, int pageSize) {
     Specification<Province> specification = provinceSpecification.build(request);
     Pageable pageable = PageRequest.of(page, pageSize, Sort.by(Sort.Direction.ASC, "code"));
@@ -60,6 +64,7 @@ public class ProvinceServiceImpl implements ProvinceService {
   }
 
   @Override
+  @Cacheable(cacheNames = CacheNames.PROVINCES, key = "'lon:' + #lon + ':lat:' + #lat + ':page:' + #page + ':pageSize:' + #pageSize")
   public List<ProvinceResponse> getProvincesByLonAndLat(Float lon, Float lat, int page, int pageSize) {
     List<GisProvince> gisProvinces = gisProvinceRepository.findByLonAndLat(lon, lat);
     return gisProvinces.stream()
@@ -69,6 +74,7 @@ public class ProvinceServiceImpl implements ProvinceService {
   }
 
   @Override
+  @Cacheable(cacheNames = CacheNames.PROVINCES, key = "'lon:' + #lon + ':lat:' + #lat")
   public List<ProvinceResponse> getProvincesByLonAndLatWithoutPagination(Float lon, Float lat) {
     List<GisProvince> gisProvinces = gisProvinceRepository.findByLonAndLat(lon, lat);
     return gisProvinces.stream()
@@ -78,6 +84,7 @@ public class ProvinceServiceImpl implements ProvinceService {
   }
 
   @Override
+  @Cacheable(cacheNames = CacheNames.PROVINCES, key = "'all'")
   public List<ProvinceResponse> getAllWithoutPagination() {
     return provinceRepository.findAll(Sort.by(Sort.Direction.ASC, "code"))
         .stream()
@@ -86,6 +93,7 @@ public class ProvinceServiceImpl implements ProvinceService {
   }
 
   @Override
+  @Cacheable(cacheNames = CacheNames.PROVINCES, key = "'list:' + (#request.name == null ? 'all' : #request.name)")
   public List<ProvinceResponse> getProvincesWithoutPagination(ProvinceSearchRequest request) {
     Specification<Province> specification = provinceSpecification.build(request);
     return provinceRepository.findAll(specification, Sort.by(Sort.Direction.ASC, "code"))

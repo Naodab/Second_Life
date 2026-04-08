@@ -6,6 +6,9 @@ server:
       max-request-size: 20MB
     context-path: /api/v1
 
+external:
+  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}
+
 spring:
   application:
     name: locationservice
@@ -21,6 +24,10 @@ spring:
       hibernate:
         "[format_sql]": true
     open-in-view: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   jackson:
     serialization:
       "[indent_output]": true

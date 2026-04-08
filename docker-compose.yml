@@ -159,6 +159,9 @@ services:
       - "${SERVER_PORT_LOCATION_SERVICE}:${SERVER_PORT_LOCATION_SERVICE}"
     env_file:
       - .env
+    depends_on:
+      redis:
+        condition: service_started
     networks:
       - second_life_network
     labels:

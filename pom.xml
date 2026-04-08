@@ -32,6 +32,7 @@
 		<module>profileservice</module>
 		<module>mailservice</module>
 		<module>locationservice</module>
+		<module>productservice</module>
 		<module>uploadservice</module>
 	</modules>
 </project>

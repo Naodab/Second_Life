@@ -14,10 +14,11 @@ COPY profileservice/pom.xml profileservice/pom.xml
 COPY mailservice/pom.xml mailservice/pom.xml
 COPY uploadservice/pom.xml uploadservice/pom.xml
 COPY locationservice/pom.xml locationservice/pom.xml
+COPY productservice/pom.xml productservice/pom.xml
 
 # download dependencies (persist ~/.m2 across builds via BuildKit cache)
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -pl authservice -am dependency:go-offline -B
+    mvn -pl uploadservice -am dependency:go-offline -B
 
 # copy source code
 COPY commonjpa commonjpa
