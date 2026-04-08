@@ -29,7 +29,8 @@ public class WardSpecification {
       }
 
       if (request.getProvinceCode() != null) {
-        helper.equalsStringPattern(predicates, criteriaBuilder, root, "province.code", request.getProvinceCode());
+        predicates.add(
+            criteriaBuilder.equal(root.get("province").get("code"), request.getProvinceCode()));
       }
 
       return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
