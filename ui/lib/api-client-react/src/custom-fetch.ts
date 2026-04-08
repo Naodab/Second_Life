@@ -1,5 +1,6 @@
 export type CustomFetchOptions = RequestInit & {
   responseType?: "json" | "text" | "blob" | "auto";
+  query?: Record<string, any>;
 };
 
 export type ErrorType<T = unknown> = ApiError<T>;
@@ -290,12 +291,37 @@ async function parseSuccessBody(
   }
 }
 
+function appendQuery(url: string, query?: Record<string, any>) {
+  if (!query) return url;
+
+  const qs = new URLSearchParams(
+    Object.entries(query)
+      .filter(([_, v]) => v !== undefined && v !== null)
+      .map(([k, v]) => [k, String(v)]),
+  ).toString();
+
+  if (!qs) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}${qs}`;
+}
+
+function applyQuery(input: RequestInfo | URL, query?: Record<string, any>): RequestInfo | URL {
+  if (!query) return input;
+
+  const url = appendQuery(resolveUrl(input), query);
+  if (typeof input === "string") return url;
+  if (isUrl(input)) return new URL(url);
+  if (isRequest(input)) return new Request(url, input);
+  return url;
+}
+
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
 ): Promise<T> {
+  const { responseType = "auto", headers: headersInit, query, ...init } = options;
   input = applyBaseUrl(input);
-  const { responseType = "auto", headers: headersInit, ...init } = options;
+  input = applyQuery(input, query);
 
   const method = resolveMethod(input, init.method);
 

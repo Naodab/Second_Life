@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Filter, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
 import { useProducts } from "@/hooks/use-mock-api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CATEGORIES, PROVINCES } from "@/lib/mock-data";
+import { CATEGORIES } from "@/lib/mock-data";
 import {
   Select,
   SelectContent,
@@ -15,22 +15,39 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { getProvinces, ProvinceResponse, getWards, WardResponse } from "@/api/location";
 
 export default function Search() {
   const [, setLocation] = useLocation();
+  const [provinces, setProvinces] = useState<ProvinceResponse[]>([]);
+  const [wards, setWards] = useState<WardResponse[]>([]);
   const searchParams = new URLSearchParams(window.location.search);
   const initialType = searchParams.get('type') || 'all';
   const initialCategory = searchParams.get('category') || 'All';
-  
+
   const [typeFilter, setTypeFilter] = useState(initialType);
   const [catFilter, setCatFilter] = useState(initialCategory);
-  
+  const [provinceCode, setProvinceCode] = useState<string | undefined>(undefined);
+  const [wardCode, setWardCode] = useState<string | undefined>(undefined);
+
   const { data: products, isLoading } = useProducts(catFilter, typeFilter);
+
+  useEffect(() => {
+    getProvinces({}).then(setProvinces);
+  }, []);
+
+  useEffect(() => {
+    if (provinceCode) {
+      getWards({ provinceCode: provinceCode }).then(setWards);
+    } else {
+      setWards([]);
+    }
+  }, [provinceCode]);
 
   return (
     <div className="min-h-screen bg-gray-50/30 pt-8 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Mobile Filter Toggle */}
         <div className="flex md:hidden items-center justify-between mb-4">
           <h1 className="text-2xl font-bold font-display">Khám phá</h1>
@@ -43,33 +60,33 @@ export default function Search() {
           {/* Sidebar Filters */}
           <aside className="w-full md:w-64 flex-shrink-0 hidden md:block">
             <div className="sticky top-28 space-y-8">
-              
+
               <div>
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                   <Filter className="w-5 h-5 text-primary" /> Bộ lọc
                 </h3>
-                
+
                 <div className="space-y-6 bg-white p-5 rounded-2xl border shadow-sm">
                   {/* Listing Type */}
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">Loại tin</h4>
                     <div className="flex flex-col gap-2">
-                      <Button 
-                        variant={typeFilter === 'all' ? 'default' : 'ghost'} 
+                      <Button
+                        variant={typeFilter === 'all' ? 'default' : 'ghost'}
                         className={`justify-start ${typeFilter === 'all' ? 'bg-primary/10 text-primary hover:bg-primary/20' : ''}`}
                         onClick={() => setTypeFilter('all')}
                       >
                         Tất cả
                       </Button>
-                      <Button 
-                        variant={typeFilter === 'buy' ? 'default' : 'ghost'} 
+                      <Button
+                        variant={typeFilter === 'buy' ? 'default' : 'ghost'}
                         className={`justify-start ${typeFilter === 'buy' ? 'bg-primary/10 text-primary hover:bg-primary/20' : ''}`}
                         onClick={() => setTypeFilter('buy')}
                       >
                         Chỉ mua
                       </Button>
-                      <Button 
-                        variant={typeFilter === 'rent' ? 'default' : 'ghost'} 
+                      <Button
+                        variant={typeFilter === 'rent' ? 'default' : 'ghost'}
                         className={`justify-start ${typeFilter === 'rent' ? 'bg-secondary/10 text-secondary-foreground hover:bg-secondary/20' : ''}`}
                         onClick={() => setTypeFilter('rent')}
                       >
@@ -81,26 +98,38 @@ export default function Search() {
                   {/* Location */}
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">Địa điểm</h4>
-                    <Select>
+                    <Select value={provinceCode} onValueChange={setProvinceCode}>
                       <SelectTrigger className="w-full bg-gray-50 border-transparent">
                         <SelectValue placeholder="Tất cả tỉnh thành" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Tất cả tỉnh thành</SelectItem>
-                        {PROVINCES.map(p => (
-                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        {provinces.map(p => (
+                          <SelectItem key={p.id} value={p.code}>{p.fullName}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <Select value={wardCode} onValueChange={setWardCode}>
+                      <SelectTrigger className="w-full bg-gray-50 border-transparent">
+                        <SelectValue placeholder="Tất cả xã phường" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tất cả xã phường</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {wards.map(w => (
+                      <SelectContent key={w.id}>
+                        <SelectItem value={w.code}>{w.fullName}</SelectItem>
+                      </SelectContent>
+                    ))}
                   </div>
-
                   {/* Categories */}
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">Danh mục</h4>
                     <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                       <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="cat-all" 
+                        <Checkbox
+                          id="cat-all"
                           checked={catFilter === 'All'}
                           onCheckedChange={() => setCatFilter('All')}
                         />
@@ -110,8 +139,8 @@ export default function Search() {
                       </div>
                       {CATEGORIES.map(cat => (
                         <div key={cat} className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={`cat-${cat}`} 
+                          <Checkbox
+                            id={`cat-${cat}`}
                             checked={catFilter === cat}
                             onCheckedChange={() => setCatFilter(cat)}
                           />
@@ -147,7 +176,7 @@ export default function Search() {
                 </h1>
                 <p className="text-muted-foreground text-sm">{products.length} kết quả tìm thấy</p>
               </div>
-              
+
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Sắp xếp:</span>
                 <Select defaultValue="newest">
