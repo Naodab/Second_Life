@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getProvinces, ProvinceResponse, getWards, WardResponse } from "@/api/location";
+import { LocationPickerCombobox } from "@/components/LocationPickerCombobox";
 
 export default function Search() {
   const [, setLocation] = useLocation();
@@ -98,30 +99,35 @@ export default function Search() {
                   {/* Location */}
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">Địa điểm</h4>
-                    <Select value={provinceCode} onValueChange={setProvinceCode}>
-                      <SelectTrigger className="w-full bg-gray-50 border-transparent">
-                        <SelectValue placeholder="Tất cả tỉnh thành" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tất cả tỉnh thành</SelectItem>
-                        {provinces.map(p => (
-                          <SelectItem key={p.id} value={p.code}>{p.fullName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={wardCode} onValueChange={setWardCode}>
-                      <SelectTrigger className="w-full bg-gray-50 border-transparent">
-                        <SelectValue placeholder="Tất cả xã phường" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tất cả xã phường</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {wards.map(w => (
-                      <SelectContent key={w.id}>
-                        <SelectItem value={w.code}>{w.fullName}</SelectItem>
-                      </SelectContent>
-                    ))}
+                    <LocationPickerCombobox
+                      items={provinces}
+                      value={provinceCode}
+                      onValueChange={(code) => {
+                        setProvinceCode(code);
+                        setWardCode(undefined);
+                      }}
+                      allLabel="Tất cả tỉnh thành"
+                      searchPlaceholder="Tìm tỉnh thành..."
+                      emptySearchText="Không tìm thấy tỉnh thành."
+                    />
+                    <LocationPickerCombobox
+                      className="mt-2"
+                      items={wards}
+                      value={wardCode}
+                      onValueChange={setWardCode}
+                      disabled={!provinceCode}
+                      allLabel="Tất cả xã phường"
+                      searchPlaceholder={
+                        provinceCode
+                          ? "Tìm xã, phường..."
+                          : "Chọn tỉnh thành trước"
+                      }
+                      emptySearchText={
+                        provinceCode
+                          ? "Không tìm thấy xã phường."
+                          : "Chọn tỉnh thành trước."
+                      }
+                    />
                   </div>
                   {/* Categories */}
                   <div>

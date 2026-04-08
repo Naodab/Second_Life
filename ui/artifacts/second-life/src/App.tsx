@@ -91,7 +91,7 @@ function Router() {
 }
 
 function App() {
-  setBaseUrl(import.meta.env.VITE_BACKEND_URL || "http://localhost:8080");
+  setBaseUrl(import.meta.env.VITE_BACKEND_URL || "http://localhost");
 
   return (
     <QueryClientProvider client={queryClient}>
