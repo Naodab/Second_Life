@@ -24,6 +24,7 @@ spring:
     topics:
       update-avatar: "profile.update-avatar"
       upload-avatar: "upload.upload-avatar"
+      update-main-image-facility: "facility.update-main-image"
 
 file:
   max-size: 100 # in mb
