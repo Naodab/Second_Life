@@ -10,20 +10,16 @@ spring:
   application:
     name: profileservice
   datasource:
-    url: ${MYSQL_URL}
-    username: ${MYSQL_USERNAME}
-    password: ${MYSQL_PASSWORD}
+    url: ${MYSQL_URL:${SPRING_DATASOURCE_URL:}}
+    username: ${MYSQL_USERNAME:${SPRING_DATASOURCE_USERNAME:}}
+    password: ${MYSQL_PASSWORD:${SPRING_DATASOURCE_PASSWORD:}}
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
     properties:
       hibernate:
-        "[format_sql]": true
         dialect: org.hibernate.dialect.MySQLDialect
   jackson:
-    serialization:
-      "[indent_output]": true
     deserialization:
       fail-on-unknown-properties: false
   kafka:
@@ -45,7 +41,7 @@ spring:
       account-profile-linked: "auth.account-profile-linked"
 
 upload-service:
-  url: ${UPLOAD_SERVICE_URL:http://localhost:8084/api/v1}
+  url: ${UPLOAD_SERVICE_URL:}
 
 external:
-  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:8080}
+  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:}

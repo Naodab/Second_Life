@@ -10,19 +10,13 @@ spring:
   application:
     name: productservice
   datasource:
-    url: "${DATABASE_URL}"
-    username: "${DATABASE_USERNAME}"
-    password: "${DATABASE_PASSWORD}"
+    url: ${MYSQL_URL:${SPRING_DATASOURCE_URL:}}
+    username: ${MYSQL_USERNAME:${SPRING_DATASOURCE_USERNAME:}}
+    password: ${MYSQL_PASSWORD:${SPRING_DATASOURCE_PASSWORD:}}
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        "[format_sql]": true
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
   jackson:
-    serialization:
-      "[indent_output]": true
     deserialization:
       fail-on-unknown-properties: false
   kafka:
@@ -46,7 +40,7 @@ sort:
 
 external:
   location-service:
-    url: ${LOCATION_SERVICE_URL:http://localhost:8085/api/v1}
+    url: ${LOCATION_SERVICE_URL:}
   upload-service:
-    url: ${UPLOAD_SERVICE_URL:http://localhost:8084/api/v1}
-  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}
+    url: ${UPLOAD_SERVICE_URL:}
+  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:}

@@ -1,0 +1,30 @@
+# Copy to application-dev.yml and adjust (application-dev.yml is gitignored).
+
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+
+external:
+  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}
+
+spring:
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://127.0.0.1:3306/second_life_location?ssl-mode=REQUIRED}
+    username: ${MYSQL_USERNAME:dev}
+    password: ${MYSQL_PASSWORD:changeme}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        "[format_sql]": true
+  jackson:
+    serialization:
+      "[indent_output]": true
+
+logging:
+  level:
+    root: INFO
+    "[com.naodab.locationservice]": DEBUG

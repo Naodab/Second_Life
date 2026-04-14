@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.naodab.uploadservice.dto.events.UpdateAvatarEvent;
+import com.naodab.uploadservice.dto.events.UpdateMainImageFacilityEvent;
 
 @Configuration
 public class KafkaConfig {
@@ -59,6 +60,11 @@ public class KafkaConfig {
   @Bean
   public KafkaTemplate<String, UpdateAvatarEvent> updateAvatarKafkaTemplate() {
     return kafkaTemplate(UpdateAvatarEvent.class);
+  }
+
+  @Bean
+  public KafkaTemplate<String, UpdateMainImageFacilityEvent> updateMainImageFacilityKafkaTemplate() {
+    return kafkaTemplate(UpdateMainImageFacilityEvent.class);
   }
 
   public <T> ConsumerFactory<String, T> consumerFactory(Class<T> type, String groupId) {

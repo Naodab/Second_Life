@@ -1,0 +1,16 @@
+# Copy to application-dev.yml and adjust (application-dev.yml is gitignored).
+
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+
+cloudinary:
+  id: ${CLOUDINARY_ID:your-cloudinary-cloud-name}
+  key: ${CLOUDINARY_KEY:your-api-key}
+  secret: ${CLOUDINARY_SECRET:your-api-secret}
+
+logging:
+  level:
+    root: INFO
+    "[com.naodab.uploadservice]": DEBUG

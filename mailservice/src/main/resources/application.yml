@@ -10,10 +10,10 @@ spring:
   application:
     name: mailservice
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${SMTP_USERNAME}
-    password: ${SMTP_PASSWORD}
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -22,7 +22,7 @@ spring:
             enable: true
             required: true
           ssl:
-            trust: smtp.gmail.com
+            trust: ${SMTP_SSL_TRUST:smtp.gmail.com}
   kafka:
     listener:
       missing-topics-fatal: false
@@ -45,19 +45,8 @@ spring:
 
 app:
   mail:
-    from: noreply@gmail.com
-    from-name: Second Life
-    base-url: ${GATEWAY_URL:http://localhost:8080}
+    from: ${MAIL_FROM:noreply@gmail.com}
+    from-name: ${MAIL_FROM_NAME:Second Life}
+    base-url: ${GATEWAY_URL:}
   frontend:
-    url: ${FRONTEND_URL:http://localhost:3000}
-
-logging:
-  file:
-    name: mailservice.log
-  logback:
-    rollingpolicy:
-      file-name-pattern: mailservice-%d{yyyy-MM-dd}.log
-      max-file-size: 10MB
-  level:
-    "[com.naodab.mailservice]": DEBUG
-    "[org.springframework.kafka]": INFO
+    url: ${FRONTEND_URL:}

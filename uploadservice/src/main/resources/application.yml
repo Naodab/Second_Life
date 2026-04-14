@@ -30,6 +30,6 @@ file:
   max-size: 100 # in mb
 
 cloudinary:
-  id: ${CLOUDINARY_ID}
-  key: ${CLOUDINARY_KEY}
-  secret: ${CLOUDINARY_SECRET}
+  id: ${CLOUDINARY_ID:}
+  key: ${CLOUDINARY_KEY:}
+  secret: ${CLOUDINARY_SECRET:}
