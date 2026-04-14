@@ -37,3 +37,16 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    topics:
+      update-main-image-facility: "facility.update-main-image"
+
+sort:
+  facilities:
+    default: created_at
+
+external:
+  location-service:
+    url: ${LOCATION_SERVICE_URL:http://localhost:8085/api/v1}
+  upload-service:
+    url: ${UPLOAD_SERVICE_URL:http://localhost:8084/api/v1}
+  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}

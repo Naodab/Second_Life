@@ -39,6 +39,11 @@
       "name": "server.servlet.multipart.max-request-size",
       "type": "java.lang.String",
       "description": "Max request size"
+    },
+    {
+      "name": "spring.kafka.topics.update-main-image-facility",
+      "type": "java.lang.String",
+      "description": "Update main image facility topic"
     }
   ]
 }

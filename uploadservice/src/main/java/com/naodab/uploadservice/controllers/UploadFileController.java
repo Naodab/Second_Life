@@ -10,8 +10,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.naodab.commonservice.constant.AppConstants;
 import com.naodab.uploadservice.dto.events.UpdateAvatarEvent;
+import com.naodab.uploadservice.dto.events.UpdateMainImageFacilityEvent;
 import com.naodab.uploadservice.services.UploadService;
 import com.naodab.uploadservice.kafka.producers.UpdateAvatarProducer;
+import com.naodab.uploadservice.kafka.producers.UpdateMainImageFacilityProducer;
 
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -26,6 +28,7 @@ public class UploadFileController {
 
   UploadService uploadService;
   UpdateAvatarProducer updateAvatarProducer;
+  UpdateMainImageFacilityProducer updateMainImageFacilityProducer;
 
   @PostMapping("/avatar")
   public ResponseEntity<Void> uploadAvatar(
@@ -38,6 +41,18 @@ public class UploadFileController {
         .avatarUrl(avatarUrl)
         .build());
 
+    return ResponseEntity.ok().build();
+  }
+
+  @PostMapping("/facility-image")
+  public ResponseEntity<Void> uploadFacilityImage(
+      @RequestParam String facilityId,
+      @RequestParam MultipartFile image) {
+    String url = uploadService.upload(image);
+    updateMainImageFacilityProducer.send(UpdateMainImageFacilityEvent.builder()
+        .facilityId(facilityId)
+        .imageUrl(url)
+        .build());
     return ResponseEntity.ok().build();
   }
 }
