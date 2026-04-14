@@ -1,0 +1,29 @@
+# Copy to application-dev.yml and adjust (application-dev.yml is gitignored).
+
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+
+spring:
+  mail:
+    username: ${SMTP_USERNAME:your-email@gmail.com}
+    password: ${SMTP_PASSWORD:your-app-password}
+
+app:
+  mail:
+    base-url: ${GATEWAY_URL:http://localhost:8080}
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:5173}
+
+logging:
+  file:
+    name: mailservice.log
+  logback:
+    rollingpolicy:
+      file-name-pattern: mailservice-%d{yyyy-MM-dd}.log
+      max-file-size: 10MB
+  level:
+    root: INFO
+    "[com.naodab.mailservice]": DEBUG
+    "[org.springframework.kafka]": INFO

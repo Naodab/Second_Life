@@ -1,0 +1,53 @@
+# Copy to application-dev.yml and adjust (application-dev.yml is gitignored).
+# Or set the same keys via environment / .env.
+
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+
+spring:
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://127.0.0.1:3306/second_life?ssl-mode=REQUIRED}
+    username: ${MYSQL_USERNAME:dev}
+    password: ${MYSQL_PASSWORD:changeme}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        "[format_sql]": true
+  jackson:
+    serialization:
+      "[indent_output]": true
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your-google-client-id.apps.googleusercontent.com}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-min-256-bits-hex-or-random-string}
+  oauth2:
+    authorized-redirect-uris:
+      - http://localhost:3000/oauth2/redirect
+      - http://localhost:5173/oauth2/callback/google
+      - http://localhost:8080/oauth2/redirect
+
+external:
+  frontend_url: ${FRONTEND_URL:http://localhost:5173}
+  auth_service_public_base_url: ${AUTH_SERVICE_PUBLIC_BASE_URL:http://localhost:8081/api/v1}
+  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:8080}
+
+profile-service:
+  url: ${PROFILE_SERVICE_URL:http://localhost:8082/api/v1}
+
+logging:
+  level:
+    root: INFO
+    "[com.naodab.authservice]": DEBUG
+    "[org.springframework.security]": DEBUG
