@@ -4,81 +4,81 @@ services:
       - ./traefik/traefik.dev.yml:/etc/traefik/traefik.yml
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml
 
-  auth-service:
-    develop:
-      watch:
-        - action: rebuild
-          path: ./pom.xml
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./commonjpa
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./commonservice
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./authservice
-          ignore:
-            - "**/target/**"
+  # auth-service:
+  #   develop:
+  #     watch:
+  #       - action: rebuild
+  #         path: ./pom.xml
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./commonjpa
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./commonservice
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./authservice
+  #         ignore:
+  #           - "**/target/**"
 
-  mail-service:
-    develop:
-      watch:
-        - action: rebuild
-          path: ./pom.xml
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./commonjpa
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./commonservice
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./mailservice
-          ignore:
-            - "**/target/**"
+  # mail-service:
+  #   develop:
+  #     watch:
+  #       - action: rebuild
+  #         path: ./pom.xml
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./commonjpa
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./commonservice
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./mailservice
+  #         ignore:
+  #           - "**/target/**"
 
-  profile-service:
-    develop:
-      watch:
-        - action: rebuild
-          path: ./pom.xml
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./commonjpa
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./commonservice
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./profileservice
-          ignore:
-            - "**/target/**"
+  # profile-service:
+  #   develop:
+  #     watch:
+  #       - action: rebuild
+  #         path: ./pom.xml
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./commonjpa
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./commonservice
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./profileservice
+  #         ignore:
+  #           - "**/target/**"
 
-  upload-service:
-    develop:
-      watch:
-        - action: rebuild
-          path: ./pom.xml
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./commonservice
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./uploadservice
-          ignore:
-            - "**/target/**"
+  # upload-service:
+  #   develop:
+  #     watch:
+  #       - action: rebuild
+  #         path: ./pom.xml
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./commonservice
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./uploadservice
+  #         ignore:
+  #           - "**/target/**"
 
   location-service:
     develop:
@@ -93,5 +93,21 @@ services:
             - "**/target/**"
         - action: rebuild
           path: ./locationservice
+          ignore:
+            - "**/target/**"
+
+  product-service:
+    develop:
+      watch:
+        - action: rebuild
+          path: ./pom.xml
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./commonservice
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./productservice
           ignore:
             - "**/target/**"

@@ -167,6 +167,26 @@ services:
     labels:
       - "traefik.enable=true"
 
+  product-service:
+    image: product-service:latest
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: productservice/Dockerfile
+    ports:
+      - "${SERVER_PORT_PRODUCT_SERVICE}:${SERVER_PORT_PRODUCT_SERVICE}"
+    env_file:
+      - .env
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - second_life_network
+    labels:
+      - "traefik.enable=true"
+
 volumes:
   kafka-data:
   mysql-data:

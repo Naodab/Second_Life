@@ -46,7 +46,7 @@ http:
         - gateway-jwt
       priority: 1
     location-api-options:
-      rule: "PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`) && Method(`OPTIONS`)"
+      rule: "(PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`)) && Method(`OPTIONS`)"
       service: location-service
       entryPoints:
         - web
@@ -57,6 +57,20 @@ http:
       service: location-service
       entryPoints:
         - web
+      priority: 1
+    product-api-options:
+      rule: "(PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`)) && Method(`OPTIONS`)"
+      service: product-service
+      entryPoints:
+        - web
+      priority: 100
+    product-api:
+      rule: "PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`)"
+      service: product-service
+      entryPoints:
+        - web
+      middlewares:
+        - gateway-jwt
       priority: 1
 
   services:
@@ -80,3 +94,7 @@ http:
       loadBalancer:
         servers:
           - url: "http://upload-service:8084"
+    product-service:
+      loadBalancer:
+        servers:
+          - url: "http://product-service:8086"

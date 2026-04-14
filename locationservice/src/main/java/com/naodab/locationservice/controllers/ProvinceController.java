@@ -15,90 +15,108 @@ import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.locationservice.dto.request.ProvinceSearchRequest;
 import com.naodab.locationservice.dto.response.ProvinceResponse;
 import com.naodab.locationservice.services.ProvinceService;
+import com.naodab.locationservice.services.WardService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
+@Slf4j
 @RequestMapping("/provinces")
 @RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class ProvinceController {
-  ProvinceService provinceService;
+	ProvinceService provinceService;
+	WardService wardService;
 
-  @GetMapping("/{code}")
-  public ResponseEntity<ApiResponse<ProvinceResponse>> getProvince(@PathVariable String code) {
-    return ResponseEntity.ok(
-        ApiResponse.<ProvinceResponse>builder()
-            .data(provinceService.getProvince(code))
-            .build());
-  }
+	@GetMapping("/{code}")
+	public ResponseEntity<ApiResponse<ProvinceResponse>> getProvince(@PathVariable String code) {
+		return ResponseEntity.ok(
+				ApiResponse.<ProvinceResponse>builder()
+						.data(provinceService.getProvince(code))
+						.build());
+	}
 
-  @GetMapping
-  public ResponseEntity<ApiResponse<List<ProvinceResponse>>> getProvinces(
-      @RequestParam(required = false) Integer page,
-      @RequestParam(required = false) Integer pageSize,
-      @RequestParam(required = false) String name) {
+	@GetMapping
+	public ResponseEntity<ApiResponse<List<ProvinceResponse>>> getProvinces(
+			@RequestParam(required = false) Integer page,
+			@RequestParam(required = false) Integer pageSize,
+			@RequestParam(required = false) String name) {
 
-    ProvinceSearchRequest request = ProvinceSearchRequest.builder().name(name).build();
-    List<ProvinceResponse> data = page == null || pageSize == null
-        ? provinceService.getProvincesWithoutPagination(request)
-        : provinceService.getProvinces(request, page, pageSize);
+		ProvinceSearchRequest request = ProvinceSearchRequest.builder().name(name).build();
+		List<ProvinceResponse> data = page == null || pageSize == null
+				? provinceService.getProvincesWithoutPagination(request)
+				: provinceService.getProvinces(request, page, pageSize);
 
-    return ResponseEntity.ok(
-        ApiResponse.<List<ProvinceResponse>>builder()
-            .data(data)
-            .build());
-  }
+		return ResponseEntity.ok(
+				ApiResponse.<List<ProvinceResponse>>builder()
+						.data(data)
+						.build());
+	}
 
-  @GetMapping("/radius")
-  public ResponseEntity<ApiResponse<List<ProvinceResponse>>> getProvincesWithinRadius(
-      @RequestParam(required = false) Float lat,
-      @RequestParam(required = false) Float lon,
-      @RequestParam(required = false) Float radiusMeters,
-      @RequestParam(required = false) Integer page,
-      @RequestParam(required = false) Integer pageSize) {
+	@GetMapping("/radius")
+	public ResponseEntity<ApiResponse<List<ProvinceResponse>>> getProvincesWithinRadius(
+			@RequestParam(required = false) Float lat,
+			@RequestParam(required = false) Float lon,
+			@RequestParam(required = false) Float radiusMeters,
+			@RequestParam(required = false) Integer page,
+			@RequestParam(required = false) Integer pageSize) {
 
-    if (lat == null || lon == null || radiusMeters == null) {
-      return ResponseEntity.badRequest().body(
-          ApiResponse.<List<ProvinceResponse>>builder()
-              .message("Lat, lon and radiusMeters are required")
-              .code(ErrorCode.INVALID_INPUT.getCode())
-              .build());
-    }
+		if (lat == null || lon == null || radiusMeters == null) {
+			return ResponseEntity.badRequest().body(
+					ApiResponse.<List<ProvinceResponse>>builder()
+							.message("Lat, lon and radiusMeters are required")
+							.code(ErrorCode.INVALID_INPUT.getCode())
+							.build());
+		}
 
-    List<ProvinceResponse> data = page == null || pageSize == null
-        ? provinceService.getProvincesByLonAndLatWithoutPagination(lon, lat)
-        : provinceService.getProvincesWithinRadius(lat, lon, radiusMeters, page, pageSize);
+		List<ProvinceResponse> data = page == null || pageSize == null
+				? provinceService.getProvincesByLonAndLatWithoutPagination(lon, lat)
+				: provinceService.getProvincesWithinRadius(lat, lon, radiusMeters, page, pageSize);
 
-    return ResponseEntity.ok(
-        ApiResponse.<List<ProvinceResponse>>builder()
-            .data(data)
-            .build());
-  }
+		return ResponseEntity.ok(
+				ApiResponse.<List<ProvinceResponse>>builder()
+						.data(data)
+						.build());
+	}
 
-  @GetMapping("/lon-lat")
-  public ResponseEntity<ApiResponse<List<ProvinceResponse>>> getProvincesByLonAndLat(
-      @RequestParam(required = false) Float lon,
-      @RequestParam(required = false) Float lat,
-      @RequestParam(required = false) Integer page,
-      @RequestParam(required = false) Integer pageSize) {
+	@GetMapping("/lon-lat")
+	public ResponseEntity<ApiResponse<List<ProvinceResponse>>> getProvincesByLonAndLat(
+			@RequestParam(required = false) Float lon,
+			@RequestParam(required = false) Float lat,
+			@RequestParam(required = false) Integer page,
+			@RequestParam(required = false) Integer pageSize) {
 
-    if (lon == null || lat == null) {
-      return ResponseEntity.badRequest().body(
-          ApiResponse.<List<ProvinceResponse>>builder()
-              .message("Lon and lat are required")
-              .code(ErrorCode.INVALID_INPUT.getCode())
-              .build());
-    }
+		if (lon == null || lat == null) {
+			return ResponseEntity.badRequest().body(
+					ApiResponse.<List<ProvinceResponse>>builder()
+							.message("Lon and lat are required")
+							.code(ErrorCode.INVALID_INPUT.getCode())
+							.build());
+		}
 
-    List<ProvinceResponse> data = page == null || pageSize == null
-        ? provinceService.getProvincesByLonAndLatWithoutPagination(lon, lat)
-        : provinceService.getProvincesByLonAndLat(lon, lat, page, pageSize);
+		List<ProvinceResponse> data = page == null || pageSize == null
+				? provinceService.getProvincesByLonAndLatWithoutPagination(lon, lat)
+				: provinceService.getProvincesByLonAndLat(lon, lat, page, pageSize);
 
-    return ResponseEntity.ok(
-        ApiResponse.<List<ProvinceResponse>>builder()
-            .data(data)
-            .build());
-  }
+		return ResponseEntity.ok(
+				ApiResponse.<List<ProvinceResponse>>builder()
+						.data(data)
+						.build());
+	}
+
+	@GetMapping("/{provinceCode}/wards/{wardCode}/valid-location")
+	public ResponseEntity<ApiResponse<Boolean>> validLocation(
+			@PathVariable String provinceCode,
+			@PathVariable String wardCode,
+			@RequestParam Float latitude,
+			@RequestParam Float longitude) {
+		boolean valid = wardService.isLocationValid(provinceCode, wardCode, latitude, longitude);
+		log.info("Valid location: {} - {} - {} - {} - {}", provinceCode, wardCode, latitude, longitude, valid);
+		return ResponseEntity.ok(
+				ApiResponse.<Boolean>builder()
+						.data(valid)
+						.build());
+	}
 }

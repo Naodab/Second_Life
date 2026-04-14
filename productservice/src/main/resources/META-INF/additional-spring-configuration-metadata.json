@@ -9,6 +9,31 @@
       "name": "server.servlet.multipart.max-request-size",
       "type": "java.lang.String",
       "description": "Max request size"
+    },
+    {
+      "name": "sort.facilities.default",
+      "type": "java.lang.String",
+      "description": "Default sort for facilities"
+    },
+    {
+      "name": "external.cors_allowed_origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated CORS origins (Spring allowedOrigins), e.g. http://localhost:5173,http://localhost"
+    },
+    {
+      "name": "external.location-service.url",
+      "type": "java.lang.String",
+      "description": "Location service URL"
+    },
+    {
+      "name": "external.upload-service.url",
+      "type": "java.lang.String",
+      "description": "Upload service URL"
+    },
+    {
+      "name": "spring.kafka.topics.update-main-image-facility",
+      "type": "java.lang.String",
+      "description": "Update main image facility topic"
     }
   ]
 }

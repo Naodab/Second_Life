@@ -24,7 +24,6 @@ public class UpdateAvatarProducer {
   @Value("${spring.kafka.topics.update-avatar}")
   String updateAvatarTopic;
 
-  @SuppressWarnings("null")
   @Async
   public void send(UpdateAvatarEvent event) {
     log.info("Sending update avatar event to topic: {}", updateAvatarTopic);

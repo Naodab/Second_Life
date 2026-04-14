@@ -18,4 +18,6 @@ public interface WardService {
 
   List<WardResponse> getAllWithoutPagination(WardSearchRequest request);
 
+  boolean isLocationValid(String provinceCode, String wardCode, Float latitude, Float longitude);
+
 }

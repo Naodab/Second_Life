@@ -5,4 +5,5 @@ public class AppRegexp {
   public static final String CHARACTER_ONLY_REGEX = "^[\\p{L}\\s]+$";
   public static final String NUMBER_ONLY_REGEX = "^\\d+$";
   public static final String BANK_ACCOUNT_NUMBER_REGEX = "^\\d{10,19}$";
+  public static final String COORDINATES_REGEX = "@([-\\d.]+),([-\\d.]+)";
 }

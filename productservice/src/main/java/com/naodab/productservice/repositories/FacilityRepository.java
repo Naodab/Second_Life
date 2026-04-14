@@ -1,23 +1,31 @@
 package com.naodab.productservice.repositories;
 
 import java.util.List;
+import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.naodab.productservice.models.Facility;
 
-public interface FacilityRepository extends JpaRepository<Facility, String> {
+public interface FacilityRepository extends JpaRepository<Facility, String>, JpaSpecificationExecutor<Facility> {
 
-  @Query("SELECT f FROM Facility f WHERE f.ownerId = :ownerId")
-  List<Facility> findByOwnerId(@Param("ownerId") String ownerId);
+  Optional<Facility> findByIdAndDeletedAtIsNull(String id);
 
-  @Query("SELECT f FROM Facility f WHERE f.provinceCode = :provinceCode")
-  List<Facility> findByProvinceCode(@Param("provinceCode") String provinceCode);
+  List<Facility> findAllByDeletedAtIsNull(Sort sort);
 
-  @Query("SELECT f FROM Facility f WHERE f.wardCode = :wardCode")
-  List<Facility> findByWardCode(@Param("wardCode") String wardCode);
+  Page<Facility> findAllByDeletedAtIsNull(Pageable pageable);
+
+  boolean existsByOwnerIdAndNameAndDeletedAtIsNull(String ownerId, String name);
+
+  boolean existsByOwnerIdAndNameAndIdNotAndDeletedAtIsNull(String ownerId, String name, String id);
+
+  Optional<Facility> findByIdAndOwnerIdAndDeletedAtIsNull(String id, String ownerId);
 
   @Query(value = """
       WITH d AS (
