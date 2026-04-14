@@ -1,0 +1,27 @@
+package com.naodab.productservice.services;
+
+import java.util.List;
+
+import com.naodab.productservice.dto.request.FacilityCreateRequest;
+import com.naodab.productservice.dto.request.FacilitySearchRequest;
+import com.naodab.productservice.dto.request.FacilityUpdateRequest;
+import com.naodab.productservice.dto.response.FacilityResponse;
+import org.springframework.web.multipart.MultipartFile;
+
+public interface FacilityService {
+  FacilityResponse createFacility(String profileId, FacilityCreateRequest request);
+
+  FacilityResponse getFacilityById(String id);
+
+  List<FacilityResponse> getAllFacilities(Integer page, Integer pageSize);
+
+  List<FacilityResponse> searchFacilities(Integer page, Integer pageSize, FacilitySearchRequest request);
+
+  FacilityResponse updateFacility(String id, FacilityUpdateRequest request);
+
+  void deleteFacility(String id);
+
+  void uploadMainImageFacility(String id, String ownerId, MultipartFile image);
+
+  void updateMainImageFacility(String id, String imageUrl);
+}

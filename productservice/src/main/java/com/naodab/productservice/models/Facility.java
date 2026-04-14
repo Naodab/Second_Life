@@ -2,11 +2,13 @@ package com.naodab.productservice.models;
 
 import com.naodab.commonjpa.entity.BaseEntity;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -22,6 +24,7 @@ import jakarta.persistence.Index;
 })
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
@@ -35,6 +38,7 @@ public class Facility extends BaseEntity {
   String description;
   String imageUrl;
 
+  @Column(length = 4096)
   String linkGoogleMap;
   String address;
   String provinceCode;
@@ -42,7 +46,15 @@ public class Facility extends BaseEntity {
   Float latitude;
   Float longitude;
 
-  Long viewCount;
-  Long orderCount;
-  Float averageRating;
+  @Builder.Default
+  Boolean isActive = true;
+
+  @Builder.Default
+  Long viewCount = 0L;
+
+  @Builder.Default
+  Long orderCount = 0L;
+
+  @Builder.Default
+  Float averageRating = 0.0F;
 }

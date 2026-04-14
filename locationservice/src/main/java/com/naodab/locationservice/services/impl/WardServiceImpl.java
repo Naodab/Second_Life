@@ -85,13 +85,18 @@ public class WardServiceImpl implements WardService {
   }
 
   @Override
-  @Cacheable(cacheNames = CacheNames.WARDS, key = "'all'")
+  @Cacheable(cacheNames = CacheNames.WARDS, key = "'all:' + (#request.name == null ? 'all' : #request.name) + ':' + (#request.provinceCode == null ? 'all' : #request.provinceCode)", condition = "#request.name != null || #request.provinceCode != null")
   public List<WardResponse> getAllWithoutPagination(WardSearchRequest request) {
     Specification<Ward> specification = wardSpecification.build(request);
     return wardRepository.findAll(specification, Sort.by(Sort.Direction.ASC, "code"))
         .stream()
         .map(ward -> wardMapper.toWardResponse(ward, false))
         .toList();
+  }
+
+  @Override
+  public boolean isLocationValid(String provinceCode, String wardCode, Float latitude, Float longitude) {
+    return gisWardRepository.countWardContainingPoint(wardCode, provinceCode, longitude, latitude) > 0;
   }
 
 }

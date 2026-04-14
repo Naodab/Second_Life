@@ -54,6 +54,9 @@ public enum ErrorCode {
   CATEGORY_NOT_FOUND(1040, "Category not found", HttpStatus.NOT_FOUND),
   SUB_CATEGORY_ALREADY_EXISTS(1041, "Sub category already exists", HttpStatus.BAD_REQUEST),
   SUB_CATEGORY_NOT_FOUND(1042, "Sub category not found", HttpStatus.NOT_FOUND),
+  FACILITY_ALREADY_EXISTS(1043, "Facility already exists", HttpStatus.BAD_REQUEST),
+  FACILITY_NOT_FOUND(1044, "Facility not found", HttpStatus.NOT_FOUND),
+  FACILITY_LOCATION_INVALID(1045, "Facility location is invalid", HttpStatus.BAD_REQUEST),
   ;
 
   private int code;
