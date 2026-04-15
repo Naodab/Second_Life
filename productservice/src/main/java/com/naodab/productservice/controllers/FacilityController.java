@@ -70,6 +70,24 @@ public class FacilityController {
         .build());
   }
 
+  @GetMapping("/me")
+  public ResponseEntity<ApiResponse<List<FacilityResponse>>> getFacilitiesByOwnerId(
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
+    String profileId;
+    if (StringUtils.hasText(profileIdHeader)) {
+      profileId = profileIdHeader.trim();
+    } else {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    FacilitySearchRequest request = FacilitySearchRequest.builder()
+        .ownerId(profileId)
+        .build();
+    return ResponseEntity.ok(ApiResponse.<List<FacilityResponse>>builder()
+        .data(facilityService.searchFacilities(null, null, request))
+        .build());
+  }
+
   @GetMapping("/search")
   public ResponseEntity<ApiResponse<List<FacilityResponse>>> searchFacilities(
       @RequestParam(required = false) Integer page,

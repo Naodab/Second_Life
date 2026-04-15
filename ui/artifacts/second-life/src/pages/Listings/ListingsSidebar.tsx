@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { Shop } from "@/lib/mock-data";
+import { facilityAvatarUrl, type FacilityWithPlaceNames } from "@/api/facility";
 import type { ListingsView, PendingProduct } from "./types";
 
 export function ListingsSidebar({
@@ -40,7 +40,7 @@ export function ListingsSidebar({
   setFacilitySearch: (v: string) => void;
   pendingProducts: PendingProduct[];
   onGoHome: () => void;
-  facilities: Shop[];
+  facilities: FacilityWithPlaceNames[];
   onAddFacilityClick: () => void;
 }) {
   const filteredFacilities = facilities.filter(
@@ -123,7 +123,11 @@ export function ListingsSidebar({
                         : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
                     )}
                   >
-                    <img src={f.avatar} className="w-6 h-6 rounded-full object-cover flex-shrink-0" alt="" />
+                    <img
+                      src={facilityAvatarUrl(f)}
+                      className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                      alt=""
+                    />
                     <span className="truncate text-xs">{f.name}</span>
                     {pendingProducts.filter((p) => p.facilityId === f.id).length > 0 && (
                       <span className="ml-auto bg-primary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold flex-shrink-0">

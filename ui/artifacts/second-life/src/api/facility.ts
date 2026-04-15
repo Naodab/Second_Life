@@ -1,6 +1,5 @@
 import { customFetch } from "@workspace/api-client-react";
 import { unwrapApiData, type ApiResponseEnvelope } from "./types";
-import type { Shop } from "@/lib/mock-data";
 
 export const FACILITY_GOOGLE_MAP_LINK_MAX = 4096;
 
@@ -49,26 +48,17 @@ export type FacilityResponse = {
   averageRating?: number | null;
 };
 
-const DEFAULT_FACILITY_AVATAR =
+export const DEFAULT_FACILITY_AVATAR =
   "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop";
 
-export function facilityResponseToShop(
-  f: FacilityResponse,
-  opts: { provinceLabel: string; wardLabel: string },
-): Shop {
-  return {
-    id: f.id,
-    name: f.name,
-    avatar: f.imageUrl?.trim() || DEFAULT_FACILITY_AVATAR,
-    address: f.address,
-    province: opts.provinceLabel,
-    ward: opts.wardLabel,
-    rating: f.averageRating ?? 0,
-    totalOrders: Number(f.orderCount ?? 0),
-    joinedDate: new Date().toISOString().slice(0, 10),
-    isVerified: false,
-    categories: [],
-  };
+/** API facility + resolved locality names for UI. */
+export type FacilityWithPlaceNames = FacilityResponse & {
+  provinceName: string;
+  wardName: string;
+};
+
+export function facilityAvatarUrl(f: Pick<FacilityResponse, "imageUrl">): string {
+  return f.imageUrl?.trim() || DEFAULT_FACILITY_AVATAR;
 }
 
 export async function createFacility(body: FacilityCreateBody): Promise<FacilityResponse> {
@@ -77,6 +67,13 @@ export async function createFacility(body: FacilityCreateBody): Promise<Facility
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, linkGoogleMap }),
+  });
+  return unwrapApiData(raw);
+}
+
+export async function getMyFacilities(): Promise<FacilityResponse[]> {
+  const raw = await customFetch<ApiResponseEnvelope<FacilityResponse[]>>(`/api/v1/facilities/me`, {
+    method: "GET",
   });
   return unwrapApiData(raw);
 }

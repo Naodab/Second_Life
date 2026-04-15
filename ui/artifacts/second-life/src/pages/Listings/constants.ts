@@ -1,7 +1,5 @@
 import type { OrderStatus } from "@/lib/mock-data";
 
-export const MY_FACILITY_IDS = ["s1", "s2"];
-
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   completed: "Đã hoàn thành",
   pending_approval: "Chờ duyệt",

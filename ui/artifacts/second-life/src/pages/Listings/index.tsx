@@ -1,6 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
-import { MOCK_PRODUCTS, MOCK_SHOPS, type Shop } from "@/lib/mock-data";
+import {
+  getMyFacilities,
+  type FacilityResponse,
+  type FacilityWithPlaceNames,
+} from "@/api/facility";
+import { getProvinces, getWards } from "@/api/location";
+import { MOCK_PRODUCTS } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { AddFacilityModal } from "./AddFacilityModal";
 import { AddProductModal } from "./AddProductModal";
@@ -11,18 +18,44 @@ import { OwnerProductDetail } from "./OwnerProductDetail";
 import { OrdersView } from "./OrdersView";
 import { UnpublishedView } from "./UnpublishedView";
 import { UploadingModal } from "./UploadingModal";
-import { MY_FACILITY_IDS } from "./constants";
 import type { AddProductSubmitPayload, ListingsView, PendingProduct } from "./types";
+
+async function attachPlaceNames(
+  facilities: FacilityResponse[],
+): Promise<FacilityWithPlaceNames[]> {
+  if (facilities.length === 0) return [];
+  const provinces = await getProvinces({ pageSize: 100 });
+  const provinceNameByCode = new Map(provinces.map((p) => [p.code, p.fullName || p.name]));
+  const uniqueProvinceCodes = [...new Set(facilities.map((f) => f.provinceCode))];
+  const wardNameByProvinceAndCode = new Map<string, Map<string, string>>();
+  await Promise.all(
+    uniqueProvinceCodes.map(async (provinceCode) => {
+      try {
+        const wards = await getWards({ provinceCode, pageSize: 500 });
+        wardNameByProvinceAndCode.set(
+          provinceCode,
+          new Map(wards.map((w) => [w.code, w.fullName || w.name])),
+        );
+      } catch {
+        wardNameByProvinceAndCode.set(provinceCode, new Map());
+      }
+    }),
+  );
+  return facilities.map((f) => {
+    const provinceName = provinceNameByCode.get(f.provinceCode) ?? f.provinceCode;
+    const wardName = wardNameByProvinceAndCode.get(f.provinceCode)?.get(f.wardCode) ?? f.wardCode;
+    return { ...f, provinceName, wardName };
+  });
+}
 
 export default function Listings() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const [view, setView] = useState<ListingsView>("dashboard");
-  const [facilities, setFacilities] = useState(() =>
-    MOCK_SHOPS.filter((s) => MY_FACILITY_IDS.includes(s.id)),
-  );
-  const [activeFacilityId, setActiveFacilityId] = useState<string>(MY_FACILITY_IDS[0]);
+  const [facilities, setFacilities] = useState<FacilityWithPlaceNames[]>([]);
+  const [activeFacilityId, setActiveFacilityId] = useState("");
+  const [facilitiesLoading, setFacilitiesLoading] = useState(true);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [facilitiesOpen, setFacilitiesOpen] = useState(true);
   const [facilitySearch, setFacilitySearch] = useState("");
@@ -31,7 +64,40 @@ export default function Listings() {
   const [isUploadingModal, setIsUploadingModal] = useState(false);
   const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
 
-  const activeShop = useMemo(
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setFacilitiesLoading(true);
+      try {
+        const raw = await getMyFacilities();
+        if (cancelled) return;
+        const list = await attachPlaceNames(raw);
+        if (cancelled) return;
+        setFacilities(list);
+        if (list.length > 0) {
+          setActiveFacilityId((prev) =>
+            prev && list.some((s) => s.id === prev) ? prev : list[0].id,
+          );
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setFacilities([]);
+          toast({
+            title: "Không tải được danh sách cơ sở",
+            description: e instanceof Error ? e.message : "Vui lòng thử lại sau.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (!cancelled) setFacilitiesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [toast]);
+
+  const activeFacility = useMemo(
     () => facilities.find((s) => s.id === activeFacilityId),
     [facilities, activeFacilityId],
   );
@@ -81,11 +147,14 @@ export default function Listings() {
     toast({ title: "Đã đăng sản phẩm!", description: "Sản phẩm của bạn đã được đăng bán." });
   };
 
-  const handleFacilityCreated = (shop: Shop) => {
-    setFacilities((prev) => [...prev, shop]);
-    setActiveFacilityId(shop.id);
+  const handleFacilityCreated = (facility: FacilityWithPlaceNames) => {
+    setFacilities((prev) => [...prev, facility]);
+    setActiveFacilityId(facility.id);
     setView("facility");
-    toast({ title: "Đã tạo cơ sở", description: `${shop.name} đã được thêm vào danh sách.` });
+    toast({
+      title: "Đã tạo cơ sở",
+      description: `${facility.name} đã được thêm vào danh sách.`,
+    });
   };
 
   const activeProduct = activeProductId ? MOCK_PRODUCTS.find((p) => p.id === activeProductId) : null;
@@ -109,27 +178,36 @@ export default function Listings() {
 
       <main className="flex-1 p-6 overflow-y-auto min-h-screen">
         <div className="max-w-5xl mx-auto">
-          {view === "dashboard" && <DashboardView facilityId={activeFacilityId} />}
+          {facilitiesLoading ? (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3 text-muted-foreground">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden />
+              <p className="text-sm">Đang tải danh sách cơ sở…</p>
+            </div>
+          ) : (
+            <>
+              {view === "dashboard" && <DashboardView facilityId={activeFacilityId} />}
 
-          {view === "facility" && activeShop && (
-            <FacilityView
-              shop={activeShop}
-              onViewProduct={handleViewProduct}
-              onAddProduct={() => setIsAddModalOpen(true)}
-              onViewUnpublished={() => setView("unpublished")}
-              pendingCount={facilityPendingProducts.length}
-            />
+              {view === "facility" && activeFacility && (
+                <FacilityView
+                  facility={activeFacility}
+                  onViewProduct={handleViewProduct}
+                  onAddProduct={() => setIsAddModalOpen(true)}
+                  onViewUnpublished={() => setView("unpublished")}
+                  pendingCount={facilityPendingProducts.length}
+                />
+              )}
+
+              {view === "facility-product" && activeProduct && (
+                <OwnerProductDetail product={activeProduct} onBack={() => setView("facility")} />
+              )}
+
+              {view === "unpublished" && (
+                <UnpublishedView products={facilityPendingProducts} onPublish={handlePublish} />
+              )}
+
+              {view === "orders" && <OrdersView facilityId={activeFacilityId} />}
+            </>
           )}
-
-          {view === "facility-product" && activeProduct && (
-            <OwnerProductDetail product={activeProduct} onBack={() => setView("facility")} />
-          )}
-
-          {view === "unpublished" && (
-            <UnpublishedView products={facilityPendingProducts} onPublish={handlePublish} />
-          )}
-
-          {view === "orders" && <OrdersView facilityId={activeFacilityId} />}
         </div>
       </main>
 
