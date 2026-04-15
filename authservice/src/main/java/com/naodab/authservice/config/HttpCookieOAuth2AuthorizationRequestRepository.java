@@ -13,7 +13,6 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
 
   private static final String OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME = "oauth2_auth_request";
   public static final String REDIRECT_URI_PARAM_COOKIE_NAME = "redirect_uri";
-  /** Query param on /oauth2/authorize/... and cookie: {@code login} | {@code register} */
   public static final String OAUTH_ENTRY_PARAM_NAME = "oauth_entry";
   public static final String OAUTH_ENTRY_COOKIE_NAME = "oauth_entry";
   private static final int COOKIE_EXPIRE_SECONDS = 180;

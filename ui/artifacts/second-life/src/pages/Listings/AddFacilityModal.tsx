@@ -150,7 +150,6 @@ export function AddFacilityModal({
     wards.find((w) => w.code === form.wardCode)?.name ||
     form.wardCode;
 
-  /** Chỉ khóa khi đang tải tỉnh/thành hoặc đang gửi — validate chi tiết khi bấm Gửi (tránh nút “Tạo” mãi xám vì link dài / lỗi nhỏ). */
   const canSubmit = !loadMeta && !submitting;
 
   const handleSubmit = async () => {

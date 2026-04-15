@@ -2,12 +2,8 @@ import { customFetch } from "@workspace/api-client-react";
 import { unwrapApiData, type ApiResponseEnvelope } from "./types";
 import type { Shop } from "@/lib/mock-data";
 
-/** Khớp validation backend (`@Size(max = 4096)` trên link Google Map). */
 export const FACILITY_GOOGLE_MAP_LINK_MAX = 4096;
 
-/**
- * Giữ nguyên địa điểm, bỏ vài query theo dõi (vd. g_ep, entry) để link gọn hơn khi có thể.
- */
 export function normalizeGoogleMapsShareUrl(raw: string): string {
   const trimmed = raw.trim();
   try {
@@ -27,7 +23,6 @@ export function normalizeGoogleMapsShareUrl(raw: string): string {
   }
 }
 
-/** Khớp `FacilityCreateRequest` (productservice). Owner lấy từ header `X-Profile-Id` (Traefik forwardAuth). */
 export type FacilityCreateBody = {
   name: string;
   description?: string;

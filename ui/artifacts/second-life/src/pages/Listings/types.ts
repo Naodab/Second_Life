@@ -17,7 +17,6 @@ export interface PendingProduct {
   buyPrice?: number;
 }
 
-/** Payload từ form thêm sản phẩm (mock) */
 export interface AddProductSubmitPayload {
   name: string;
   description: string;

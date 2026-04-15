@@ -1,7 +1,3 @@
-/**
- * Decode JWT payload (no signature verification). Used when profile API is unavailable
- * or still provisioning after OAuth; claims match authservice JwtTokenProvider.
- */
 export function decodeJwtPayloadUnsafe(token: string): {
   sub?: string;
   profileId?: string;

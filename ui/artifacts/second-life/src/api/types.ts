@@ -1,4 +1,3 @@
-/** Matches profileservice `ApiResponse` JSON shape. */
 export type ApiResponseEnvelope<T> = {
   code?: number;
   message?: string | null;

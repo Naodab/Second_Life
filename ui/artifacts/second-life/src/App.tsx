@@ -18,7 +18,7 @@ import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders";
 import Messages from "@/pages/Messages";
-import Listings from "@/pages/Listings";
+import Listings from "@/pages/Listings/index";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import OAuthCallback from "@/pages/OAuthCallback";
@@ -27,7 +27,6 @@ import ProfileSetup from "@/pages/ProfileSetup";
 
 const queryClient = new QueryClient();
 
-/** Sends users with incomplete profile (e.g. Google) to onboarding before other app pages. */
 function ProfileSetupRedirect() {
   const { isLoggedIn, isLoading, needsProfileSetup } = useAuth();
   const [location, setLocation] = useLocation();
