@@ -36,7 +36,7 @@ spring:
 
 sort:
   facilities:
-    default: created_at
+    default: createdAt
 
 external:
   location-service:

@@ -117,6 +117,8 @@ public class JwtTokenProvider {
       log.error("JWT token is unsupported: {}", e.getMessage());
     } catch (IllegalArgumentException e) {
       log.error("JWT claims string is empty: {}", e.getMessage());
+    } catch (Exception e) {
+      log.error("JWT validation failed (key/config or parse): {}", e.getMessage());
     }
 
     return false;

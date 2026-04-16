@@ -51,7 +51,6 @@ export type FacilityResponse = {
 export const DEFAULT_FACILITY_AVATAR =
   "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop";
 
-/** API facility + resolved locality names for UI. */
 export type FacilityWithPlaceNames = FacilityResponse & {
   provinceName: string;
   wardName: string;
@@ -74,6 +73,9 @@ export async function createFacility(body: FacilityCreateBody): Promise<Facility
 export async function getMyFacilities(): Promise<FacilityResponse[]> {
   const raw = await customFetch<ApiResponseEnvelope<FacilityResponse[]>>(`/api/v1/facilities/me`, {
     method: "GET",
+    headers: {
+      "Content-Type": "application/json"
+    }
   });
   return unwrapApiData(raw);
 }

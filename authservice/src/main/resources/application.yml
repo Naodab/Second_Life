@@ -11,7 +11,7 @@ spring:
     name: authservice
   datasource:
     url: ${MYSQL_URL}
-    username: ${MYSQL_USENAME}
+    username: ${MYSQL_USERNAME}
     password: ${MYSQL_PASSWORD}
   jpa:
     open-in-view: false

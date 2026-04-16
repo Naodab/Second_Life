@@ -54,13 +54,6 @@ public class FacilityController {
         .build());
   }
 
-  @GetMapping("/{id}")
-  public ResponseEntity<ApiResponse<FacilityResponse>> getFacilityById(@PathVariable String id) {
-    return ResponseEntity.ok(ApiResponse.<FacilityResponse>builder()
-        .data(facilityService.getFacilityById(id))
-        .build());
-  }
-
   @GetMapping
   public ResponseEntity<ApiResponse<List<FacilityResponse>>> getAllFacilities(
       @RequestParam(required = false) Integer page,
@@ -79,6 +72,7 @@ public class FacilityController {
     } else {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
+    log.info("Getting facilities for profile: {}", profileId);
 
     FacilitySearchRequest request = FacilitySearchRequest.builder()
         .ownerId(profileId)
@@ -109,6 +103,13 @@ public class FacilityController {
 
     return ResponseEntity.ok(ApiResponse.<List<FacilityResponse>>builder()
         .data(facilityService.searchFacilities(page, pageSize, request))
+        .build());
+  }
+
+  @GetMapping("/{id}")
+  public ResponseEntity<ApiResponse<FacilityResponse>> getFacilityById(@PathVariable String id) {
+    return ResponseEntity.ok(ApiResponse.<FacilityResponse>builder()
+        .data(facilityService.getFacilityById(id))
         .build());
   }
 

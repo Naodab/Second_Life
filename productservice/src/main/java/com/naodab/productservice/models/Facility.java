@@ -15,6 +15,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Index;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.CascadeType;
+import java.util.List;
 
 @Entity
 @Table(name = "facilities", indexes = {
@@ -57,4 +60,7 @@ public class Facility extends BaseEntity {
 
   @Builder.Default
   Float averageRating = 0.0F;
+
+  @OneToMany(mappedBy = "facility", cascade = CascadeType.ALL, orphanRemoval = true)
+  List<Product> products;
 }
