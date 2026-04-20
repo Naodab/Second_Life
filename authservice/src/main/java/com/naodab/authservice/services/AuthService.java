@@ -101,7 +101,7 @@ public class AuthService {
     ProfileResponse profile = profileClient.getProfileById(account.getProfileId())
         .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
 
-    String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail(), account.getProfileId());
+    String accessToken = generateAccessToken(account);
     String refreshToken = jwtTokenProvider.generateRefreshToken(account.getEmail());
 
     account.setRefreshToken(refreshToken);
@@ -133,7 +133,7 @@ public class AuthService {
       throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
     }
 
-    String newAccessToken = jwtTokenProvider.generateAccessToken(account.getEmail(), account.getProfileId());
+    String newAccessToken = generateAccessToken(account);
     String newRefreshToken = jwtTokenProvider.generateRefreshToken(email);
 
     account.setRefreshToken(newRefreshToken);
@@ -160,7 +160,7 @@ public class AuthService {
       throw new AppException(ErrorCode.PROFILE_NOT_LINKED_TO_ACCOUNT);
     }
 
-    String accessToken = jwtTokenProvider.generateAccessToken(account.getEmail(), account.getProfileId());
+    String accessToken = generateAccessToken(account);
     String refreshToken = jwtTokenProvider.generateRefreshToken(email);
 
     account.setEmailVerified(true);
@@ -248,5 +248,9 @@ public class AuthService {
 
   private AuthResponse emptyAuthResponse() {
     return AuthResponse.builder().build();
+  }
+
+  private String generateAccessToken(Account account) {
+    return jwtTokenProvider.generateAccessToken(account.getEmail(), account.getProfileId(), account.getRole());
   }
 }

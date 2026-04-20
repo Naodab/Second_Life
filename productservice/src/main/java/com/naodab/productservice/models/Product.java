@@ -11,11 +11,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Index;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.JoinTable;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.CascadeType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.naodab.commonjpa.entity.BaseEntity;
@@ -50,12 +49,9 @@ public class Product extends BaseEntity {
   @JoinColumn(name = "facility_id", nullable = false)
   Facility facility;
 
-  @ManyToMany
-  @JoinTable(name = "product_sub_categories", joinColumns = @JoinColumn(name = "product_id"), inverseJoinColumns = @JoinColumn(name = "sub_category_id"), indexes = {
-      @Index(name = "idx_product_id", columnList = "product_id"),
-      @Index(name = "idx_sub_category_id", columnList = "sub_category_id"),
-  })
-  List<SubCategory> subCategories;
+  @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
+  List<ProductSubCategory> productSubCategories = new ArrayList<>();
 
   @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
   List<ProductMedia> medias;

@@ -72,3 +72,8 @@ external:
 
 profile-service:
   url: ${PROFILE_SERVICE_URL:}
+
+account:
+  admin:
+    email: ${ACCOUNT_ADMIN_EMAIL:}
+    password: ${ACCOUNT_ADMIN_PASSWORD:}

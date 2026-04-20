@@ -13,9 +13,9 @@ spring:
   application:
     name: locationservice
   datasource:
-    url: ${MYSQL_URL:${SPRING_DATASOURCE_URL:}}
-    username: ${MYSQL_USERNAME:${SPRING_DATASOURCE_USERNAME:}}
-    password: ${MYSQL_PASSWORD:${SPRING_DATASOURCE_PASSWORD:}}
+    url: ${LOCATION_MYSQL_URL}
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}

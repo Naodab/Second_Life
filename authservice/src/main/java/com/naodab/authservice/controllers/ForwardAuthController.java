@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.naodab.authservice.models.Account.Role;
 import com.naodab.authservice.security.JwtTokenProvider;
 import com.naodab.commonservice.constant.AppConstants;
 
@@ -47,6 +48,13 @@ public class ForwardAuthController {
       String profileId = jwtTokenProvider.getProfileIdFromToken(jwt);
       if (StringUtils.hasText(profileId)) {
         response = response.header(AppConstants.HEADER_PROFILE_ID, profileId);
+      }
+
+      String role = jwtTokenProvider.getRoleFromToken(jwt);
+      if (StringUtils.hasText(role)) {
+        response = response.header(AppConstants.JWT_CLAIM_ROLE, role);
+      } else {
+        response = response.header(AppConstants.JWT_CLAIM_ROLE, Role.USER.name());
       }
 
       return response.build();

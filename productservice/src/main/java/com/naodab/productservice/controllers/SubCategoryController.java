@@ -5,11 +5,15 @@ import java.util.List;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.naodab.commonservice.constant.AppConstants;
+import com.naodab.commonservice.exception.AppException;
+import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.productservice.dto.request.SubCategoryCreateRequest;
 import com.naodab.productservice.dto.response.SubCategoryResponse;
@@ -29,7 +33,11 @@ public class SubCategoryController {
 
   @PostMapping
   public ResponseEntity<ApiResponse<SubCategoryResponse>> createSubCategory(
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role,
       @RequestBody @Valid SubCategoryCreateRequest request) {
+    if (role != null && !role.equals(AppConstants.ROLE_ADMIN)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
     return ResponseEntity.ok(
         ApiResponse.<SubCategoryResponse>builder()
             .data(subCategoryService.createSubCategory(request))
@@ -70,7 +78,12 @@ public class SubCategoryController {
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<ApiResponse<Void>> deleteSubCategory(@PathVariable String id) {
+  public ResponseEntity<ApiResponse<Void>> deleteSubCategory(
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role,
+      @PathVariable String id) {
+    if (role != null && !role.equals(AppConstants.ROLE_ADMIN)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
     subCategoryService.deleteSubCategory(id);
     return ResponseEntity.ok(
         ApiResponse.<Void>builder()

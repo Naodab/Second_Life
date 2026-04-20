@@ -1,5 +1,7 @@
 package com.naodab.productservice.mapper;
 
+import java.util.UUID;
+
 import org.springframework.stereotype.Component;
 
 import com.naodab.productservice.dto.request.SubCategoryCreateRequest;
@@ -18,6 +20,7 @@ public class SubCategoryMapper {
 
   public SubCategory toSubCategory(SubCategoryCreateRequest request) {
     return SubCategory.builder()
+        .id(UUID.randomUUID().toString())
         .name(request.getName())
         .description(request.getDescription())
         .build();
