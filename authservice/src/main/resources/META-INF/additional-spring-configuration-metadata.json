@@ -79,6 +79,16 @@
       "name": "external.auth_service_public_base_url",
       "type": "java.lang.String",
       "description": "Auth service public base URL"
+    },
+    {
+      "name": "account.admin.email",
+      "type": "java.lang.String",
+      "description": "Admin email"
+    },
+    {
+      "name": "account.admin.password",
+      "type": "java.lang.String",
+      "description": "Admin password"
     }
   ]
 }

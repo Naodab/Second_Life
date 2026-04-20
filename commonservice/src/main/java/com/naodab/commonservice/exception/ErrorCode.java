@@ -57,6 +57,11 @@ public enum ErrorCode {
   FACILITY_ALREADY_EXISTS(1043, "Facility already exists", HttpStatus.BAD_REQUEST),
   FACILITY_NOT_FOUND(1044, "Facility not found", HttpStatus.NOT_FOUND),
   FACILITY_LOCATION_INVALID(1045, "Facility location is invalid", HttpStatus.BAD_REQUEST),
+  ATTRIBUTE_ALREADY_EXISTS(1046, "Attribute already exists", HttpStatus.BAD_REQUEST),
+  ATTRIBUTE_NOT_FOUND(1047, "Attribute not found", HttpStatus.NOT_FOUND),
+  ATTRIBUTE_VALUE_ALREADY_EXISTS(1048, "Attribute value already exists", HttpStatus.BAD_REQUEST),
+  ATTRIBUTE_VALUE_NOT_FOUND(1049, "Attribute value not found", HttpStatus.NOT_FOUND),
+  FORBIDDEN(1050, "Forbidden", HttpStatus.FORBIDDEN),
   ;
 
   private int code;

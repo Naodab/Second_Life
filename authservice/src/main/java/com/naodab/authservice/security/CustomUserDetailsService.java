@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.naodab.authservice.models.Account;
 import com.naodab.authservice.repositories.AccountRepository;
@@ -28,14 +29,18 @@ public class CustomUserDetailsService implements UserDetailsService {
     Account account = accountRepository.findByEmail(username)
       .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
 
+    String password = StringUtils.hasText(account.getPassword())
+      ? account.getPassword()
+      : "{noop}unused";
+
     return User.builder()
       .username(account.getEmail())
-      .password(account.getPassword())
+      .password(password)
       .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + account.getRole().name())))
       .accountExpired(false)
-      .accountLocked(account.getActive())
+      .accountLocked(!Boolean.TRUE.equals(account.getActive()))
       .credentialsExpired(false)
-      .disabled(!account.getActive())
+      .disabled(!Boolean.TRUE.equals(account.getActive()))
       .build();
   }
 }

@@ -51,7 +51,6 @@ http:
       entryPoints:
         - web
       priority: 100
-    # Public reference data — no gateway-jwt (forward-auth rejects requests without Bearer token)
     location-api:
       rule: "PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`)"
       service: location-service

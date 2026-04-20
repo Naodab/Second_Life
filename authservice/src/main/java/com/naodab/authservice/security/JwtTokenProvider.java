@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import com.naodab.authservice.models.Account.Role;
 import com.naodab.commonservice.constant.AppConstants;
 
 import io.jsonwebtoken.Claims;
@@ -45,12 +46,13 @@ public class JwtTokenProvider {
     return Keys.hmacShaKeyFor(keyBytes);
   }
 
-  public String generateAccessToken(String email, String profileId) {
+  public String generateAccessToken(String email, String profileId, Role role) {
     var builder = Jwts.builder()
         .subject(email)
         .signWith(getSecretKey())
         .issuedAt(new Date())
-        .expiration(new Date(System.currentTimeMillis() + jwtExpirationInMs));
+        .expiration(new Date(System.currentTimeMillis() + jwtExpirationInMs))
+        .claim(AppConstants.JWT_CLAIM_ROLE, role.name());
     if (StringUtils.hasText(profileId)) {
       builder.claim(AppConstants.JWT_CLAIM_PROFILE_ID, profileId);
     }
@@ -102,6 +104,15 @@ public class JwtTokenProvider {
     return claims.get(AppConstants.JWT_CLAIM_PROFILE_ID, String.class);
   }
 
+  public String getRoleFromToken(String token) {
+    Claims claims = Jwts.parser()
+        .verifyWith(getSecretKey())
+        .build()
+        .parseSignedClaims(token)
+        .getPayload();
+    return claims.get(AppConstants.JWT_CLAIM_ROLE, String.class);
+  }
+
   public boolean validateToken(String token) {
     try {
       Jwts.parser()
@@ -117,6 +128,8 @@ public class JwtTokenProvider {
       log.error("JWT token is unsupported: {}", e.getMessage());
     } catch (IllegalArgumentException e) {
       log.error("JWT claims string is empty: {}", e.getMessage());
+    } catch (Exception e) {
+      log.error("JWT validation failed (key/config or parse): {}", e.getMessage());
     }
 
     return false;

@@ -54,19 +54,31 @@ public class FacilityController {
         .build());
   }
 
-  @GetMapping("/{id}")
-  public ResponseEntity<ApiResponse<FacilityResponse>> getFacilityById(@PathVariable String id) {
-    return ResponseEntity.ok(ApiResponse.<FacilityResponse>builder()
-        .data(facilityService.getFacilityById(id))
-        .build());
-  }
-
   @GetMapping
   public ResponseEntity<ApiResponse<List<FacilityResponse>>> getAllFacilities(
       @RequestParam(required = false) Integer page,
       @RequestParam(required = false) Integer pageSize) {
     return ResponseEntity.ok(ApiResponse.<List<FacilityResponse>>builder()
         .data(facilityService.getAllFacilities(page, pageSize))
+        .build());
+  }
+
+  @GetMapping("/me")
+  public ResponseEntity<ApiResponse<List<FacilityResponse>>> getFacilitiesByOwnerId(
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
+    String profileId;
+    if (StringUtils.hasText(profileIdHeader)) {
+      profileId = profileIdHeader.trim();
+    } else {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+    log.info("Getting facilities for profile: {}", profileId);
+
+    FacilitySearchRequest request = FacilitySearchRequest.builder()
+        .ownerId(profileId)
+        .build();
+    return ResponseEntity.ok(ApiResponse.<List<FacilityResponse>>builder()
+        .data(facilityService.searchFacilities(null, null, request))
         .build());
   }
 
@@ -91,6 +103,13 @@ public class FacilityController {
 
     return ResponseEntity.ok(ApiResponse.<List<FacilityResponse>>builder()
         .data(facilityService.searchFacilities(page, pageSize, request))
+        .build());
+  }
+
+  @GetMapping("/{id}")
+  public ResponseEntity<ApiResponse<FacilityResponse>> getFacilityById(@PathVariable String id) {
+    return ResponseEntity.ok(ApiResponse.<FacilityResponse>builder()
+        .data(facilityService.getFacilityById(id))
         .build());
   }
 

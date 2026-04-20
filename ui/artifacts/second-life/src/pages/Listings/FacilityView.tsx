@@ -1,38 +1,27 @@
 import { useRef, useState } from "react";
-import {
-  Plus,
-  Store,
-  ShieldCheck,
-  MapPin,
-  Star,
-  Package,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-} from "lucide-react";
+import { Plus, Store, MapPin, Star, Package, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MOCK_PRODUCTS, type Shop } from "@/lib/mock-data";
+import { facilityAvatarUrl, type FacilityWithPlaceNames } from "@/api/facility";
+import { MOCK_PRODUCTS } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
-import { vi } from "date-fns/locale";
 
 export function FacilityView({
-  shop,
+  facility,
   onViewProduct,
   onAddProduct,
   onViewUnpublished,
   pendingCount,
 }: {
-  shop: Shop;
+  facility: FacilityWithPlaceNames;
   onViewProduct: (id: string) => void;
   onAddProduct: () => void;
   onViewUnpublished: () => void;
   pendingCount: number;
 }) {
-  const products = MOCK_PRODUCTS.filter((p) => p.shopId === shop.id);
+  const products = MOCK_PRODUCTS.filter((p) => p.shopId === facility.id);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const catRef = useRef<HTMLDivElement>(null);
-  const categories = shop?.categories || [...new Set(products.map((p) => p.category))];
+  const categories = [...new Set(products.map((p) => p.category))];
 
   const filtered = categoryFilter ? products.filter((p) => p.category === categoryFilter) : products;
 
@@ -41,16 +30,17 @@ export function FacilityView({
       <div className="bg-white rounded-2xl border shadow-sm p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <img src={shop.avatar} className="w-14 h-14 rounded-full border-2 border-primary/20 object-cover" alt="" />
+            <img
+              src={facilityAvatarUrl(facility)}
+              className="w-14 h-14 rounded-full border-2 border-primary/20 object-cover"
+              alt=""
+            />
             <div>
-              <h2 className="font-bold text-lg flex items-center gap-2">
-                {shop.name}
-                {shop.isVerified && <ShieldCheck className="w-4 h-4 text-primary" />}
-              </h2>
+              <h2 className="font-bold text-lg flex items-center gap-2">{facility.name}</h2>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <MapPin className="w-3.5 h-3.5" /> {shop.address}, {shop.ward}
+                <MapPin className="w-3.5 h-3.5" /> {facility.address}, {facility.wardName}
               </div>
-              <div className="text-xs font-medium text-foreground">{shop.province}</div>
+              <div className="text-xs font-medium text-foreground">{facility.provinceName}</div>
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -70,12 +60,12 @@ export function FacilityView({
 
         <div className="flex items-center gap-4 mt-4 pt-4 border-t text-sm text-muted-foreground">
           <div className="flex items-center gap-1.5 text-amber-500 font-semibold">
-            <Star className="w-3.5 h-3.5 fill-current" /> {shop.rating}
+            <Star className="w-3.5 h-3.5 fill-current" /> {facility.averageRating ?? 0}
           </div>
           <span>•</span>
-          <span>{shop.totalOrders} đơn hoàn thành</span>
+          <span>{Number(facility.orderCount ?? 0)} đơn</span>
           <span>•</span>
-          <span>Tham gia {formatDistanceToNow(new Date(shop.joinedDate), { locale: vi, addSuffix: true })}</span>
+          <span>{Number(facility.viewCount ?? 0)} lượt xem</span>
         </div>
       </div>
 

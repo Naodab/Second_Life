@@ -15,7 +15,6 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class CacheManagerConfig {
 
-  @SuppressWarnings("null")
   @Bean
   public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
     RedisCacheConfiguration defaults = RedisCacheConfiguration.defaultCacheConfig()

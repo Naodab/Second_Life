@@ -19,11 +19,10 @@ import {
 import {
   createFacility,
   FACILITY_GOOGLE_MAP_LINK_MAX,
-  facilityResponseToShop,
   type FacilityCreateBody,
+  type FacilityWithPlaceNames,
 } from "@/api/facility";
 import { getProvinces, getWards, type ProvinceResponse, type WardResponse } from "@/api/location";
-import type { Shop } from "@/lib/mock-data";
 
 function inLength(s: string, min: number, max: number): boolean {
   const t = s.trim();
@@ -56,7 +55,7 @@ export function AddFacilityModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: (shop: Shop) => void;
+  onCreated: (facility: FacilityWithPlaceNames) => void;
 }) {
   const [form, setForm] = useState({
     name: "",
@@ -150,7 +149,6 @@ export function AddFacilityModal({
     wards.find((w) => w.code === form.wardCode)?.name ||
     form.wardCode;
 
-  /** Chỉ khóa khi đang tải tỉnh/thành hoặc đang gửi — validate chi tiết khi bấm Gửi (tránh nút “Tạo” mãi xám vì link dài / lỗi nhỏ). */
   const canSubmit = !loadMeta && !submitting;
 
   const handleSubmit = async () => {
@@ -172,8 +170,12 @@ export function AddFacilityModal({
     if (desc) body.description = desc;
     try {
       const res = await createFacility(body);
-      const shop = facilityResponseToShop(res, { provinceLabel, wardLabel });
-      onCreated(shop);
+      const facility: FacilityWithPlaceNames = {
+        ...res,
+        provinceName: provinceLabel,
+        wardName: wardLabel,
+      };
+      onCreated(facility);
       onClose();
       reset();
     } catch (e) {
