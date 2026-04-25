@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { Filter, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,41 @@ export default function Search() {
   const [provinces, setProvinces] = useState<ProvinceResponse[]>([]);
   const [wards, setWards] = useState<WardResponse[]>([]);
   const [hoverCategoryId, setHoverCategoryId] = useState<string | null>(null);
+  const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number } | null>(null);
+  const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { data: categories = [] } = useCategories();
+
+  const clearHoverCloseTimer = () => {
+    if (hoverCloseTimerRef.current) {
+      clearTimeout(hoverCloseTimerRef.current);
+      hoverCloseTimerRef.current = null;
+    }
+  };
+
+  const openHoverMenu = (catId: string, anchorEl?: HTMLElement | null) => {
+    clearHoverCloseTimer();
+    setHoverCategoryId(catId);
+    if (anchorEl) {
+      const rect = anchorEl.getBoundingClientRect();
+      setSubmenuPos({
+        top: rect.top,
+        left: rect.right + 8,
+      });
+    }
+  };
+
+  const scheduleCloseHoverMenu = (catId: string) => {
+    clearHoverCloseTimer();
+    hoverCloseTimerRef.current = setTimeout(() => {
+      setHoverCategoryId((prev) => {
+        if (prev === catId) {
+          setSubmenuPos(null);
+          return null;
+        }
+        return prev;
+      });
+    }, 180);
+  };
 
   const parsedFilters = useMemo(() => {
     const query = location.includes("?") ? location.split("?")[1] ?? "" : "";
@@ -82,6 +117,12 @@ export default function Search() {
       setLocation(nextPath);
     }
   }, [typeFilter, categoryIds, subCategoryIds, provinceCode, wardCode, location, setLocation]);
+
+  useEffect(() => {
+    return () => {
+      clearHoverCloseTimer();
+    };
+  }, []);
 
   const selectedProvinceName = useMemo(() => {
     if (!provinceCode) return null;
@@ -140,14 +181,14 @@ export default function Search() {
         </div>
 
         <div className="flex flex-col md:flex-row gap-8">
-          <aside className="w-full md:w-64 flex-shrink-0 hidden md:block relative z-[200]">
-            <div className="sticky top-28 space-y-8 relative z-[200]">
+          <aside className="w-full md:w-64 flex-shrink-0 hidden md:block relative z-20">
+            <div className="sticky top-28 relative z-20 max-h-[calc(100vh-8rem)] overflow-y-auto overflow-x-visible pr-1 custom-scrollbar">
               <div>
                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                   <Filter className="w-5 h-5 text-primary" /> Bộ lọc
                 </h3>
 
-                <div className="space-y-6 bg-white p-5 rounded-2xl border shadow-sm">
+                <div className="space-y-6 bg-white p-5 rounded-2xl border shadow-sm overflow-visible">
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
                       Loại tin
@@ -218,10 +259,8 @@ export default function Search() {
                           <div
                             key={catId}
                             className="relative"
-                            onMouseEnter={() => setHoverCategoryId(catId)}
-                            onMouseLeave={() =>
-                              setHoverCategoryId((prev) => (prev === catId ? null : prev))
-                            }
+                            onMouseEnter={(event) => openHoverMenu(catId, event.currentTarget)}
+                            onMouseLeave={() => scheduleCloseHoverMenu(catId)}
                           >
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center space-x-2 min-w-0">
@@ -242,28 +281,40 @@ export default function Search() {
                               )}
                             </div>
 
-                            {hasSubCategories && hoverCategoryId === catId && (
-                              <div className="absolute left-full top-0 ml-2 z-[1000] min-w-56 rounded-xl border bg-white p-3 shadow-lg space-y-2">
-                                {subItems.map((sub) => {
-                                  const subId = String(sub.id);
-                                  return (
-                                    <div key={subId} className="flex items-center space-x-2">
-                                      <Checkbox
-                                        id={`sub-${catId}-${subId}`}
-                                        checked={subCategoryIds.includes(subId)}
-                                        onCheckedChange={(checked) => toggleSubCategory(subId, checked === true)}
-                                      />
-                                      <label
-                                        htmlFor={`sub-${catId}-${subId}`}
-                                        className="text-sm leading-none cursor-pointer text-muted-foreground"
-                                      >
-                                        {sub.name}
-                                      </label>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
+                            {hasSubCategories &&
+                              hoverCategoryId === catId &&
+                              submenuPos &&
+                              typeof document !== "undefined" &&
+                              createPortal(
+                                <div
+                                  className="fixed z-[1400] min-w-56 rounded-xl border bg-white p-3 shadow-lg space-y-2"
+                                  style={{ top: submenuPos.top, left: submenuPos.left }}
+                                  onMouseEnter={() => openHoverMenu(catId)}
+                                  onMouseLeave={() => scheduleCloseHoverMenu(catId)}
+                                >
+                                  {subItems.map((sub) => {
+                                    const subId = String(sub.id);
+                                    return (
+                                      <div key={subId} className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`sub-${catId}-${subId}`}
+                                          checked={subCategoryIds.includes(subId)}
+                                          onCheckedChange={(checked) =>
+                                            toggleSubCategory(subId, checked === true)
+                                          }
+                                        />
+                                        <label
+                                          htmlFor={`sub-${catId}-${subId}`}
+                                          className="text-sm leading-none cursor-pointer text-muted-foreground"
+                                        >
+                                          {sub.name}
+                                        </label>
+                                      </div>
+                                    );
+                                  })}
+                                </div>,
+                                document.body,
+                              )}
                           </div>
                         );
                       })}
