@@ -19,12 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useCart, getPendingCheckout, clearPendingCheckout, type CheckoutSelection } from "@/hooks/use-mock-api";
-import { MOCK_SHOPS } from "@/lib/mock-data";
+import { MOCK_FACILITIES } from "@/lib/mock-data";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { PayOSScreen } from "./PayOSScreen";
 import { SuccessScreen } from "./SuccessScreen";
-import { groupByShop, itemTotal, itemDays } from "./checkout-utils";
+import { groupByFacility, itemTotal, itemDays } from "./checkout-utils";
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
@@ -32,7 +32,7 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPayOS, setShowPayOS] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [expandedShops, setExpandedShops] = useState<Record<string, boolean>>({});
+  const [expandedFacilities, setExpandedFacilities] = useState<Record<string, boolean>>({});
 
   const [items, setItems] = useState<CheckoutSelection[]>(() => {
     const pending = getPendingCheckout();
@@ -42,7 +42,7 @@ export default function Checkout() {
       productId: ci.productId,
       name: ci.name,
       images: ci.images,
-      shopId: ci.shopId,
+      facilityId: ci.facilityId,
       buyPrice: ci.buyPrice,
       rentPrice: ci.rentPrice,
       mode: (ci.rentalDates ? "rent" : "buy") as "buy" | "rent",
@@ -57,8 +57,8 @@ export default function Checkout() {
     }
   }, [items, isSuccess, showPayOS, setLocation]);
 
-  const shopGroups = groupByShop(items);
-  const subOrderCount = shopGroups.size;
+  const facilityGroups = groupByFacility(items);
+  const subOrderCount = facilityGroups.size;
 
   const subtotal = items.reduce((s, i) => s + itemTotal(i), 0);
   const shipping = 30000 * subOrderCount;
@@ -86,8 +86,8 @@ export default function Checkout() {
   if (isSuccess) return <SuccessScreen subOrderCount={subOrderCount} />;
   if (showPayOS) return <PayOSScreen amount={grandTotal} onSuccess={handlePayOSSuccess} />;
 
-  const toggleShop = (shopId: string) =>
-    setExpandedShops((prev) => ({ ...prev, [shopId]: prev[shopId] === false ? true : false }));
+  const toggleFacility = (facilityId: string) =>
+    setExpandedFacilities((prev) => ({ ...prev, [facilityId]: prev[facilityId] === false ? true : false }));
 
   return (
     <div className="min-h-screen bg-gray-50/40 pt-6 pb-24">
@@ -129,26 +129,26 @@ export default function Checkout() {
               </div>
             </div>
 
-            {Array.from(shopGroups.entries()).map(([shopId, shopItems], idx) => {
-              const shop = MOCK_SHOPS.find((s) => s.id === shopId);
-              const shopSubtotal = shopItems.reduce((s, i) => s + itemTotal(i), 0);
-              const isExpanded = expandedShops[shopId] !== false;
+            {Array.from(facilityGroups.entries()).map(([facilityId, facilityItems], idx) => {
+              const facility = MOCK_FACILITIES.find((f) => f.id === facilityId);
+              const facilitySubtotal = facilityItems.reduce((s, i) => s + itemTotal(i), 0);
+              const isExpanded = expandedFacilities[facilityId] !== false;
 
               return (
-                <div key={shopId} className="bg-white rounded-3xl border shadow-sm overflow-hidden">
+                <div key={facilityId} className="bg-white rounded-3xl border shadow-sm overflow-hidden">
                   <div
                     role="button"
                     tabIndex={0}
                     className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50/60 transition-colors"
-                    onClick={() => toggleShop(shopId)}
-                    onKeyDown={(e) => e.key === "Enter" && toggleShop(shopId)}
+                    onClick={() => toggleFacility(facilityId)}
+                    onKeyDown={(e) => e.key === "Enter" && toggleFacility(facilityId)}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <Store className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-bold text-sm">{shop?.name ?? shopId}</p>
+                        <p className="font-bold text-sm">{facility?.name ?? facilityId}</p>
                         {subOrderCount > 1 && (
                           <Badge variant="outline" className="text-[10px] px-2 py-0 mt-0.5 font-medium text-primary border-primary/30">
                             Đơn #{idx + 1}
@@ -157,7 +157,7 @@ export default function Checkout() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-primary">{formatCurrency(shopSubtotal)}</span>
+                      <span className="text-sm font-semibold text-primary">{formatCurrency(facilitySubtotal)}</span>
                       {isExpanded ? (
                         <ChevronUp className="w-4 h-4 text-muted-foreground" />
                       ) : (
@@ -168,7 +168,7 @@ export default function Checkout() {
 
                   {isExpanded && (
                     <div className="px-5 pb-5 border-t divide-y">
-                      {shopItems.map((item) => {
+                      {facilityItems.map((item) => {
                         const days = itemDays(item);
                         const price = itemTotal(item);
                         return (

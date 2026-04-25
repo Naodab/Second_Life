@@ -1,36 +1,125 @@
 package com.naodab.authservice.controllers;
 
+import java.net.URI;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.naodab.authservice.models.Account.Role;
+import com.naodab.authservice.properties.ProtectedPathsProperties;
 import com.naodab.authservice.security.JwtTokenProvider;
 import com.naodab.commonservice.constant.AppConstants;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lombok.experimental.FieldDefaults;
 
 @Slf4j
 @RestController
 @RequiredArgsConstructor
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class ForwardAuthController {
+  JwtTokenProvider jwtTokenProvider;
+  ProtectedPathsProperties protectedPathsProperties;
 
-  public static final String HEADER_USER_SUB = "X-User-Sub";
+  private static final String HEADER_FORWARDED_METHOD = "X-Forwarded-Method";
 
-  private final JwtTokenProvider jwtTokenProvider;
+  private static final String HEADER_FORWARDED_URI = "X-Forwarded-Uri";
 
   @RequestMapping("/auth/forward-auth")
   public ResponseEntity<Void> forwardAuth(
-      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+      @RequestHeader(value = HEADER_FORWARDED_METHOD, required = false) String forwardedMethod,
+      @RequestHeader(value = HEADER_FORWARDED_URI, required = false) String forwardedUri,
+      @RequestParam(value = "method", required = false) String methodParam) {
 
+    String method = firstNonBlank(forwardedMethod, methodParam);
+    String path = normalizeRequestPath(forwardedUri);
+
+    if (!requiresProtection(method, path)) {
+      log.debug("Forward auth skipped (not a protected path): method={}, path={}", method, path);
+      return ResponseEntity.ok().build();
+    }
+
+    return authenticateAndForwardHeaders(authorization);
+  }
+
+  private boolean requiresProtection(String method, String path) {
+    Map<String, List<String>> protectedPaths = protectedPathsProperties.getByMethod();
+    if (protectedPaths.isEmpty()) {
+      return false;
+    }
+    if (!StringUtils.hasText(method) || !StringUtils.hasText(path)) {
+      return true;
+    }
+    String key = method.trim().toUpperCase(Locale.ROOT);
+    List<String> prefixes = protectedPaths.get(key);
+    if (prefixes == null || prefixes.isEmpty()) {
+      return false;
+    }
+    for (String prefix : prefixes) {
+      if (!StringUtils.hasText(prefix)) {
+        continue;
+      }
+      if (pathMatches(path, prefix.trim())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean pathMatches(String path, String prefix) {
+    return path.equals(prefix) || path.startsWith(prefix + "/");
+  }
+
+  private static String firstNonBlank(String a, String b) {
+    if (StringUtils.hasText(a)) {
+      return a.trim();
+    }
+    if (StringUtils.hasText(b)) {
+      return b.trim();
+    }
+    return null;
+  }
+
+  private static String normalizeRequestPath(String forwardedUri) {
+    if (!StringUtils.hasText(forwardedUri)) {
+      return null;
+    }
+    String raw = forwardedUri.trim();
+    int q = raw.indexOf('?');
+    if (q >= 0) {
+      raw = raw.substring(0, q);
+    }
+    int hash = raw.indexOf('#');
+    if (hash >= 0) {
+      raw = raw.substring(0, hash);
+    }
+    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+      try {
+        URI uri = URI.create(raw);
+        String p = uri.getPath();
+        return StringUtils.hasText(p) ? p : "/";
+      } catch (IllegalArgumentException ignored) {
+        return raw.startsWith("/") ? raw : "/" + raw;
+      }
+    }
+    return raw.startsWith("/") ? raw : "/" + raw;
+  }
+
+  private ResponseEntity<Void> authenticateAndForwardHeaders(String authorization) {
     String jwt = extractBearer(authorization);
     log.debug("Forward auth request, bearer token present: {}", StringUtils.hasText(jwt));
-    log.debug("Forward auth request, bearer token: {}", jwtTokenProvider.validateToken(jwt));
+    log.debug("Forward auth request, bearer token valid: {}", jwtTokenProvider.validateToken(jwt));
     if (!StringUtils.hasText(jwt) || !jwtTokenProvider.validateToken(jwt)) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }

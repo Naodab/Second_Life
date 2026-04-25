@@ -4,29 +4,29 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MOCK_SHOPS } from "@/lib/mock-data";
+import { MOCK_FACILITIES } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
-const SHOP_CHATS = [
+const FACILITY_CHATS = [
   {
-    id: "sc1", shop: MOCK_SHOPS[0],
+    id: "sc1", facility: MOCK_FACILITIES[0],
     lastMessage: "Vâng, sản phẩm vẫn còn hàng cuối tuần này!",
     time: "10:30", unread: 2,
     messages: [
-      { id: 1, from: "shop", text: "Xin chào! Bạn có quan tâm đến chiếc máy ảnh không?", time: "10:20" },
+      { id: 1, from: "seller", text: "Xin chào! Bạn có quan tâm đến chiếc máy ảnh không?", time: "10:20" },
       { id: 2, from: "me", text: "Vâng, cuối tuần này còn hàng để thuê không ạ?", time: "10:25" },
-      { id: 3, from: "shop", text: "Vâng, sản phẩm vẫn còn hàng cuối tuần này!", time: "10:30" },
+      { id: 3, from: "seller", text: "Vâng, sản phẩm vẫn còn hàng cuối tuần này!", time: "10:30" },
     ]
   },
   {
-    id: "sc2", shop: MOCK_SHOPS[1],
+    id: "sc2", facility: MOCK_FACILITIES[1],
     lastMessage: "Cảm ơn bạn đã thuê hàng, hẹn gặp lại!",
     time: "Hôm qua", unread: 0,
     messages: [
       { id: 1, from: "me", text: "Mình muốn hỏi về chiếc lều cắm trại, còn không ạ?", time: "09:00" },
-      { id: 2, from: "shop", text: "Còn 2 chiếc bạn nhé! Bạn muốn thuê bao nhiêu ngày?", time: "09:05" },
+      { id: 2, from: "seller", text: "Còn 2 chiếc bạn nhé! Bạn muốn thuê bao nhiêu ngày?", time: "09:05" },
       { id: 3, from: "me", text: "Mình thuê 3 ngày từ thứ 7 này nha.", time: "09:10" },
-      { id: 4, from: "shop", text: "Cảm ơn bạn đã thuê hàng, hẹn gặp lại!", time: "09:30" },
+      { id: 4, from: "seller", text: "Cảm ơn bạn đã thuê hàng, hẹn gặp lại!", time: "09:30" },
     ]
   },
 ];
@@ -75,18 +75,18 @@ const CUSTOMER_CHATS = [
   },
 ];
 
-type TabType = 'shops' | 'customers';
+type TabType = "facilities" | "customers";
 
 export default function Messages() {
-  const [tab, setTab] = useState<TabType>('shops');
+  const [tab, setTab] = useState<TabType>("facilities");
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [localMessages, setLocalMessages] = useState<Record<string, any[]>>({});
 
-  const shopChat = SHOP_CHATS.find(c => c.id === activeChat);
-  const customerChat = CUSTOMER_CHATS.find(c => c.id === activeChat);
-  const currentChat = tab === 'shops' ? shopChat : customerChat;
-  const currentList = tab === 'shops' ? SHOP_CHATS : CUSTOMER_CHATS;
+  const facilityChat = FACILITY_CHATS.find((c) => c.id === activeChat);
+  const customerChat = CUSTOMER_CHATS.find((c) => c.id === activeChat);
+  const currentChat = tab === "facilities" ? facilityChat : customerChat;
+  const currentList = tab === "facilities" ? FACILITY_CHATS : CUSTOMER_CHATS;
 
   const handleSend = () => {
     if (!messageText.trim() || !activeChat) return;
@@ -115,10 +115,10 @@ export default function Messages() {
             </div>
             <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
               <button
-                onClick={() => { setTab('shops'); setActiveChat(null); }}
-                className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all", tab === 'shops' ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground")}
+                onClick={() => { setTab("facilities"); setActiveChat(null); }}
+                className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all", tab === "facilities" ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground")}
               >
-                <Store className="w-3.5 h-3.5" /> Với shop
+                <Store className="w-3.5 h-3.5" /> Với cơ sở
               </button>
               <button
                 onClick={() => { setTab('customers'); setActiveChat(null); }}
@@ -130,7 +130,7 @@ export default function Messages() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {tab === 'shops' && (
+            {tab === "facilities" && (
               <div className="px-3 py-2">
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-2 mb-2">Cuộc trò chuyện với cơ sở</p>
               </div>
@@ -152,8 +152,8 @@ export default function Messages() {
               >
                 <div className="relative flex-shrink-0">
                   <Avatar className="h-11 w-11 border">
-                    <AvatarImage src={tab === 'shops' ? chat.shop.avatar : chat.buyerAvatar} />
-                    <AvatarFallback>{tab === 'shops' ? <Store className="h-4 w-4" /> : <User className="h-4 w-4" />}</AvatarFallback>
+                    <AvatarImage src={tab === "facilities" ? chat.facility.avatar : chat.buyerAvatar} />
+                    <AvatarFallback>{tab === "facilities" ? <Store className="h-4 w-4" /> : <User className="h-4 w-4" />}</AvatarFallback>
                   </Avatar>
                   {chat.unread > 0 && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center border border-white">
@@ -163,7 +163,7 @@ export default function Messages() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-0.5">
-                    <h4 className="font-semibold text-sm truncate">{tab === 'shops' ? chat.shop.name : chat.buyerName}</h4>
+                    <h4 className="font-semibold text-sm truncate">{tab === "facilities" ? chat.facility.name : chat.buyerName}</h4>
                     <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">{chat.time}</span>
                   </div>
                   {tab === 'customers' && (
@@ -188,23 +188,23 @@ export default function Messages() {
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <Avatar className="h-10 w-10 border flex-shrink-0">
-                  <AvatarImage src={tab === 'shops' ? (currentChat as any).shop?.avatar : (currentChat as any).buyerAvatar} />
-                  <AvatarFallback>{tab === 'shops' ? <Store className="h-4 w-4" /> : <User className="h-4 w-4" />}</AvatarFallback>
+                  <AvatarImage src={tab === "facilities" ? (currentChat as any).facility?.avatar : (currentChat as any).buyerAvatar} />
+                  <AvatarFallback>{tab === "facilities" ? <Store className="h-4 w-4" /> : <User className="h-4 w-4" />}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <h3 className="font-bold truncate">{tab === 'shops' ? (currentChat as any).shop?.name : (currentChat as any).buyerName}</h3>
+                  <h3 className="font-bold truncate">{tab === "facilities" ? (currentChat as any).facility?.name : (currentChat as any).buyerName}</h3>
                   {tab === 'customers' && (
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Building2 className="w-3 h-3" /> {(currentChat as any).facilityName}
                     </p>
                   )}
-                  {tab === 'shops' && (
+                  {tab === "facilities" && (
                     <p className="text-xs text-primary flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" /> Đang hoạt động
                     </p>
                   )}
                 </div>
-                {tab === 'shops' && (
+                {tab === "facilities" && (
                   <Badge variant="outline" className="ml-auto text-xs hidden sm:flex items-center gap-1">
                     <Store className="w-3 h-3" /> Cơ sở
                   </Badge>
@@ -224,8 +224,8 @@ export default function Messages() {
                   <div key={msg.id} className={cn("flex gap-2", msg.from === 'me' ? "justify-end" : "")}>
                     {msg.from !== 'me' && (
                       <Avatar className="h-8 w-8 flex-shrink-0 mt-1">
-                        <AvatarImage src={tab === 'shops' ? (currentChat as any).shop?.avatar : (currentChat as any).buyerAvatar} />
-                        <AvatarFallback className="text-xs">{msg.from === 'shop' ? <Store className="w-3 h-3" /> : <User className="w-3 h-3" />}</AvatarFallback>
+                        <AvatarImage src={tab === "facilities" ? (currentChat as any).facility?.avatar : (currentChat as any).buyerAvatar} />
+                        <AvatarFallback className="text-xs">{msg.from === "seller" ? <Store className="w-3 h-3" /> : <User className="w-3 h-3" />}</AvatarFallback>
                       </Avatar>
                     )}
                     <div className={cn("max-w-[70%]", msg.from === 'me' ? "items-end" : "items-start", "flex flex-col gap-1")}>
@@ -261,14 +261,14 @@ export default function Messages() {
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                {tab === 'shops' ? <Store className="w-10 h-10 text-primary/50" /> : <User className="w-10 h-10 text-primary/50" />}
+                {tab === "facilities" ? <Store className="w-10 h-10 text-primary/50" /> : <User className="w-10 h-10 text-primary/50" />}
               </div>
               <h3 className="text-xl font-bold mb-2">
-                {tab === 'shops' ? "Tin nhắn với cơ sở" : "Tin nhắn từ khách hàng"}
+                {tab === "facilities" ? "Tin nhắn với cơ sở" : "Tin nhắn từ khách hàng"}
               </h3>
               <p className="text-muted-foreground text-sm">
-                {tab === 'shops'
-                  ? "Chọn một cuộc trò chuyện với shop để tiếp tục."
+                {tab === "facilities"
+                  ? "Chọn một cuộc trò chuyện với cơ sở để tiếp tục."
                   : "Chọn một tin nhắn từ khách hàng để xem và trả lời."}
               </p>
             </div>

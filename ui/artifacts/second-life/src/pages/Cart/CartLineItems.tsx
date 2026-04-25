@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { checkRentAvailability, type CartItem } from "@/hooks/use-mock-api";
 import { formatCurrency, cn } from "@/lib/utils";
-import { MOCK_SHOPS } from "@/lib/mock-data";
+import { MOCK_FACILITIES } from "@/lib/mock-data";
 import type { ItemState, ModeKey } from "./cart-types";
 import { calcBuyTotal, calcRentTotal, rentDays } from "./cart-utils";
 
@@ -214,7 +214,7 @@ export function CartItemCard({
   onStateChange: (id: string, patch: Partial<ItemState>) => void;
   onRemove: (id: string) => void;
 }) {
-  const shop = MOCK_SHOPS.find((s) => s.id === item.shopId);
+  const facility = MOCK_FACILITIES.find((f) => f.id === item.facilityId);
   const isBuy = item.type === "buy" || item.type === "both";
   const isRent = item.type === "rent" || item.type === "both";
   const buyKey: ModeKey = `${item.cartItemId}:buy`;
@@ -260,7 +260,7 @@ export function CartItemCard({
           <Link href={`/product/${item.productId}`}>
             <h3 className="font-bold text-sm line-clamp-1 hover:text-primary transition-colors">{item.name}</h3>
           </Link>
-          <p className="text-xs text-muted-foreground mt-0.5">{shop?.name ?? item.shopId}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{facility?.name ?? item.facilityId}</p>
           <div className="flex gap-1.5 mt-1.5">
             {isBuy && (
               <Badge className="text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-0 font-semibold">Mua được</Badge>

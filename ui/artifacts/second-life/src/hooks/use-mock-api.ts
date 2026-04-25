@@ -1,34 +1,68 @@
 import { useState, useEffect } from 'react';
-import { MOCK_PRODUCTS, MOCK_SHOPS, MOCK_REVIEWS, Product, Shop, Review } from '@/lib/mock-data';
+import { MOCK_PRODUCTS, MOCK_FACILITIES, MOCK_REVIEWS, Product, MockFacility, Review } from '@/lib/mock-data';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export function useProducts(category?: string, type?: string) {
+export function useProducts(
+  subCategoryIds?: string[] | null,
+  listingType?: string,
+  categoryIds?: string[] | null,
+  provinceName?: string | null,
+  wardName?: string | null,
+) {
   const [data, setData] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setIsLoading(true);
     let filtered = [...MOCK_PRODUCTS];
-    if (category && category !== 'All') {
-      filtered = filtered.filter(p => p.category === category);
+    const normalize = (v?: string | null) => (v ?? "").trim().toLowerCase();
+    const subIds = (subCategoryIds?.filter(Boolean) ?? []).map(String);
+    if (subIds.length > 0) {
+      const allowed = new Set(subIds);
+      filtered = filtered.filter((p) => allowed.has(String(p.subCategoryId)));
+    } else if (categoryIds && categoryIds.length > 0) {
+      const allowed = new Set(categoryIds.map(String));
+      filtered = filtered.filter((p) => allowed.has(String(p.categoryId)));
     }
-    if (type && type !== 'All' && type !== 'all') {
-      filtered = filtered.filter(p => p.type === type || p.type === 'both');
+    if (listingType && listingType !== "All" && listingType !== "all") {
+      filtered = filtered.filter((p) => p.type === listingType || p.type === "both");
+    }
+    if (provinceName) {
+      const wanted = normalize(provinceName);
+      filtered = filtered.filter((p) => {
+        const facilityProvince = MOCK_FACILITIES.find((f) => f.id === p.facilityId)?.province;
+        const candidate = normalize(facilityProvince || p.location);
+        return candidate.includes(wanted) || wanted.includes(candidate);
+      });
+    }
+    if (wardName) {
+      const wanted = normalize(wardName);
+      filtered = filtered.filter((p) => {
+        const facilityWard = MOCK_FACILITIES.find((f) => f.id === p.facilityId)?.ward;
+        const candidate = normalize(facilityWard);
+        return candidate.includes(wanted) || wanted.includes(candidate);
+      });
     }
 
     delay(800).then(() => {
       setData(filtered);
       setIsLoading(false);
     });
-  }, [category, type]);
+  }, [
+    subCategoryIds?.join("\0"),
+    listingType,
+    categoryIds?.join("\0"),
+    provinceName,
+    wardName,
+  ]);
 
   return { data, isLoading };
 }
 
 export function useProduct(id: string) {
   const [data, setData] = useState<Product | null>(null);
-  const [shop, setShop] = useState<Shop | null>(null);
+  const [facility, setFacility] = useState<MockFacility | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [recommended, setRecommended] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,28 +73,34 @@ export function useProduct(id: string) {
       const product = MOCK_PRODUCTS.find(p => p.id === id) || null;
       setData(product);
       if (product) {
-        setShop(MOCK_SHOPS.find(s => s.id === product.shopId) || MOCK_SHOPS[0]);
-        const recs = MOCK_PRODUCTS.filter(p => p.id !== id && (p.category === product.category || p.shopId === product.shopId));
+        setFacility(MOCK_FACILITIES.find(f => f.id === product.facilityId) || MOCK_FACILITIES[0]);
+        const recs = MOCK_PRODUCTS.filter(
+          (p) =>
+            p.id !== id &&
+            (p.subCategoryId === product.subCategoryId || p.categoryId === product.categoryId || p.facilityId === product.facilityId),
+        );
         setRecommended(recs.length > 0 ? recs : MOCK_PRODUCTS.filter(p => p.id !== id).slice(0, 6));
+      } else {
+        setFacility(null);
       }
       setReviews(MOCK_REVIEWS);
       setIsLoading(false);
     });
   }, [id]);
 
-  return { data, shop, reviews, recommended, isLoading };
+  return { data, facility, reviews, recommended, isLoading };
 }
 
-export function useShop(id: string) {
-  const [data, setData] = useState<Shop | null>(null);
+export function useFacility(id: string) {
+  const [data, setData] = useState<MockFacility | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setIsLoading(true);
     delay(600).then(() => {
-      setData(MOCK_SHOPS.find(s => s.id === id) || null);
-      setProducts(MOCK_PRODUCTS.filter(p => p.shopId === id));
+      setData(MOCK_FACILITIES.find(f => f.id === id) || null);
+      setProducts(MOCK_PRODUCTS.filter(p => p.facilityId === id));
       setIsLoading(false);
     });
   }, [id]);
@@ -90,7 +130,7 @@ export interface CartItem {
   productId: string;
   name: string;
   images: string[];
-  shopId: string;
+  facilityId: string;
   buyPrice: number;
   rentPrice: number;
   stock: number;
@@ -112,12 +152,12 @@ export function useCart() {
       productId: product.id,
       name: product.name,
       images: product.images,
-      shopId: product.shopId,
+      facilityId: product.facilityId,
       buyPrice: product.buyPrice || 0,
       rentPrice: product.rentPrice || 0,
       stock: product.stock,
       type: product.type as 'buy' | 'rent' | 'both',
-      category: product.category,
+      category: product.subCategoryName,
       quantity,
       rentalDates,
       addedAt: new Date().toISOString(),
@@ -145,7 +185,7 @@ export interface CheckoutSelection {
   productId: string;
   name: string;
   images: string[];
-  shopId: string;
+  facilityId: string;
   buyPrice: number;
   rentPrice: number;
   mode: 'buy' | 'rent';

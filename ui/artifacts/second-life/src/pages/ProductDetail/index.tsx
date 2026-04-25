@@ -40,7 +40,7 @@ import { StarDisplay } from "./StarDisplay";
 export default function ProductDetail() {
   const [, params] = useRoute("/product/:id");
   const productId = params?.id || "";
-  const { data: product, shop, reviews, recommended, isLoading } = useProduct(productId);
+  const { data: product, facility, reviews, recommended, isLoading } = useProduct(productId);
 
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [isRentModalOpen, setIsRentModalOpen] = useState(false);
@@ -133,8 +133,11 @@ export default function ProductDetail() {
             Trang chủ
           </Link>
           <span>/</span>
-          <Link href={`/search?category=${product.category}`} className="hover:text-primary">
-            {product.category}
+          <Link
+            href={`/search?subCategoryId=${encodeURIComponent(product.subCategoryId)}`}
+            className="hover:text-primary"
+          >
+            {product.subCategoryName}
           </Link>
           <span>/</span>
           <span className="text-foreground truncate max-w-[200px]">{product.name}</span>
@@ -151,7 +154,7 @@ export default function ProductDetail() {
             <div className="bg-white rounded-3xl border p-8 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                  {product.category}
+                  {product.subCategoryName}
                 </Badge>
                 <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">
                   Tình trạng: {product.condition}
@@ -241,24 +244,24 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {shop && (
+            {facility && (
               <div className="bg-white rounded-3xl border p-6 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <img src={shop.avatar} alt={shop.name} className="w-16 h-16 rounded-full object-cover border-2 border-primary/20" />
+                    <img src={facility.avatar} alt={facility.name} className="w-16 h-16 rounded-full object-cover border-2 border-primary/20" />
                     <div>
                       <h3 className="font-bold text-lg flex items-center gap-2">
-                        {shop.name}
-                        {shop.isVerified && <ShieldCheck className="w-4 h-4 text-primary" />}
+                        {facility.name}
+                        {facility.isVerified && <ShieldCheck className="w-4 h-4 text-primary" />}
                       </h3>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
                         <MapPin className="w-3.5 h-3.5" />
                         <span>
-                          {shop.address}, {shop.ward}
+                          {facility.address}, {facility.ward}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                        <span className="font-medium text-foreground">{shop.province}</span>
+                        <span className="font-medium text-foreground">{facility.province}</span>
                       </div>
                     </div>
                   </div>
@@ -268,9 +271,9 @@ export default function ProductDetail() {
                         <MessageSquare className="w-4 h-4 mr-1" /> Chat ngay
                       </Button>
                     </Link>
-                    <Link href={`/shop/${shop.id}`}>
+                    <Link href={`/facility/${facility.id}`}>
                       <Button size="sm" className="rounded-full bg-primary/10 text-primary hover:bg-primary/20 border-0 shadow-none">
-                        <Store className="w-4 h-4 mr-1" /> Xem shop
+                        <Store className="w-4 h-4 mr-1" /> Xem cơ sở
                       </Button>
                     </Link>
                   </div>
@@ -279,13 +282,13 @@ export default function ProductDetail() {
                   <div className="flex items-center gap-1">
                     <Package className="w-4 h-4" />
                     <span>
-                      <strong className="text-foreground">{shop.totalOrders}</strong> đơn đã hoàn thành
+                      <strong className="text-foreground">{facility.totalOrders}</strong> đơn đã hoàn thành
                     </span>
                   </div>
                   <span>•</span>
                   <div className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    <span>Tham gia {formatDistanceToNow(new Date(shop.joinedDate), { locale: vi, addSuffix: true })}</span>
+                    <span>Tham gia {formatDistanceToNow(new Date(facility.joinedDate), { locale: vi, addSuffix: true })}</span>
                   </div>
                 </div>
               </div>

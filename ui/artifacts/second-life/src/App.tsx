@@ -13,7 +13,7 @@ import { setBaseUrl } from "@workspace/api-client-react";
 import Home from "@/pages/Home";
 import Search from "@/pages/Search";
 import ProductDetail from "@/pages/ProductDetail";
-import Shop from "@/pages/Shop";
+import FacilityPage from "@/pages/Facility";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders";
@@ -70,7 +70,8 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/search" component={Search} />
           <Route path="/product/:id" component={ProductDetail} />
-          <Route path="/shop/:id" component={Shop} />
+          <Route path="/facility/:id" component={FacilityPage} />
+          <Route path="/shop/:id" component={FacilityPage} />
           <Route path="/cart" component={Cart} />
           <Route path="/checkout" component={Checkout} />
           <ProtectedRoute path="/orders" component={Orders} />

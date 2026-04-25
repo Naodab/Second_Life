@@ -69,6 +69,11 @@ export default defineConfig(async ({ mode }) => {
       port,
       host: "0.0.0.0",
       allowedHosts: true,
+      /** Nếu HMR không cập nhật khi sửa file: `VITE_WATCH_POLLING=1 pnpm run dev` */
+      watch:
+        process.env.VITE_WATCH_POLLING === "1"
+          ? { usePolling: true, interval: 300 }
+          : undefined,
       fs: {
         strict: true,
         deny: ["**/.*"],

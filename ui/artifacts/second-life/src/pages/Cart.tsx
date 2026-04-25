@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useCart, checkRentAvailability, setPendingCheckout, CartItem, CheckoutSelection } from "@/hooks/use-mock-api";
 import { formatCurrency, cn } from "@/lib/utils";
-import { MOCK_SHOPS } from "@/lib/mock-data";
+import { MOCK_FACILITIES } from "@/lib/mock-data";
 import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 import { vi } from "date-fns/locale";
 
@@ -252,7 +252,7 @@ function CartItemCard({
   onStateChange: (id: string, patch: Partial<ItemState>) => void;
   onRemove: (id: string) => void;
 }) {
-  const shop = MOCK_SHOPS.find(s => s.id === item.shopId);
+  const facility = MOCK_FACILITIES.find((f) => f.id === item.facilityId);
   const isBuy = item.type === 'buy' || item.type === 'both';
   const isRent = item.type === 'rent' || item.type === 'both';
   const buyKey: ModeKey = `${item.cartItemId}:buy`;
@@ -297,7 +297,7 @@ function CartItemCard({
           <Link href={`/product/${item.productId}`}>
             <h3 className="font-bold text-sm line-clamp-1 hover:text-primary transition-colors">{item.name}</h3>
           </Link>
-          <p className="text-xs text-muted-foreground mt-0.5">{shop?.name ?? item.shopId}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{facility?.name ?? item.facilityId}</p>
           <div className="flex gap-1.5 mt-1.5">
             {isBuy && <Badge className="text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-0 font-semibold">Mua được</Badge>}
             {isRent && <Badge className="text-[9px] px-1.5 py-0 bg-secondary/10 text-secondary border-0 font-semibold">Thuê được</Badge>}
@@ -444,7 +444,7 @@ export default function Cart() {
           productId: item.productId,
           name: item.name,
           images: item.images,
-          shopId: item.shopId,
+          facilityId: item.facilityId,
           buyPrice: item.buyPrice,
           rentPrice: item.rentPrice,
           mode: 'buy',
@@ -456,7 +456,7 @@ export default function Cart() {
           productId: item.productId,
           name: item.name,
           images: item.images,
-          shopId: item.shopId,
+          facilityId: item.facilityId,
           buyPrice: item.buyPrice,
           rentPrice: item.rentPrice,
           mode: 'rent',
