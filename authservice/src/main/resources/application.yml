@@ -77,3 +77,23 @@ account:
   admin:
     email: ${ACCOUNT_ADMIN_EMAIL:}
     password: ${ACCOUNT_ADMIN_PASSWORD:}
+
+protected_paths:
+  POST:
+    - /api/v1/facilities
+    - /api/v1/categories
+    - /api/v1/sub-categories
+    - /api/v1/products
+    - /api/v1/attributes
+  PUT:
+    - /api/v1/facilities
+    - /api/v1/categories
+    - /api/v1/sub-categories
+    - /api/v1/products
+    - /api/v1/attributes
+  DELETE:
+    - /api/v1/facilities
+    - /api/v1/categories
+    - /api/v1/sub-categories
+    - /api/v1/products
+    - /api/v1/attributes

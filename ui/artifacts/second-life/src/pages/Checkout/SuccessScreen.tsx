@@ -31,7 +31,7 @@ export function SuccessScreen({ subOrderCount }: { subOrderCount: number }) {
         </div>
         <h2 className="text-3xl font-display font-bold mb-2 text-green-700">Thanh toán thành công!</h2>
         <p className="text-muted-foreground leading-relaxed mb-1">Đơn hàng đã được ghi nhận.</p>
-        <p className="text-sm text-primary font-semibold mb-4">Hãy chờ shop duyệt đơn hàng.</p>
+        <p className="text-sm text-primary font-semibold mb-4">Hãy chờ cơ sở duyệt đơn hàng.</p>
         {subOrderCount > 1 && (
           <p className="text-xs text-muted-foreground mb-4">
             Đơn đã được tách thành <strong>{subOrderCount} đơn nhỏ</strong> theo từng cơ sở.

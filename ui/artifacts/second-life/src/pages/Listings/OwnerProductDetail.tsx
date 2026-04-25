@@ -87,7 +87,7 @@ export function OwnerProductDetail({ product, onBack }: { product: Product; onBa
           <div className="bg-white rounded-2xl border p-5 shadow-sm">
             <div className="flex gap-2 mb-3 flex-wrap">
               <Badge variant="outline" className="bg-primary/5 text-primary">
-                {product.category}
+                {product.subCategoryName}
               </Badge>
               <Badge variant="outline" className="bg-gray-100 text-gray-600">
                 {product.condition}

@@ -7,7 +7,7 @@ http:
         authResponseHeaders:
           - "X-Profile-Id"
           - "X-User-Email"
-          - "X-User-Sub"
+          - "role"
         authRequestHeaders:
           - "Authorization"
 

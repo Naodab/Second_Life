@@ -18,12 +18,12 @@ export function FacilityView({
   onViewUnpublished: () => void;
   pendingCount: number;
 }) {
-  const products = MOCK_PRODUCTS.filter((p) => p.shopId === facility.id);
+  const products = MOCK_PRODUCTS.filter((p) => p.facilityId === facility.id);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const catRef = useRef<HTMLDivElement>(null);
-  const categories = [...new Set(products.map((p) => p.category))];
+  const categories = [...new Set(products.map((p) => p.subCategoryName))];
 
-  const filtered = categoryFilter ? products.filter((p) => p.category === categoryFilter) : products;
+  const filtered = categoryFilter ? products.filter((p) => p.subCategoryName === categoryFilter) : products;
 
   return (
     <div className="space-y-5">

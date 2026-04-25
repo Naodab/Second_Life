@@ -28,7 +28,7 @@ export function ProductCard({ product }: { product: Product }) {
         {/* Content */}
         <div className="p-5 flex flex-col flex-1">
           <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-            <span className="font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md">{product.category}</span>
+            <span className="font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md line-clamp-1">{product.subCategoryName}</span>
             <span>•</span>
             <span>{product.condition}</span>
           </div>

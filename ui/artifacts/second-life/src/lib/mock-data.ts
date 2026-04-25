@@ -1,6 +1,7 @@
 export type ProductType = 'buy' | 'rent' | 'both';
 
-export interface Shop {
+/** Mock cơ sở bán hàng — cùng vai trò với facility trên backend (id mock tạm: s1, s2). */
+export interface MockFacility {
   id: string;
   name: string;
   avatar: string;
@@ -35,17 +36,34 @@ export interface Product {
   rentPrice?: number;
   aiSuggestedBuyPrice?: number;
   aiSuggestedRentPrice?: number;
-  category: string;
+  /** Parent category id (productservice seed / API) */
+  categoryId: string;
+  /** Leaf subcategory id */
+  subCategoryId: string;
+  /** Short label for badges (Vietnamese, matches seed subcategory names) */
+  subCategoryName: string;
   condition: string;
   location: string;
   stock: number;
   rating: number;
   reviewsCount: number;
-  shopId: string;
+  facilityId: string;
   createdAt: string;
 }
 
-export const MOCK_SHOPS: Shop[] = [
+export const CATEGORIES: string[] = [
+  "cat-electronics",
+  "cat-home",
+  "cat-sports",
+  "cat-beauty",
+  "cat-others",
+  "cat-books",
+  "cat-vehicle",
+  "cat-real-estate",
+  "cat-mother-baby"
+];
+
+export const MOCK_FACILITIES: MockFacility[] = [
   {
     id: "s1",
     name: "Green Loop Store",
@@ -57,7 +75,7 @@ export const MOCK_SHOPS: Shop[] = [
     totalOrders: 342,
     joinedDate: "2023-01-15",
     isVerified: true,
-    categories: ["Electronics", "Furniture", "Musical Instruments", "Books"]
+    categories: ["Máy ảnh & Quay phim", "Nội thất phòng khách", "Đồ sưu tầm & Đồ cổ", "Sách cũ"]
   },
   {
     id: "s2",
@@ -70,7 +88,7 @@ export const MOCK_SHOPS: Shop[] = [
     totalOrders: 128,
     joinedDate: "2023-06-20",
     isVerified: false,
-    categories: ["Electronics", "Sports & Outdoors", "Tools"]
+    categories: ["Game & Console", "Đồ cắm trại & Du lịch", "Phụ tùng xe"]
   }
 ];
 
@@ -90,13 +108,15 @@ export const MOCK_PRODUCTS: Product[] = [
     rentPrice: 50000,
     aiSuggestedBuyPrice: 1100000,
     aiSuggestedRentPrice: 45000,
-    category: "Electronics",
+    categoryId: "cat-electronics",
+    subCategoryId: "sub-camera",
+    subCategoryName: "Máy ảnh & Quay phim",
     condition: "Good",
     location: "TP. Hồ Chí Minh",
     stock: 1,
     rating: 4.9,
     reviewsCount: 12,
-    shopId: "s1",
+    facilityId: "s1",
     createdAt: "2024-05-10"
   },
   {
@@ -110,13 +130,15 @@ export const MOCK_PRODUCTS: Product[] = [
     type: "buy",
     buyPrice: 850000,
     aiSuggestedBuyPrice: 800000,
-    category: "Furniture",
+    categoryId: "cat-home",
+    subCategoryId: "sub-furniture-living",
+    subCategoryName: "Nội thất phòng khách",
     condition: "Like New",
     location: "Hà Nội",
     stock: 1,
     rating: 4.5,
     reviewsCount: 3,
-    shopId: "s1",
+    facilityId: "s1",
     createdAt: "2024-05-12"
   },
   {
@@ -130,13 +152,15 @@ export const MOCK_PRODUCTS: Product[] = [
     type: "rent",
     rentPrice: 80000,
     aiSuggestedRentPrice: 75000,
-    category: "Sports & Outdoors",
+    categoryId: "cat-sports",
+    subCategoryId: "sub-camping",
+    subCategoryName: "Đồ cắm trại & Du lịch",
     condition: "Good",
     location: "Đà Nẵng",
     stock: 2,
     rating: 4.7,
     reviewsCount: 25,
-    shopId: "s2",
+    facilityId: "s2",
     createdAt: "2024-04-20"
   },
   {
@@ -152,13 +176,15 @@ export const MOCK_PRODUCTS: Product[] = [
     rentPrice: 100000,
     aiSuggestedBuyPrice: 1350000,
     aiSuggestedRentPrice: 90000,
-    category: "Musical Instruments",
+    categoryId: "cat-others",
+    subCategoryId: "sub-collectible",
+    subCategoryName: "Đồ sưu tầm & Đồ cổ",
     condition: "Fair",
     location: "TP. Hồ Chí Minh",
     stock: 1,
     rating: 4.2,
     reviewsCount: 8,
-    shopId: "s2",
+    facilityId: "s2",
     createdAt: "2024-05-15"
   },
   {
@@ -171,13 +197,15 @@ export const MOCK_PRODUCTS: Product[] = [
     type: "buy",
     buyPrice: 600000,
     aiSuggestedBuyPrice: 550000,
-    category: "Furniture",
+    categoryId: "cat-home",
+    subCategoryId: "sub-furniture-living",
+    subCategoryName: "Nội thất phòng khách",
     condition: "Good",
     location: "Hà Nội",
     stock: 1,
     rating: 4.0,
     reviewsCount: 2,
-    shopId: "s1",
+    facilityId: "s1",
     createdAt: "2024-05-18"
   },
   {
@@ -193,13 +221,15 @@ export const MOCK_PRODUCTS: Product[] = [
     rentPrice: 150000,
     aiSuggestedBuyPrice: 3200000,
     aiSuggestedRentPrice: 130000,
-    category: "Electronics",
+    categoryId: "cat-books",
+    subCategoryId: "sub-games",
+    subCategoryName: "Game & Console",
     condition: "Good",
     location: "TP. Hồ Chí Minh",
     stock: 1,
     rating: 4.8,
     reviewsCount: 45,
-    shopId: "s2",
+    facilityId: "s2",
     createdAt: "2024-05-01"
   },
   {
@@ -215,13 +245,15 @@ export const MOCK_PRODUCTS: Product[] = [
     rentPrice: 120000,
     aiSuggestedBuyPrice: 3900000,
     aiSuggestedRentPrice: 110000,
-    category: "Sports & Outdoors",
+    categoryId: "cat-vehicle",
+    subCategoryId: "sub-bike",
+    subCategoryName: "Xe đạp & Xe điện",
     condition: "Good",
     location: "TP. Hồ Chí Minh",
     stock: 1,
     rating: 4.6,
     reviewsCount: 18,
-    shopId: "s1",
+    facilityId: "s1",
     createdAt: "2024-04-28"
   },
   {
@@ -234,13 +266,15 @@ export const MOCK_PRODUCTS: Product[] = [
     type: "rent",
     rentPrice: 200000,
     aiSuggestedRentPrice: 180000,
-    category: "Electronics",
+    categoryId: "cat-electronics",
+    subCategoryId: "sub-tv",
+    subCategoryName: "Tivi & Màn hình",
     condition: "Like New",
     location: "Hà Nội",
     stock: 3,
     rating: 4.4,
     reviewsCount: 7,
-    shopId: "s2",
+    facilityId: "s2",
     createdAt: "2024-05-20"
   }
 ];
@@ -285,11 +319,6 @@ export const MOCK_REVIEWS: Review[] = [
     comment: "Sản phẩm ổn nhưng có một vài điểm không như mô tả. Shop phản hồi nhanh và giải quyết thỏa đáng.",
     date: "2024-04-22"
   }
-];
-
-export const CATEGORIES = [
-  "Electronics", "Clothing", "Furniture", "Books",
-  "Sports & Outdoors", "Toys", "Kitchen", "Musical Instruments", "Tools"
 ];
 
 export const PROVINCES = [

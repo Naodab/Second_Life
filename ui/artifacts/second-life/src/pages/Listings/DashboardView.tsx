@@ -8,9 +8,9 @@ import { RevenueBar, StatCard } from "./dashboard-widgets";
 export function DashboardView({ facilityId }: { facilityId: string }) {
   const orders = MOCK_ORDERS.filter((o) => o.facilityId === facilityId);
   const monthRevenue = orders.filter((o) => o.status === "completed").reduce((s, o) => s + o.total, 0);
-  const productCount = MOCK_PRODUCTS.filter((p) => p.shopId === facilityId).length;
+  const productCount = MOCK_PRODUCTS.filter((p) => p.facilityId === facilityId).length;
   const rentCount = MOCK_PRODUCTS.filter(
-    (p) => p.shopId === facilityId && (p.type === "rent" || p.type === "both")
+    (p) => p.facilityId === facilityId && (p.type === "rent" || p.type === "both")
   ).length;
 
   const monthlyData = [

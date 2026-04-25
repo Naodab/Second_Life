@@ -1,11 +1,11 @@
 import type { CheckoutSelection } from "@/hooks/use-mock-api";
 import { differenceInDays } from "date-fns";
 
-export function groupByShop(items: CheckoutSelection[]) {
+export function groupByFacility(items: CheckoutSelection[]) {
   const map = new Map<string, CheckoutSelection[]>();
   for (const item of items) {
-    if (!map.has(item.shopId)) map.set(item.shopId, []);
-    map.get(item.shopId)!.push(item);
+    if (!map.has(item.facilityId)) map.set(item.facilityId, []);
+    map.get(item.facilityId)!.push(item);
   }
   return map;
 }

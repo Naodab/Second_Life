@@ -89,6 +89,21 @@
       "name": "account.admin.password",
       "type": "java.lang.String",
       "description": "Admin password"
+    },
+    {
+      "name": "protected_paths.POST",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Protected paths for POST method"
+    },
+    {
+      "name": "protected_paths.PUT",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Protected paths for PUT method"
+    },
+    {
+      "name": "protected_paths.DELETE",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Protected paths for DELETE method"
     }
   ]
 }

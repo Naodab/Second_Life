@@ -70,6 +70,19 @@ services:
     volumes:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      mail-service:
+        condition: service_healthy
+      profile-service:
+        condition: service_healthy
+      upload-service:
+        condition: service_healthy
+      location-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
     networks:
       - second_life_network
 
@@ -79,8 +92,12 @@ services:
     build:
       context: .
       dockerfile: authservice/Dockerfile
+    # Traefik dynamic.yml targets fixed in-network ports; keep Spring aligned.
+    # Host publish port still comes from .env (defaults to same as internal).
     ports:
-      - "${SERVER_PORT_AUTH_SERVICE}:${SERVER_PORT_AUTH_SERVICE}"
+      - "${SERVER_PORT_AUTH_SERVICE:-8081}:8081"
+    environment:
+      SERVER_PORT_AUTH_SERVICE: "8081"
     env_file:
       - .env
     depends_on:
@@ -89,6 +106,16 @@ services:
       redis:
         condition: service_started
       # - db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://127.0.0.1:8081/api/v1/v3/api-docs -o /dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -101,12 +128,24 @@ services:
       context: .
       dockerfile: mailservice/Dockerfile
     ports:
-      - "${SERVER_PORT_MAIL_SERVICE}:${SERVER_PORT_MAIL_SERVICE}"
+      - "${SERVER_PORT_MAIL_SERVICE:-8083}:8083"
+    environment:
+      SERVER_PORT_MAIL_SERVICE: "8083"
     env_file:
       - .env
     depends_on:
       kafka:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://127.0.0.1:8083/api/v1/v3/api-docs -o /dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -119,13 +158,25 @@ services:
       context: .
       dockerfile: profileservice/Dockerfile
     ports:
-      - "${SERVER_PORT_PROFILE_SERVICE}:${SERVER_PORT_PROFILE_SERVICE}"
+      - "${SERVER_PORT_PROFILE_SERVICE:-8082}:8082"
+    environment:
+      SERVER_PORT_PROFILE_SERVICE: "8082"
     env_file:
       - .env
     depends_on:
       kafka:
         condition: service_healthy
       # - db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://127.0.0.1:8082/api/v1/v3/api-docs -o /dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -138,12 +189,24 @@ services:
       context: .
       dockerfile: uploadservice/Dockerfile
     ports:
-      - "${SERVER_PORT_UPLOAD_SERVICE}:${SERVER_PORT_UPLOAD_SERVICE}"
+      - "${SERVER_PORT_UPLOAD_SERVICE:-8084}:8084"
+    environment:
+      SERVER_PORT_UPLOAD_SERVICE: "8084"
     env_file:
       - .env
     depends_on:
       kafka:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://127.0.0.1:8084/api/v1/v3/api-docs -o /dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -156,12 +219,24 @@ services:
       context: .
       dockerfile: locationservice/Dockerfile
     ports:
-      - "${SERVER_PORT_LOCATION_SERVICE}:${SERVER_PORT_LOCATION_SERVICE}"
+      - "${SERVER_PORT_LOCATION_SERVICE:-8085}:8085"
+    environment:
+      SERVER_PORT_LOCATION_SERVICE: "8085"
     env_file:
       - .env
     depends_on:
       redis:
         condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://127.0.0.1:8085/api/v1/v3/api-docs -o /dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -174,12 +249,24 @@ services:
       context: .
       dockerfile: productservice/Dockerfile
     ports:
-      - "${SERVER_PORT_PRODUCT_SERVICE}:${SERVER_PORT_PRODUCT_SERVICE}"
+      - "${SERVER_PORT_PRODUCT_SERVICE:-8086}:8086"
+    environment:
+      SERVER_PORT_PRODUCT_SERVICE: "8086"
     env_file:
       - .env
     depends_on:
       kafka:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://127.0.0.1:8086/api/v1/v3/api-docs -o /dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     networks:
       - second_life_network
     labels:
