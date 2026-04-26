@@ -12,16 +12,18 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
-public class CategoryInitializer {
+public class DataInitializer {
   CategorySeedBootstrap categorySeedBootstrap;
+  AttributeSeedBootstrap attributeSeedBootstrap;
 
   @Bean
-  public CommandLineRunner initializeCategories() {
+  public CommandLineRunner initializeData() {
     return args -> {
       try {
         categorySeedBootstrap.seedIfEmpty();
+        attributeSeedBootstrap.seedIfEmpty();
       } catch (RuntimeException e) {
-        log.error("Error initializing categories", e);
+        log.error("Error initializing data", e);
       }
     };
   }
