@@ -1,0 +1,76 @@
+attributes:
+  - id: attr-condition
+    name: "Condition"
+    attributeValues:
+      - id: val-new
+        value: "New"
+      - id: val-like-new
+        value: "Like New"
+      - id: val-good
+        value: "Good"
+      - id: val-fair
+        value: "Fair"
+      - id: val-poor
+        value: "Poor"
+
+  - id: attr-color
+    name: "Color"
+    attributeValues:
+      - id: val-red
+        value: "Red"
+      - id: val-blue
+        value: "Blue"
+      - id: val-black
+        value: "Black"
+      - id: val-white
+        value: "White"
+      - id: val-yellow
+        value: "Yellow"
+
+  - id: attr-material
+    name: "Material"
+    attributeValues:
+      - id: val-wood
+        value: "Wood"
+      - id: val-metal
+        value: "Metal"
+      - id: val-plastic
+        value: "Plastic"
+      - id: val-leather
+        value: "Leather"
+      - id: val-fabric
+        value: "Fabric"
+
+  - id: attr-usage-type
+    name: "Usage Type"
+    attributeValues:
+      - id: val-sell
+        value: "Sell"
+      - id: val-rent
+        value: "Rent"
+      - id: val-both
+        value: "Sell & Rent"
+
+  - id: attr-size
+    name: "Size"
+    attributeValues:
+      - id: val-small
+        value: "Small"
+      - id: val-medium
+        value: "Medium"
+      - id: val-large
+        value: "Large"
+
+  - id: attr-brand
+    name: "Brand"
+    attributeValues:
+      - id: val-ikea
+        value: "IKEA"
+      - id: val-sony
+        value: "Sony"
+      - id: val-samsung
+        value: "Samsung"
+      - id: val-apple
+        value: "Apple"
+      - id: val-other
+        value: "Other"

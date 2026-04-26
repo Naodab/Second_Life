@@ -6,7 +6,12 @@ import com.naodab.productservice.dto.request.AttributeCreateRequest;
 import com.naodab.productservice.dto.response.AttributeResponse;
 import com.naodab.productservice.models.Attribute;
 
+import lombok.experimental.FieldDefaults;
+import lombok.RequiredArgsConstructor;
+
 @Component
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
+@RequiredArgsConstructor
 public class AttributeMapper {
   AttributeValueMapper attributeValueMapper;
 
