@@ -48,7 +48,7 @@ public class ForwardAuthController {
     if (requiresProtection(method, path)) {
       return requireAuthenticatedAndForward(authorization);
     }
-    return optionallyForwardAuthHeaders(authorization, method, path);
+    return optionallyForwardAuthHeaders(authorization);
   }
 
   private boolean requiresProtection(String method, String path) {
@@ -124,8 +124,7 @@ public class ForwardAuthController {
     return applyJwtClaimsToResponse(jwt, true);
   }
 
-  private ResponseEntity<Void> optionallyForwardAuthHeaders(
-      String authorization, String method, String path) {
+  private ResponseEntity<Void> optionallyForwardAuthHeaders(String authorization) {
     String jwt = extractBearer(authorization);
     if (!StringUtils.hasText(jwt)) {
       return noUserContextToForward();
