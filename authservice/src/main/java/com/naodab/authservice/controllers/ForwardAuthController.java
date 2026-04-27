@@ -128,14 +128,11 @@ public class ForwardAuthController {
       String authorization, String method, String path) {
     String jwt = extractBearer(authorization);
     if (!StringUtils.hasText(jwt)) {
-      log.debug("Forward auth (optional) no bearer: method={}, path={}", method, path);
-      return ResponseEntity.ok().build();
+      return noUserContextToForward();
     }
     if (!jwtTokenProvider.validateToken(jwt)) {
-      log.debug("Forward auth (optional) invalid token ignored: method={}, path={}", method, path);
-      return ResponseEntity.ok().build();
+      return noUserContextToForward();
     }
-    log.debug("Forward auth (optional) forwarding claims: method={}, path={}", method, path);
     return applyJwtClaimsToResponse(jwt, false);
   }
 
@@ -146,10 +143,10 @@ public class ForwardAuthController {
         if (strict) {
           return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        return ResponseEntity.ok().build();
+        return noUserContextToForward();
       }
 
-      var response = ResponseEntity.ok()
+      var response = ResponseEntity.status(HttpStatus.OK)
           .header(AppConstants.HEADER_USER_EMAIL, subject);
 
       String profileId = jwtTokenProvider.getProfileIdFromToken(jwt);
@@ -170,8 +167,12 @@ public class ForwardAuthController {
       if (strict) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
       }
-      return ResponseEntity.ok().build();
+      return noUserContextToForward();
     }
+  }
+
+  private static ResponseEntity<Void> noUserContextToForward() {
+    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 
   private static String extractBearer(String authorization) {
