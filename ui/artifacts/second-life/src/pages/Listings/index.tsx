@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   getMyFacilities,
+  uploadFacilityMainImage,
   type FacilityResponse,
   type FacilityWithPlaceNames,
 } from "@/api/facility";
@@ -157,6 +158,30 @@ export default function Listings() {
     });
   };
 
+  const handleUpdateFacilityAvatar = async (file: File) => {
+    if (!activeFacilityId) return;
+    try {
+      await uploadFacilityMainImage(activeFacilityId, file);
+      const previewUrl = URL.createObjectURL(file);
+      setFacilities((prev) =>
+        prev.map((facility) =>
+          facility.id === activeFacilityId ? { ...facility, imageUrl: previewUrl } : facility,
+        ),
+      );
+      toast({
+        title: "Đã cập nhật avatar",
+        description: "Ảnh đại diện cơ sở đã được cập nhật.",
+      });
+    } catch (e) {
+      toast({
+        title: "Cập nhật avatar thất bại",
+        description: e instanceof Error ? e.message : "Vui lòng thử lại sau.",
+        variant: "destructive",
+      });
+      throw e;
+    }
+  };
+
   const activeProduct = activeProductId ? MOCK_PRODUCTS.find((p) => p.id === activeProductId) : null;
 
   return (
@@ -193,6 +218,7 @@ export default function Listings() {
                   onViewProduct={handleViewProduct}
                   onAddProduct={() => setIsAddModalOpen(true)}
                   onViewUnpublished={() => setView("unpublished")}
+                  onUpdateAvatar={handleUpdateFacilityAvatar}
                   pendingCount={facilityPendingProducts.length}
                 />
               )}

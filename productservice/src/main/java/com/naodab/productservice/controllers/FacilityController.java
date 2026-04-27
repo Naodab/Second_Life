@@ -12,6 +12,8 @@ import com.naodab.productservice.services.FacilityService;
 import com.naodab.productservice.dto.response.FacilityResponse;
 import com.naodab.productservice.dto.request.FacilityCreateRequest;
 import com.naodab.commonservice.constant.AppConstants;
+import com.naodab.commonservice.exception.AppException;
+import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.productservice.dto.request.FacilitySearchRequest;
 import com.naodab.productservice.dto.request.FacilityUpdateRequest;
@@ -25,7 +27,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,12 +44,7 @@ public class FacilityController {
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
       @RequestBody FacilityCreateRequest request) {
     log.info("Creating facility for profile: {}", profileIdHeader);
-    String profileId;
-    if (StringUtils.hasText(profileIdHeader)) {
-      profileId = profileIdHeader.trim();
-    } else {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
+    String profileId = validateProfileId(profileIdHeader);
     return ResponseEntity.ok(ApiResponse.<FacilityResponse>builder()
         .data(facilityService.createFacility(profileId, request))
         .build());
@@ -66,14 +62,7 @@ public class FacilityController {
   @GetMapping("/me")
   public ResponseEntity<ApiResponse<List<FacilityResponse>>> getFacilitiesByOwnerId(
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
-    String profileId;
-    if (StringUtils.hasText(profileIdHeader)) {
-      profileId = profileIdHeader.trim();
-    } else {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-    log.info("Getting facilities for profile: {}", profileId);
-
+    String profileId = validateProfileId(profileIdHeader);
     FacilitySearchRequest request = FacilitySearchRequest.builder()
         .ownerId(profileId)
         .build();
@@ -128,8 +117,21 @@ public class FacilityController {
   }
 
   @PostMapping("/{id}/main-image")
-  public ResponseEntity<ApiResponse<Void>> uploadMainImageFacility(@PathVariable String id,
+  public ResponseEntity<ApiResponse<Void>> uploadMainImageFacility(
+      @PathVariable String id,
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
       @RequestParam MultipartFile image) {
+    log.info("Uploading main image for facility: {}", id);
+    String profileId = validateProfileId(profileIdHeader);
+    facilityService.uploadMainImageFacility(id, profileId, image);
     return ResponseEntity.ok(ApiResponse.<Void>builder().build());
+  }
+
+  private String validateProfileId(String profileIdHeader) {
+    if (!StringUtils.hasText(profileIdHeader)) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    return profileIdHeader.trim();
   }
 }
