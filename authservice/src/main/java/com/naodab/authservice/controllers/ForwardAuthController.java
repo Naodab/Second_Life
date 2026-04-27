@@ -45,12 +45,10 @@ public class ForwardAuthController {
     String method = firstNonBlank(forwardedMethod, methodParam);
     String path = normalizeRequestPath(forwardedUri);
 
-    if (!requiresProtection(method, path)) {
-      log.debug("Forward auth skipped (not a protected path): method={}, path={}", method, path);
-      return ResponseEntity.ok().build();
+    if (requiresProtection(method, path)) {
+      return requireAuthenticatedAndForward(authorization);
     }
-
-    return authenticateAndForwardHeaders(authorization);
+    return optionallyForwardAuthHeaders(authorization);
   }
 
   private boolean requiresProtection(String method, String path) {
@@ -116,22 +114,38 @@ public class ForwardAuthController {
     return raw.startsWith("/") ? raw : "/" + raw;
   }
 
-  private ResponseEntity<Void> authenticateAndForwardHeaders(String authorization) {
+  private ResponseEntity<Void> requireAuthenticatedAndForward(String authorization) {
     String jwt = extractBearer(authorization);
-    log.debug("Forward auth request, bearer token present: {}", StringUtils.hasText(jwt));
-    log.debug("Forward auth request, bearer token valid: {}", jwtTokenProvider.validateToken(jwt));
+    log.debug("Forward auth (protected) bearer present: {}, valid: {}", StringUtils.hasText(jwt),
+        jwt != null && jwtTokenProvider.validateToken(jwt));
     if (!StringUtils.hasText(jwt) || !jwtTokenProvider.validateToken(jwt)) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
+    return applyJwtClaimsToResponse(jwt, true);
+  }
 
+  private ResponseEntity<Void> optionallyForwardAuthHeaders(String authorization) {
+    String jwt = extractBearer(authorization);
+    if (!StringUtils.hasText(jwt)) {
+      return noUserContextToForward();
+    }
+    if (!jwtTokenProvider.validateToken(jwt)) {
+      return noUserContextToForward();
+    }
+    return applyJwtClaimsToResponse(jwt, false);
+  }
+
+  private ResponseEntity<Void> applyJwtClaimsToResponse(String jwt, boolean strict) {
     try {
       String subject = jwtTokenProvider.getEmailFromToken(jwt);
-      log.debug("Forward auth request, subject present: {}", StringUtils.hasText(subject));
       if (!StringUtils.hasText(subject)) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (strict) {
+          return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return noUserContextToForward();
       }
 
-      var response = ResponseEntity.ok()
+      var response = ResponseEntity.status(HttpStatus.OK)
           .header(AppConstants.HEADER_USER_EMAIL, subject);
 
       String profileId = jwtTokenProvider.getProfileIdFromToken(jwt);
@@ -149,8 +163,15 @@ public class ForwardAuthController {
       return response.build();
     } catch (Exception e) {
       log.error("Forward auth failed while reading token claims: {}", e.getMessage());
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      if (strict) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      }
+      return noUserContextToForward();
     }
+  }
+
+  private static ResponseEntity<Void> noUserContextToForward() {
+    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 
   private static String extractBearer(String authorization) {

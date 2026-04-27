@@ -25,11 +25,14 @@ import com.naodab.profileservice.dto.response.ProfileResponse;
 import com.naodab.profileservice.services.ProfileService;
 
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
 
+@Slf4j
 @RestController
 @RequestMapping("/profiles")
 @RequiredArgsConstructor
@@ -79,17 +82,20 @@ public class ProfileController {
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
       @RequestHeader(value = AppConstants.HEADER_USER_EMAIL, required = false) String userEmail,
       @RequestBody @Validated ProfileUpdateRequest request) {
-    String id;
+    log.info("Updating current profile with profileIdHeader: {}, userEmail: {}, request: {}", profileIdHeader,
+        userEmail, request);
+    ProfileResponse data;
     if (StringUtils.hasText(profileIdHeader)) {
-      id = profileIdHeader.trim();
+      data = profileService.updateProfile(profileIdHeader.trim(), request);
     } else if (StringUtils.hasText(userEmail)) {
-      id = profileService.getProfileByEmail(userEmail.trim()).getId();
+      data = profileService.updateProfileByEmail(userEmail.trim(), request);
     } else {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
+
     return ResponseEntity.ok(
         ApiResponse.<ProfileResponse>builder()
-            .data(profileService.updateProfile(id, request))
+            .data(data)
             .build());
   }
 

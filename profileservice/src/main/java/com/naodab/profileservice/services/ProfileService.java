@@ -22,6 +22,8 @@ public interface ProfileService {
 
   ProfileResponse updateProfile(String id, ProfileUpdateRequest request);
 
+  ProfileResponse updateProfileByEmail(String email, ProfileUpdateRequest request);
+
   void deleteProfile(String id);
 
   void createProfileFromEvent(CreateProfileEvent event);

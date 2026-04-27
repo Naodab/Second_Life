@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Plus, Store, MapPin, Star, Package, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Plus, Store, MapPin, Star, Package, ChevronLeft, ChevronRight, Eye, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { facilityAvatarUrl, type FacilityWithPlaceNames } from "@/api/facility";
 import { MOCK_PRODUCTS } from "@/lib/mock-data";
@@ -10,17 +10,21 @@ export function FacilityView({
   onViewProduct,
   onAddProduct,
   onViewUnpublished,
+  onUpdateAvatar,
   pendingCount,
 }: {
   facility: FacilityWithPlaceNames;
   onViewProduct: (id: string) => void;
   onAddProduct: () => void;
   onViewUnpublished: () => void;
+  onUpdateAvatar: (file: File) => Promise<void>;
   pendingCount: number;
 }) {
   const products = MOCK_PRODUCTS.filter((p) => p.facilityId === facility.id);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const catRef = useRef<HTMLDivElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const categories = [...new Set(products.map((p) => p.subCategoryName))];
 
   const filtered = categoryFilter ? products.filter((p) => p.subCategoryName === categoryFilter) : products;
@@ -51,6 +55,38 @@ export function FacilityView({
                   {pendingCount}
                 </span>
               )}
+            </Button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setIsUploadingAvatar(true);
+                try {
+                  await onUpdateAvatar(file);
+                } finally {
+                  setIsUploadingAvatar(false);
+                  e.target.value = "";
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              disabled={isUploadingAvatar}
+              onClick={() => avatarInputRef.current?.click()}
+            >
+              {isUploadingAvatar ? (
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Upload className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              Cập nhật avatar
             </Button>
             <Button size="sm" className="rounded-full shadow-md shadow-primary/20" onClick={onAddProduct}>
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Thêm mặt hàng

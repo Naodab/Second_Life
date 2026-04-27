@@ -182,4 +182,18 @@ public class ProfileServiceImpl implements ProfileService {
 
     uploadFileClient.uploadAvatar(request.getProfileId(), request.getAvatar());
   }
+
+  @Override
+  public ProfileResponse updateProfileByEmail(String email, ProfileUpdateRequest request) {
+    if (email == null || email.isBlank()) {
+      log.error("Email is null or blank");
+      throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+
+    return profileRepository.findByEmail(email)
+        .map(profile -> profileMapper.toProfile(profile, request))
+        .map(profileRepository::save)
+        .map(profileMapper::toProfileResponse)
+        .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
+  }
 }
