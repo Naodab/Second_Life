@@ -2,6 +2,8 @@ package com.naodab.productservice.dto.request;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +22,7 @@ import jakarta.validation.constraints.Size;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ProductCreateRequest {
   @NotBlank(message = "REQUIRED_FIELD")
   @Size(min = 3, max = 255, message = "NAME_INVALID")

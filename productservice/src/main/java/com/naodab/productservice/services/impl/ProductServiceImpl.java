@@ -177,7 +177,8 @@ public class ProductServiceImpl implements ProductService {
 
   private String generateSku(Product product, List<AttributeValue> attributeValues, int sequence) {
     SubCategory primarySubCategory = product.getPrimarySubCategory();
-    String categoryCode = safeSkuPart(primarySubCategory.getCategory() == null ? null : primarySubCategory.getCategory().getCode(),
+    String categoryCode = safeSkuPart(
+        primarySubCategory.getCategory() == null ? null : primarySubCategory.getCategory().getCode(),
         primarySubCategory.getCategory() == null ? "CAT" : primarySubCategory.getCategory().getId());
     String subCategoryCode = safeSkuPart(primarySubCategory.getCode(), primarySubCategory.getId());
     String primarySku = categoryCode + subCategoryCode;
@@ -187,7 +188,8 @@ public class ProductServiceImpl implements ProductService {
         : attributeValues.stream()
             .map(attributeValue -> safeSkuPart(attributeValue.getCode(), attributeValue.getId()))
             .collect(Collectors.joining("-"));
-    String suffix = String.format("%03d%s", sequence, UUID.randomUUID().toString().replace("-", "").substring(0, 4).toUpperCase());
+    String suffix = String.format("%03d%s", sequence,
+        UUID.randomUUID().toString().replace("-", "").substring(0, 4).toUpperCase());
     return String.join("-", primarySku, productPart, attributePart, suffix);
   }
 
@@ -196,7 +198,10 @@ public class ProductServiceImpl implements ProductService {
     if (source == null) {
       return "NA";
     }
-    String normalized = source.trim().toUpperCase().replaceAll("[^A-Z0-9]+", "-").replaceAll("(^-|-$)", "");
+    String normalized = source.trim()
+        .toUpperCase()
+        .replaceAll("[^A-Z0-9]+", "-")
+        .replaceAll("(^-)|(-$)", "");
     return normalized.isBlank() ? "NA" : normalized;
   }
 
