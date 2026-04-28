@@ -33,6 +33,8 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
     topics:
       update-main-image-facility: "facility.update-main-image"
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
 
 sort:
   facilities:
@@ -44,3 +46,9 @@ external:
   upload-service:
     url: ${UPLOAD_SERVICE_URL:}
   cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:}
+
+logging:
+  level:
+    org.springframework.data.elasticsearch.core: DEBUG
+    org.springframework.data.elasticsearch.client.WIRE: TRACE
+    org.elasticsearch.client: DEBUG

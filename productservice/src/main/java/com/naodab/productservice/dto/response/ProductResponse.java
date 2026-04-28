@@ -9,17 +9,33 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
+import com.naodab.productservice.models.Product.ProductStatus;
+import com.naodab.productservice.models.ProductMedia;
+
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class CategoryResponse {
+public class ProductResponse {
   String id;
-  String name;
-  String description;
-  String code;
 
-  List<SubCategoryResponse> items;
+  String name;
+
+  String description;
+
+  FacilityResponse facility;
+
+  String thumbnailUrl;
+
+  CategoryResponse primarySubCategory;
+
+  List<CategoryResponse> subCategories;
+
+  List<AttributeResponse> attributes;
+
+  List<ProductMedia> medias;
+
+  ProductStatus status;
 }

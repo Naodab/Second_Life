@@ -34,6 +34,21 @@
       "name": "spring.kafka.topics.update-main-image-facility",
       "type": "java.lang.String",
       "description": "Update main image facility topic"
+    },
+    {
+      "name": "logging.level.org.springframework.data.elasticsearch.core",
+      "type": "java.lang.String",
+      "description": "Logging level for Spring Data Elasticsearch Core"
+    },
+    {
+      "name": "logging.level.org.springframework.data.elasticsearch.client.WIRE",
+      "type": "java.lang.String",
+      "description": "Logging level for Spring Data Elasticsearch Client WIRE"
+    },
+    {
+      "name": "logging.level.org.elasticsearch.client",
+      "type": "java.lang.String",
+      "description": "Logging level for Elasticsearch Client"
     }
   ]
 }

@@ -8,6 +8,12 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Index;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.CascadeType;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -39,4 +45,8 @@ public class ProductVariant extends BaseEntity {
   String sku;
 
   Long quantity;
+
+  @OneToMany(mappedBy = "productVariant", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
+  List<ProductVariantAttributeValue> variantAttributeValues = new ArrayList<>();
 }

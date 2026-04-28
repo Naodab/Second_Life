@@ -23,6 +23,7 @@ public class CategoryMapper {
         .id(category.getId())
         .name(category.getName())
         .description(category.getDescription())
+        .code(category.getCode())
         .items(category.getSubCategories() == null ? List.of()
             : category.getSubCategories().stream().map(subCategoryMapper::toSubCategoryResponse).toList())
         .build();

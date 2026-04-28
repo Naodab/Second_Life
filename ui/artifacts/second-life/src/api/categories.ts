@@ -5,12 +5,14 @@ export type SubCategoryResponse = {
   id: string;
   name: string;
   description?: string | null;
+  code?: string | null;
 };
 
 export type CategoryResponse = {
   id: string;
   name: string;
   description?: string | null;
+  code?: string | null;
   items?: SubCategoryResponse[] | null;
 };
 

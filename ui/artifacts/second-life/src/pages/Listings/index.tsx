@@ -11,7 +11,7 @@ import { getProvinces, getWards } from "@/api/location";
 import { MOCK_PRODUCTS } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
 import { AddFacilityModal } from "./AddFacilityModal";
-import { AddProductModal } from "./AddProductModal";
+import { AddProductPage } from "./AddProductPage";
 import { DashboardView } from "./DashboardView";
 import { FacilityView } from "./FacilityView";
 import { ListingsSidebar } from "./ListingsSidebar";
@@ -60,7 +60,6 @@ export default function Listings() {
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [facilitiesOpen, setFacilitiesOpen] = useState(true);
   const [facilitySearch, setFacilitySearch] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
   const [isUploadingModal, setIsUploadingModal] = useState(false);
   const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
@@ -117,21 +116,18 @@ export default function Listings() {
   };
 
   const handleAddProductSubmit = (data: AddProductSubmitPayload) => {
-    setIsAddModalOpen(false);
     setIsUploadingModal(true);
     setTimeout(() => {
       setIsUploadingModal(false);
+      setView("facility");
       const pending: PendingProduct = {
         id: `pending-${Date.now()}`,
         name: data.name,
         description: data.description,
-        color: data.color,
-        material: data.material,
-        forRent: data.forRent,
-        forBuy: data.forBuy,
-        rentQty: data.rentQty,
-        buyQty: data.buyQty,
-        totalQty: data.totalQty,
+        subCategoryIds: data.subCategoryIds,
+        attributeIds: data.attributeIds,
+        variantCount: data.variants.length,
+        totalQty: data.variants.reduce((sum, variant) => sum + variant.quantity, 0),
         previewUrl: data.previewUrl,
         facilityId: data.facilityId,
       };
@@ -143,7 +139,7 @@ export default function Listings() {
     }, 2500);
   };
 
-  const handlePublish = (id: string) => {
+  const handlePublish = (id: string, price?: number) => {
     setPendingProducts((prev) => prev.filter((p) => p.id !== id));
     toast({ title: "Đã đăng sản phẩm!", description: "Sản phẩm của bạn đã được đăng bán." });
   };
@@ -216,10 +212,18 @@ export default function Listings() {
                 <FacilityView
                   facility={activeFacility}
                   onViewProduct={handleViewProduct}
-                  onAddProduct={() => setIsAddModalOpen(true)}
+                  onAddProduct={() => setView("facility-add-product")}
                   onViewUnpublished={() => setView("unpublished")}
                   onUpdateAvatar={handleUpdateFacilityAvatar}
                   pendingCount={facilityPendingProducts.length}
+                />
+              )}
+
+              {view === "facility-add-product" && activeFacilityId && (
+                <AddProductPage
+                  facilityId={activeFacilityId}
+                  onBack={() => setView("facility")}
+                  onSubmit={handleAddProductSubmit}
                 />
               )}
 
@@ -236,13 +240,6 @@ export default function Listings() {
           )}
         </div>
       </main>
-
-      <AddProductModal
-        open={isAddModalOpen}
-        facilityId={activeFacilityId}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={handleAddProductSubmit}
-      />
 
       <AddFacilityModal
         open={isAddFacilityModalOpen}

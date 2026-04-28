@@ -22,6 +22,7 @@ import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
 import com.naodab.commonjpa.entity.BaseEntity;
+import jakarta.persistence.Column;
 
 @Entity
 @Table(name = "attribute_values", indexes = {
@@ -62,6 +63,9 @@ public class AttributeValue extends BaseEntity implements Persistable<String> {
   @ManyToOne
   @JoinColumn(name = "attribute_id", nullable = false)
   Attribute attribute;
+
+  @Column(name = "code", length = 64)
+  String code;
 
   String value;
 }

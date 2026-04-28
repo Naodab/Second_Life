@@ -118,7 +118,7 @@ export function ListingsSidebar({
                     className={cn(
                       "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-all",
                       activeFacilityId === f.id &&
-                        (view === "facility" || view === "facility-product" || view === "unpublished")
+                        (view === "facility" || view === "facility-add-product" || view === "facility-product" || view === "unpublished")
                         ? "bg-primary/10 text-primary font-medium"
                         : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
                     )}

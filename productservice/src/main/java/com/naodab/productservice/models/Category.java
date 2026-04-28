@@ -63,6 +63,9 @@ public class Category extends BaseEntity implements Persistable<String> {
   @Column(name = "description_en", length = 1000)
   String descriptionEn;
 
+  @Column(name = "code", length = 64, unique = true)
+  String code;
+
   @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
   @OrderBy("name ASC")
   List<SubCategory> subCategories;

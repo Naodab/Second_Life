@@ -53,8 +53,16 @@ public class Product extends BaseEntity {
   @Builder.Default
   List<ProductSubCategory> productSubCategories = new ArrayList<>();
 
+  @ManyToOne
+  @JoinColumn(name = "primary_sub_category_id", nullable = false)
+  SubCategory primarySubCategory;
+
   @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
   List<ProductMedia> medias;
+
+  @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
+  List<ProductVariant> variants = new ArrayList<>();
 
   @Enumerated(EnumType.STRING)
   @Builder.Default

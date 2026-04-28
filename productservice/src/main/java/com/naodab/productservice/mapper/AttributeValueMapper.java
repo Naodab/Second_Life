@@ -11,6 +11,7 @@ public class AttributeValueMapper {
     return AttributeValueResponse.builder()
         .id(attributeValue.getId())
         .value(attributeValue.getValue())
+        .code(attributeValue.getCode())
         .build();
   }
 

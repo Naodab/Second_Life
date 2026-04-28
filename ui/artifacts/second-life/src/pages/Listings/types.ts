@@ -1,32 +1,29 @@
-export type ListingsView = "dashboard" | "facility" | "facility-product" | "unpublished" | "orders";
+export type ListingsView = "dashboard" | "facility" | "facility-add-product" | "facility-product" | "unpublished" | "orders";
 
 export interface PendingProduct {
   id: string;
   name: string;
   description: string;
-  color: string;
-  material: string;
-  forRent: boolean;
-  forBuy: boolean;
-  rentQty: number;
-  buyQty: number;
+  subCategoryIds: string[];
+  attributeIds: string[];
+  variantCount: number;
   totalQty: number;
   previewUrl: string;
   facilityId: string;
-  rentPrice?: number;
-  buyPrice?: number;
+  price?: number;
 }
 
 export interface AddProductSubmitPayload {
   name: string;
   description: string;
-  color: string;
-  material: string;
-  forRent: boolean;
-  forBuy: boolean;
-  rentQty: number;
-  buyQty: number;
-  totalQty: number;
-  previewUrl: string;
   facilityId: string;
+  subCategoryIds: string[];
+  primarySubCategoryId: string;
+  attributeIds: string[];
+  variants: {
+    skuPreview: string;
+    quantity: number;
+    attributeValueIds: string[];
+  }[];
+  previewUrl: string;
 }

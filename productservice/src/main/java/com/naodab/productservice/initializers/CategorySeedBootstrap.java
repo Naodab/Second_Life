@@ -82,6 +82,7 @@ public class CategorySeedBootstrap {
     String nameEn;
     String description;
     String descriptionEn;
+    String code;
     List<SubCategorySeed> subCategories;
 
     public Category toCategory() {
@@ -91,6 +92,7 @@ public class CategorySeedBootstrap {
           .nameEn(nameEn)
           .description(description)
           .descriptionEn(descriptionEn)
+          .code(code)
           .build();
     }
   }
@@ -104,6 +106,7 @@ public class CategorySeedBootstrap {
     String nameEn;
     String description;
     String descriptionEn;
+    String code;
 
     public SubCategory toSubCategory() {
       return SubCategory.builder()
@@ -112,6 +115,7 @@ public class CategorySeedBootstrap {
           .nameEn(nameEn)
           .description(description)
           .descriptionEn(descriptionEn)
+          .code(code)
           .build();
     }
   }

@@ -1,4 +1,19 @@
 services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - second_life_network
+
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: kafka
@@ -252,11 +267,14 @@ services:
       - "${SERVER_PORT_PRODUCT_SERVICE:-8086}:8086"
     environment:
       SERVER_PORT_PRODUCT_SERVICE: "8086"
+      ELASTICSEARCH_URIS: "http://elasticsearch:9200"
     env_file:
       - .env
     depends_on:
       kafka:
         condition: service_healthy
+      elasticsearch:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -273,6 +291,7 @@ services:
       - "traefik.enable=true"
 
 volumes:
+  elasticsearch-data:
   kafka-data:
   mysql-data:
   redis-data:

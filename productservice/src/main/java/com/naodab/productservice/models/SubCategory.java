@@ -62,6 +62,9 @@ public class SubCategory extends BaseEntity implements Persistable<String> {
   @Column(name = "description_en", length = 1000)
   String descriptionEn;
 
+  @Column(name = "code", length = 64, unique = true)
+  String code;
+
   @ManyToOne
   @JoinColumn(name = "category_id", nullable = false)
   Category category;
