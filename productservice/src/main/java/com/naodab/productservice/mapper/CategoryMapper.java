@@ -30,11 +30,11 @@ public class CategoryMapper {
   }
 
   public Category toCategory(CategoryCreateRequest request) {
-    return Category.builder()
-        .id(UUID.randomUUID().toString())
-        .name(request.getName())
-        .description(request.getDescription())
-        .build();
+    Category category = new Category();
+    category.setId(UUID.randomUUID().toString());
+    category.setName(request.getName());
+    category.setDescription(request.getDescription());
+    return category;
   }
 
 }

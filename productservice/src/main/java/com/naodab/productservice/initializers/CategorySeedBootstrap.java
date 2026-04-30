@@ -86,14 +86,14 @@ public class CategorySeedBootstrap {
     List<SubCategorySeed> subCategories;
 
     public Category toCategory() {
-      return Category.builder()
-          .id(id)
-          .name(name)
-          .nameEn(nameEn)
-          .description(description)
-          .descriptionEn(descriptionEn)
-          .code(code)
-          .build();
+      Category category = new Category();
+      category.setId(id);
+      category.setName(name);
+      category.setNameEn(nameEn);
+      category.setDescription(description);
+      category.setDescriptionEn(descriptionEn);
+      category.setCode(code);
+      return category;
     }
   }
 
@@ -109,14 +109,14 @@ public class CategorySeedBootstrap {
     String code;
 
     public SubCategory toSubCategory() {
-      return SubCategory.builder()
-          .id(id)
-          .name(name)
-          .nameEn(nameEn)
-          .description(description)
-          .descriptionEn(descriptionEn)
-          .code(code)
-          .build();
+      SubCategory subCategory = new SubCategory();
+      subCategory.setId(id);
+      subCategory.setName(name);
+      subCategory.setNameEn(nameEn);
+      subCategory.setDescription(description);
+      subCategory.setDescriptionEn(descriptionEn);
+      subCategory.setCode(code);
+      return subCategory;
     }
   }
 }

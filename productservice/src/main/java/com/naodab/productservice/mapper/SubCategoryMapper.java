@@ -20,10 +20,10 @@ public class SubCategoryMapper {
   }
 
   public SubCategory toSubCategory(SubCategoryCreateRequest request) {
-    return SubCategory.builder()
-        .id(UUID.randomUUID().toString())
-        .name(request.getName())
-        .description(request.getDescription())
-        .build();
+    SubCategory subCategory = new SubCategory();
+    subCategory.setId(UUID.randomUUID().toString());
+    subCategory.setName(request.getName());
+    subCategory.setDescription(request.getDescription());
+    return subCategory;
   }
 }

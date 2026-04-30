@@ -62,21 +62,22 @@ public class ProductServiceImpl implements ProductService {
   @Transactional
   public ProductResponse createProduct(String profileId, ProductCreateRequest request) {
     Facility facility = getFacilityByOwnerAndId(profileId, request.getFacilityId());
-    List<SubCategory> subCategories = getSubCategories(request.getSubCategoryIds());
-    SubCategory primarySubCategory = getPrimarySubCategory(request.getPrimarySubCategoryId(), subCategories);
-    List<Attribute> attributes = getAttributes(request.getAttributeIds());
-    Map<String, AttributeValue> attributeValueById = getAndValidateAttributeValues(request);
+    ProductRequestData requestData = getAndValidateProductRequestData(
+        request.getSubCategoryIds(),
+        request.getPrimarySubCategoryId(),
+        request.getAttributeIds(),
+        request.getVariants());
 
     Product product = Product.builder()
         .name(request.getName())
         .description(request.getDescription())
         .facility(facility)
-        .primarySubCategory(primarySubCategory)
+        .primarySubCategory(requestData.primarySubCategory())
         .status(Product.ProductStatus.DRAFT)
         .build();
 
     product.setProductSubCategories(
-        subCategories.stream()
+        requestData.subCategories().stream()
             .map(subCategory -> ProductSubCategory.builder()
                 .id(new ProductSubCategoryId(null, subCategory.getId()))
                 .product(product)
@@ -86,7 +87,7 @@ public class ProductServiceImpl implements ProductService {
 
     final int[] sequence = { 1 };
     product.setVariants(request.getVariants().stream()
-        .map(variantRequest -> toProductVariant(product, variantRequest, attributeValueById, sequence[0]++))
+        .map(variantRequest -> toProductVariant(product, variantRequest, requestData.attributeValueById(), sequence[0]++))
         .toList());
 
     Product savedProduct = productRepository.save(product);
@@ -96,7 +97,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     productSearchService.sync(savedProduct);
-    return productMapper.toProductResponse(savedProduct, attributes);
+    return productMapper.toProductResponse(savedProduct, requestData.attributes());
   }
 
   @Override
@@ -113,19 +114,20 @@ public class ProductServiceImpl implements ProductService {
     }
 
     Facility facility = getFacilityByOwnerAndId(profileId, request.getFacilityId());
-    List<SubCategory> subCategories = getSubCategories(request.getSubCategoryIds());
-    SubCategory primarySubCategory = getPrimarySubCategory(request.getPrimarySubCategoryId(), subCategories);
-    List<Attribute> attributes = getAttributes(request.getAttributeIds());
-    Map<String, AttributeValue> attributeValueById = getAndValidateAttributeValuesForUpdate(request);
+    ProductRequestData requestData = getAndValidateProductRequestData(
+        request.getSubCategoryIds(),
+        request.getPrimarySubCategoryId(),
+        request.getAttributeIds(),
+        request.getVariants());
 
     product.setName(request.getName());
     product.setDescription(request.getDescription());
     product.setFacility(facility);
-    product.setPrimarySubCategory(primarySubCategory);
+    product.setPrimarySubCategory(requestData.primarySubCategory());
 
     product.getProductSubCategories().clear();
     product.getProductSubCategories().addAll(
-        subCategories.stream()
+        requestData.subCategories().stream()
             .map(subCategory -> ProductSubCategory.builder()
                 .id(new ProductSubCategoryId(product.getId(), subCategory.getId()))
                 .product(product)
@@ -136,12 +138,12 @@ public class ProductServiceImpl implements ProductService {
     final int[] sequence = { 1 };
     product.getVariants().clear();
     product.getVariants().addAll(request.getVariants().stream()
-        .map(variantRequest -> toProductVariant(product, variantRequest, attributeValueById, sequence[0]++))
+        .map(variantRequest -> toProductVariant(product, variantRequest, requestData.attributeValueById(), sequence[0]++))
         .toList());
 
     Product savedProduct = productRepository.save(product);
     productSearchService.sync(savedProduct);
-    return productMapper.toProductResponse(savedProduct, attributes);
+    return productMapper.toProductResponse(savedProduct, requestData.attributes());
   }
 
   private Facility getFacilityByOwnerAndId(String profileId, String facilityId) {
@@ -174,9 +176,23 @@ public class ProductServiceImpl implements ProductService {
     return attributes;
   }
 
-  private Map<String, AttributeValue> getAndValidateAttributeValues(ProductCreateRequest request) {
-    Set<String> requestedAttributeIds = new HashSet<>(request.getAttributeIds());
-    List<String> requestedAttributeValueIds = request.getVariants().stream()
+  private ProductRequestData getAndValidateProductRequestData(
+      List<String> subCategoryIds,
+      String primarySubCategoryId,
+      List<String> attributeIds,
+      List<ProductVariantCreateRequest> variants) {
+    List<SubCategory> subCategories = getSubCategories(subCategoryIds);
+    SubCategory primarySubCategory = getPrimarySubCategory(primarySubCategoryId, subCategories);
+    List<Attribute> attributes = getAttributes(attributeIds);
+    Map<String, AttributeValue> attributeValueById = getAndValidateAttributeValues(attributeIds, variants);
+    return new ProductRequestData(subCategories, primarySubCategory, attributes, attributeValueById);
+  }
+
+  private Map<String, AttributeValue> getAndValidateAttributeValues(
+      List<String> attributeIds,
+      List<ProductVariantCreateRequest> variants) {
+    Set<String> requestedAttributeIds = new HashSet<>(attributeIds);
+    List<String> requestedAttributeValueIds = variants.stream()
         .flatMap(variant -> variant.getAttributeValueIds().stream())
         .distinct()
         .toList();
@@ -201,31 +217,11 @@ public class ProductServiceImpl implements ProductService {
         .collect(Collectors.toMap(AttributeValue::getId, Function.identity()));
   }
 
-  private Map<String, AttributeValue> getAndValidateAttributeValuesForUpdate(ProductUpdateRequest request) {
-    Set<String> requestedAttributeIds = new HashSet<>(request.getAttributeIds());
-    List<String> requestedAttributeValueIds = request.getVariants().stream()
-        .flatMap(variant -> variant.getAttributeValueIds().stream())
-        .distinct()
-        .toList();
-
-    if (requestedAttributeValueIds.isEmpty()) {
-      return Collections.emptyMap();
-    }
-
-    List<AttributeValue> attributeValues = attributeValueRepository.findAllById(requestedAttributeValueIds);
-    if (attributeValues.size() != requestedAttributeValueIds.size()) {
-      throw new AppException(ErrorCode.ATTRIBUTE_VALUE_NOT_FOUND);
-    }
-
-    boolean hasInvalidAttributeValue = attributeValues.stream()
-        .map(AttributeValue::getAttribute)
-        .anyMatch(attribute -> attribute == null || !requestedAttributeIds.contains(attribute.getId()));
-    if (hasInvalidAttributeValue) {
-      throw new AppException(ErrorCode.INVALID_INPUT);
-    }
-
-    return attributeValues.stream()
-        .collect(Collectors.toMap(AttributeValue::getId, Function.identity()));
+  private record ProductRequestData(
+      List<SubCategory> subCategories,
+      SubCategory primarySubCategory,
+      List<Attribute> attributes,
+      Map<String, AttributeValue> attributeValueById) {
   }
 
   private ProductVariant toProductVariant(
