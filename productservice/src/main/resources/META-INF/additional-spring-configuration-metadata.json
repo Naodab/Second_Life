@@ -49,6 +49,11 @@
       "name": "logging.level.org.elasticsearch.client",
       "type": "java.lang.String",
       "description": "Logging level for Elasticsearch Client"
+    },
+    {
+      "name": "default.page-size",
+      "type": "java.lang.Integer",
+      "description": "Default page size"
     }
   ]
 }

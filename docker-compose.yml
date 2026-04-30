@@ -14,6 +14,19 @@ services:
     networks:
       - second_life_network
 
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    container_name: kibana
+    restart: unless-stopped
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - second_life_network
+
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: kafka

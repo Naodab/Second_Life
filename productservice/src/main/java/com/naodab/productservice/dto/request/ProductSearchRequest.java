@@ -16,6 +16,13 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class ProductSearchRequest {
+  public enum ProductSortBy {
+    RELEVANCE,
+    DISTANCE,
+    UPDATED_AT_DESC,
+    CREATED_AT_DESC
+  }
+
   String keyword;
   String facilityId;
   String provinceCode;
@@ -23,6 +30,7 @@ public class ProductSearchRequest {
   Float latitude;
   Float longitude;
   Float radiusMeters;
+  ProductSortBy sortBy;
   ProductStatus status;
   Integer page;
   Integer pageSize;

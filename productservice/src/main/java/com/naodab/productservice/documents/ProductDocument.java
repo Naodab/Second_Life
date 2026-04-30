@@ -8,6 +8,8 @@ import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.GeoPointField;
+import org.springframework.data.elasticsearch.core.geo.GeoPoint;
 
 import com.naodab.productservice.models.Product.ProductStatus;
 
@@ -26,6 +28,20 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class ProductDocument {
+  @Getter
+  @Setter
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
+  public static class VariantDocument {
+    @Field(type = FieldType.Keyword)
+    String sku;
+
+    @Field(type = FieldType.Long)
+    Long quantity;
+  }
+
   @Id
   String id;
 
@@ -34,6 +50,12 @@ public class ProductDocument {
 
   @Field(type = FieldType.Text, analyzer = "standard")
   String description;
+
+  @Field(type = FieldType.Keyword)
+  String thumbnailUrl;
+
+  @Field(type = FieldType.Keyword)
+  List<String> productMedias;
 
   @Field(type = FieldType.Keyword)
   String facilityId;
@@ -53,6 +75,9 @@ public class ProductDocument {
   @Field(type = FieldType.Keyword)
   List<String> variantSkus;
 
+  @Field(type = FieldType.Nested)
+  List<VariantDocument> variants;
+
   @Field(type = FieldType.Keyword)
   ProductStatus status;
 
@@ -68,9 +93,6 @@ public class ProductDocument {
   @Field(type = FieldType.Keyword)
   String wardCode;
 
-  @Field(type = FieldType.Float)
-  Float latitude;
-
-  @Field(type = FieldType.Float)
-  Float longitude;
+  @GeoPointField
+  GeoPoint location;
 }

@@ -46,6 +46,10 @@ public class FacilityServiceImpl implements FacilityService {
   @Value("${sort.facilities.default:created_at}")
   String defaultSort;
 
+  @NonFinal
+  @Value("${default.page-size:20}")
+  int defaultPageSize;
+
   @Override
   public FacilityResponse createFacility(String profileId, FacilityCreateRequest request) {
     Facility facility = facilityMapper.toFacility(request);
@@ -66,14 +70,7 @@ public class FacilityServiceImpl implements FacilityService {
   @Override
   public List<FacilityResponse> getAllFacilities(Integer page, Integer pageSize) {
     Sort sort = Sort.by(Sort.Direction.DESC, defaultSort);
-    if (page == null || pageSize == null || page == 0 || pageSize == 0) {
-      return facilityRepository.findAllByDeletedAtIsNull(sort)
-          .stream()
-          .map(facilityMapper::toFacilityResponse)
-          .toList();
-    }
-
-    Pageable pageable = PageRequest.of(page, pageSize, sort);
+    Pageable pageable = PageRequest.of(normalizePage(page), normalizePageSize(pageSize), sort);
     return facilityRepository.findAllByDeletedAtIsNull(pageable)
         .stream()
         .map(facilityMapper::toFacilityResponse)
@@ -85,18 +82,19 @@ public class FacilityServiceImpl implements FacilityService {
     Specification<Facility> specification = facilitySpecification.build(request);
     Sort sort = Sort.by(Sort.Direction.DESC, defaultSort);
 
-    if (page == null || pageSize == null || page == 0 || pageSize == 0) {
-      return facilityRepository.findAll(specification, sort)
-          .stream()
-          .map(facilityMapper::toFacilityResponse)
-          .toList();
-    }
-
-    Pageable pageable = PageRequest.of(page, pageSize, sort);
+    Pageable pageable = PageRequest.of(normalizePage(page), normalizePageSize(pageSize), sort);
     return facilityRepository.findAll(specification, pageable)
         .stream()
         .map(facilityMapper::toFacilityResponse)
         .toList();
+  }
+
+  private int normalizePage(Integer page) {
+    return page == null || page < 0 ? 0 : page;
+  }
+
+  private int normalizePageSize(Integer pageSize) {
+    return pageSize == null || pageSize <= 0 ? defaultPageSize : pageSize;
   }
 
   @Override

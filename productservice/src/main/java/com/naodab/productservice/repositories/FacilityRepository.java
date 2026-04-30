@@ -47,4 +47,6 @@ public interface FacilityRepository extends JpaRepository<Facility, String>, Jpa
       @Param("radiusMeters") Float radiusMeters);
 
   boolean existsByIdAndDeletedAtIsNull(String facilityId);
+
+  Optional<Facility> findByOwnerIdAndIdAndDeletedAtIsNull(String ownerId, String id);
 }

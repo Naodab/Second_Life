@@ -1,39 +1,48 @@
 package com.naodab.productservice.services.impl;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.data.elasticsearch.core.query.Criteria;
-import org.springframework.data.elasticsearch.core.query.CriteriaQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import com.naodab.productservice.dto.request.ProductSearchRequest;
+import com.naodab.productservice.dto.request.ProductSearchRequest.ProductSortBy;
 import com.naodab.productservice.documents.ProductDocument;
 import com.naodab.productservice.mapper.ProductMapper;
 import com.naodab.productservice.models.Product;
 import com.naodab.productservice.services.ProductSearchService;
 
+import co.elastic.clients.elasticsearch._types.DistanceUnit;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.SortOptions;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.experimental.NonFinal;
 
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class ProductSearchServiceImpl implements ProductSearchService {
-  static final float EARTH_RADIUS_METERS = 6_371_000F;
-  static final float METERS_PER_LATITUDE_DEGREE = 111_320F;
   static final IndexCoordinates PRODUCT_INDEX = IndexCoordinates.of("products");
 
   ElasticsearchOperations elasticsearchOperations;
   ProductMapper productMapper;
+
+  @NonFinal
+  @Value("${default.page-size:20}")
+  int defaultPageSize;
 
   @Override
   @Async
@@ -55,77 +64,20 @@ public class ProductSearchServiceImpl implements ProductSearchService {
   }
 
   @Override
-  public List<String> searchProductIds(ProductSearchRequest request) {
+  public List<ProductDocument> searchProducts(ProductSearchRequest request) {
     ProductSearchRequest safeRequest = request == null ? ProductSearchRequest.builder().build() : request;
     int normalizedPage = normalizePage(safeRequest.getPage());
     int normalizedPageSize = normalizePageSize(safeRequest.getPageSize());
     boolean geoRadiusFilterEnabled = hasGeoRadiusFilter(safeRequest);
+    Pageable pageable = PageRequest.of(normalizedPage, normalizedPageSize);
+    NativeQuery query = buildNativeQuery(safeRequest, pageable, geoRadiusFilterEnabled);
 
-    Criteria criteria = buildCriteria(safeRequest, geoRadiusFilterEnabled);
-    CriteriaQuery query = new CriteriaQuery(criteria);
-    if (!geoRadiusFilterEnabled) {
-      query.setPageable(PageRequest.of(normalizedPage, normalizedPageSize));
-    }
-
-    SearchHits<ProductDocument> hits = elasticsearchOperations.search(query, ProductDocument.class);
-    List<ProductDocument> documents = new ArrayList<>();
+    SearchHits<ProductDocument> hits = elasticsearchOperations.search(query, ProductDocument.class, PRODUCT_INDEX);
+    List<ProductDocument> products = new ArrayList<>();
     for (SearchHit<ProductDocument> hit : hits) {
-      documents.add(hit.getContent());
+      products.add(hit.getContent());
     }
-
-    if (geoRadiusFilterEnabled) {
-      documents = documents.stream()
-          .filter(document -> isWithinRadius(document, safeRequest))
-          .sorted(Comparator.comparingDouble(
-              document -> distanceMeters(document, safeRequest.getLatitude(), safeRequest.getLongitude())))
-          .skip((long) normalizedPage * normalizedPageSize)
-          .limit(normalizedPageSize)
-          .toList();
-    }
-
-    return documents.stream().map(ProductDocument::getId).toList();
-  }
-
-  private Criteria buildCriteria(ProductSearchRequest request, boolean geoRadiusFilterEnabled) {
-    Criteria criteria = Criteria.where("id").exists();
-
-    if (StringUtils.hasText(request.getKeyword())) {
-      String normalizedKeyword = request.getKeyword().trim();
-      Criteria keywordCriteria = new Criteria("name").contains(normalizedKeyword)
-          .or(new Criteria("description").contains(normalizedKeyword))
-          .or(new Criteria("attributeValues").contains(normalizedKeyword))
-          .or(new Criteria("variantSkus").contains(normalizedKeyword));
-      criteria = criteria.and(keywordCriteria);
-    }
-
-    if (StringUtils.hasText(request.getFacilityId())) {
-      criteria = criteria.and(new Criteria("facilityId").is(request.getFacilityId().trim()));
-    }
-
-    if (StringUtils.hasText(request.getProvinceCode())) {
-      criteria = criteria.and(new Criteria("provinceCode").is(request.getProvinceCode().trim()));
-    }
-
-    if (StringUtils.hasText(request.getWardCode())) {
-      criteria = criteria.and(new Criteria("wardCode").is(request.getWardCode().trim()));
-    }
-
-    if (geoRadiusFilterEnabled) {
-      float latDelta = request.getRadiusMeters() / METERS_PER_LATITUDE_DEGREE;
-      float longitudeScale = (float) Math.cos(Math.toRadians(request.getLatitude()));
-      float metersPerLongitudeDegree = Math.max(1F, METERS_PER_LATITUDE_DEGREE * Math.abs(longitudeScale));
-      float lonDelta = request.getRadiusMeters() / metersPerLongitudeDegree;
-      criteria = criteria
-          .and(new Criteria("latitude").between(request.getLatitude() - latDelta, request.getLatitude() + latDelta));
-      criteria = criteria
-          .and(new Criteria("longitude").between(request.getLongitude() - lonDelta, request.getLongitude() + lonDelta));
-    }
-
-    if (request.getStatus() != null) {
-      criteria = criteria.and(new Criteria("status").is(request.getStatus().name()));
-    }
-
-    return criteria;
+    return products;
   }
 
   private int normalizePage(Integer page) {
@@ -133,7 +85,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
   }
 
   private int normalizePageSize(Integer pageSize) {
-    return pageSize == null || pageSize <= 0 ? 20 : pageSize;
+    return pageSize == null || pageSize <= 0 ? defaultPageSize : pageSize;
   }
 
   private boolean hasGeoRadiusFilter(ProductSearchRequest request) {
@@ -143,25 +95,97 @@ public class ProductSearchServiceImpl implements ProductSearchService {
         && request.getRadiusMeters() > 0;
   }
 
-  private boolean isWithinRadius(ProductDocument document, ProductSearchRequest request) {
-    if (document.getLatitude() == null || document.getLongitude() == null) {
-      return false;
+  private NativeQuery buildNativeQuery(ProductSearchRequest request, Pageable pageable, boolean geoRadiusFilterEnabled) {
+    List<Query> mustQueries = new ArrayList<>();
+    List<Query> filterQueries = new ArrayList<>();
+
+    if (StringUtils.hasText(request.getKeyword())) {
+      mustQueries.add(Query.of(query -> query
+          .multiMatch(multiMatch -> multiMatch
+              .query(request.getKeyword().trim())
+              .fields("name", "description", "attributeValues", "variantSkus"))));
     }
 
-    return distanceMeters(document, request.getLatitude(), request.getLongitude()) <= request.getRadiusMeters();
+    if (StringUtils.hasText(request.getFacilityId())) {
+      filterQueries.add(termQuery("facilityId", request.getFacilityId().trim()));
+    }
+
+    if (StringUtils.hasText(request.getProvinceCode())) {
+      filterQueries.add(termQuery("provinceCode", request.getProvinceCode().trim()));
+    }
+
+    if (StringUtils.hasText(request.getWardCode())) {
+      filterQueries.add(termQuery("wardCode", request.getWardCode().trim()));
+    }
+
+    if (request.getStatus() != null) {
+      filterQueries.add(termQuery("status", request.getStatus().name()));
+    }
+
+    if (geoRadiusFilterEnabled) {
+      filterQueries.add(Query.of(query -> query.geoDistance(geoDistance -> geoDistance
+          .field("location")
+          .distance(request.getRadiusMeters() + "m")
+          .location(location -> location.latlon(latlon -> latlon
+              .lat(request.getLatitude())
+              .lon(request.getLongitude()))))));
+    }
+
+    Query query = Query.of(root -> root.bool(bool -> {
+      if (!mustQueries.isEmpty()) {
+        bool.must(mustQueries);
+      }
+      if (!filterQueries.isEmpty()) {
+        bool.filter(filterQueries);
+      }
+      return bool;
+    }));
+
+    NativeQueryBuilder queryBuilder = NativeQuery.builder()
+        .withQuery(query)
+        .withPageable(pageable);
+
+    appendSort(queryBuilder, request, geoRadiusFilterEnabled);
+
+    return queryBuilder.build();
   }
 
-  private double distanceMeters(ProductDocument document, float latitude, float longitude) {
-    double lat1 = Math.toRadians(latitude);
-    double lon1 = Math.toRadians(longitude);
-    double lat2 = Math.toRadians(document.getLatitude());
-    double lon2 = Math.toRadians(document.getLongitude());
+  private Query termQuery(String fieldName, String value) {
+    return Query.of(query -> query.term(term -> term.field(fieldName).value(value)));
+  }
 
-    double deltaLat = lat2 - lat1;
-    double deltaLon = lon2 - lon1;
-    double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
-        + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-    double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return EARTH_RADIUS_METERS * c;
+  private void appendSort(
+      NativeQueryBuilder queryBuilder,
+      ProductSearchRequest request,
+      boolean geoRadiusFilterEnabled) {
+    ProductSortBy sortBy = request.getSortBy() == null ? ProductSortBy.RELEVANCE : request.getSortBy();
+
+    if (sortBy == ProductSortBy.DISTANCE && geoRadiusFilterEnabled) {
+      queryBuilder.withSort(distanceSort(request.getLatitude(), request.getLongitude()));
+      return;
+    }
+
+    if (sortBy == ProductSortBy.UPDATED_AT_DESC) {
+      queryBuilder.withSort(fieldSort("updatedAt", SortOrder.Desc));
+      return;
+    }
+
+    if (sortBy == ProductSortBy.CREATED_AT_DESC) {
+      queryBuilder.withSort(fieldSort("createdAt", SortOrder.Desc));
+    }
+  }
+
+  private SortOptions fieldSort(String fieldName, SortOrder sortOrder) {
+    return SortOptions.of(sort -> sort.field(field -> field.field(fieldName).order(sortOrder)));
+  }
+
+  private SortOptions distanceSort(float latitude, float longitude) {
+    return SortOptions.of(sort -> sort.geoDistance(geoDistance -> geoDistance
+        .field("location")
+        .location(location -> location.latlon(latlon -> latlon
+            .lat(latitude)
+            .lon(longitude)))
+        .order(SortOrder.Asc)
+        .unit(DistanceUnit.Meters)));
   }
 }

@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import java.util.List;
 
 import com.naodab.commonservice.utils.MultipartInputStreamFileResource;
 
@@ -49,5 +50,15 @@ public class UploadFileClient {
     } catch (Exception e) {
       log.error("Upload main image facility failed", e);
     }
+  }
+
+  @Async
+  public void uploadProductImages(String productId, MultipartFile thumbnailImage, List<MultipartFile> productImages) {
+    log.info("Skip upload product images for productId={} until upload-service endpoint is ready", productId);
+    // TODO: integrate upload-service endpoint for product images.
+    // Expected payload:
+    // - productId
+    // - thumbnailImage (single file)
+    // - productImages (multiple files)
   }
 }

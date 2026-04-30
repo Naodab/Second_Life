@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 import org.springframework.stereotype.Component;
+import org.springframework.data.elasticsearch.core.geo.GeoPoint;
 import org.springframework.util.StringUtils;
 
 import com.naodab.productservice.documents.ProductDocument;
@@ -14,6 +15,7 @@ import com.naodab.productservice.dto.response.ProductResponse;
 import com.naodab.productservice.models.Attribute;
 import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Product;
+import com.naodab.productservice.models.ProductMedia;
 import com.naodab.productservice.models.ProductSubCategory;
 import com.naodab.productservice.models.ProductVariant;
 import com.naodab.productservice.models.ProductVariantAttributeValue;
@@ -41,6 +43,26 @@ public class ProductMapper {
         .map(String::trim)
         .distinct()
         .toList();
+    List<ProductDocument.VariantDocument> variantDocuments = variants.stream()
+        .map(variant -> ProductDocument.VariantDocument.builder()
+            .sku(variant.getSku())
+            .quantity(variant.getQuantity())
+            .build())
+        .toList();
+    List<ProductMedia> medias = product.getMedias() == null ? List.of() : product.getMedias();
+    List<String> productMedias = medias.stream()
+        .map(ProductMedia::getMediaUrl)
+        .filter(StringUtils::hasText)
+        .map(String::trim)
+        .distinct()
+        .toList();
+    String thumbnailUrl = medias.stream()
+        .filter(media -> Boolean.TRUE.equals(media.getIsThumbnail()))
+        .map(ProductMedia::getMediaUrl)
+        .filter(StringUtils::hasText)
+        .map(String::trim)
+        .findFirst()
+        .orElse(null);
 
     List<String> attributeIds = variants.stream()
         .map(ProductVariant::getVariantAttributeValues)
@@ -68,23 +90,29 @@ public class ProductMapper {
         .toList();
 
     Facility facility = product.getFacility();
+    GeoPoint location = facility != null && facility.getLatitude() != null && facility.getLongitude() != null
+        ? new GeoPoint(facility.getLatitude(), facility.getLongitude())
+        : null;
+
     return ProductDocument.builder()
         .id(product.getId())
         .name(product.getName())
         .description(product.getDescription())
+        .thumbnailUrl(thumbnailUrl)
+        .productMedias(productMedias)
         .facilityId(facility == null ? null : facility.getId())
         .subCategoryIds(subCategoryIds)
         .primarySubCategoryId(product.getPrimarySubCategory() == null ? null : product.getPrimarySubCategory().getId())
         .attributeIds(attributeIds)
         .attributeValues(attributeValues)
         .variantSkus(variantSkus)
+        .variants(variantDocuments)
         .status(product.getStatus())
         .createdAt(product.getCreatedAt())
         .updatedAt(product.getUpdatedAt())
         .provinceCode(facility == null ? null : facility.getProvinceCode())
         .wardCode(facility == null ? null : facility.getWardCode())
-        .latitude(facility == null ? null : facility.getLatitude())
-        .longitude(facility == null ? null : facility.getLongitude())
+        .location(location)
         .build();
   }
 
@@ -99,6 +127,13 @@ public class ProductMapper {
         .id(product.getId())
         .name(product.getName())
         .description(product.getDescription())
+        .thumbnailUrl(product.getMedias() == null ? null : product.getMedias().stream()
+            .filter(media -> Boolean.TRUE.equals(media.getIsThumbnail()))
+            .map(ProductMedia::getMediaUrl)
+            .filter(StringUtils::hasText)
+            .map(String::trim)
+            .findFirst()
+            .orElse(null))
         .facility(facility == null ? null : FacilityResponse.builder()
             .id(facility.getId())
             .name(facility.getName())
