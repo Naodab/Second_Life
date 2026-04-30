@@ -6,11 +6,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.multipart.MultipartFile;
-import java.util.List;
 import jakarta.validation.Valid;
 
 import com.naodab.commonservice.constant.AppConstants;
@@ -19,6 +16,7 @@ import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.productservice.dto.request.ProductCreateRequest;
 import com.naodab.productservice.dto.request.ProductUpdateRequest;
+import com.naodab.productservice.dto.request.UploadProductImagesRequest;
 import com.naodab.productservice.dto.response.ProductResponse;
 import com.naodab.productservice.services.ProductService;
 
@@ -59,10 +57,9 @@ public class ProductController {
   public ResponseEntity<ApiResponse<Void>> uploadProductImages(
       @PathVariable String id,
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
-      @RequestParam("thumbnailImage") MultipartFile thumbnailImage,
-      @RequestParam("productImages") List<MultipartFile> productImages) {
+      @RequestBody @Valid UploadProductImagesRequest request) {
     String profileId = validateProfileId(profileIdHeader);
-    productService.uploadProductImages(profileId, id, thumbnailImage, productImages);
+    productService.uploadProductImages(profileId, id, request.getThumbnailUrl(), request.getProductImageUrls());
     return ResponseEntity.ok(ApiResponse.<Void>builder().build());
   }
 

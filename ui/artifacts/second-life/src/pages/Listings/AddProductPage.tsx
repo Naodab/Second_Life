@@ -24,7 +24,7 @@ export function AddProductPage({
 }: {
   facilityId: string;
   onBack: () => void;
-  onSubmit: (data: AddProductSubmitPayload) => void;
+  onSubmit: (data: AddProductSubmitPayload) => Promise<void>;
 }) {
   type VariantDraft = {
     id: string;
@@ -48,8 +48,9 @@ export function AddProductPage({
     variants: [createEmptyVariant()],
     coverFile: null as File | null,
     coverPreview: "",
-    otherFiles: [] as { name: string; preview: string; type: string }[],
+    otherFiles: [] as { name: string; preview: string; type: string; file: File }[],
   });
+  const [submitting, setSubmitting] = useState(false);
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [attributes, setAttributes] = useState<AttributeResponse[]>([]);
   const [isLoadingFilters, setIsLoadingFilters] = useState(false);
@@ -75,7 +76,7 @@ export function AddProductPage({
       const url = URL.createObjectURL(f);
       setForm((prev) => ({
         ...prev,
-        otherFiles: [...prev.otherFiles, { name: f.name, preview: f.type.startsWith("video") ? "" : url, type: f.type }],
+        otherFiles: [...prev.otherFiles, { name: f.name, preview: f.type.startsWith("video") ? "" : url, type: f.type, file: f }],
       }));
     });
   };
@@ -342,7 +343,7 @@ export function AddProductPage({
     selectedConcreteAttributeIds,
   ]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (hasDuplicateVariants) return;
     if (!canSubmit) return;
     const variants = variantPreviewRows.map((row) => ({
@@ -351,17 +352,26 @@ export function AddProductPage({
       attributeValueIds: row.attributeValueIds,
     }));
 
-    onSubmit({
-      name: form.name,
-      description: form.description,
-      facilityId,
-      subCategoryIds: form.subCategoryIds,
-      primarySubCategoryId: form.primarySubCategoryId,
-      attributeIds: selectedConcreteAttributeIds,
-      variants,
-      previewUrl:
-        form.coverPreview || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&h=200&fit=crop",
-    });
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        name: form.name,
+        description: form.description,
+        facilityId,
+        subCategoryIds: form.subCategoryIds,
+        primarySubCategoryId: form.primarySubCategoryId,
+        attributeIds: selectedConcreteAttributeIds,
+        variants,
+        previewUrl:
+          form.coverPreview || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&h=200&fit=crop",
+        coverFile: form.coverFile,
+        otherImageFiles: form.otherFiles
+          .filter((item) => item.type.startsWith("image/"))
+          .map((item) => item.file),
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const reset = () => {
@@ -818,11 +828,11 @@ export function AddProductPage({
           Quay lại
         </Button>
         <Button
-          disabled={!canSubmit}
-          onClick={handleSubmit}
+          disabled={!canSubmit || submitting}
+          onClick={() => void handleSubmit()}
           className="rounded-full px-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
         >
-          Tiếp theo <ChevronRight className="w-4 h-4 ml-1" />
+          {submitting ? "Đang upload ảnh..." : "Tiếp theo"} <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
     </div>

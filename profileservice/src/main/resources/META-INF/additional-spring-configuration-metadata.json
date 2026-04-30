@@ -6,24 +6,9 @@
       "description": "Create profile topic"
     },
     {
-      "name": "spring.kafka.topics.update-avatar",
-      "type": "java.lang.String",
-      "description": "Update avatar topic"
-    },
-    {
-      "name": "spring.kafka.topics.upload-avatar",
-      "type": "java.lang.String",
-      "description": "Upload avatar topic"
-    },
-    {
       "name": "spring.kafka.topics.account-profile-linked",
       "type": "java.lang.String",
       "description": "Profile created; link profile id to account"
-    },
-    {
-      "name": "upload-service.url",
-      "type": "java.lang.String",
-      "description": "Upload service URL"
     },
     {
       "name": "server.servlet.multipart.max-file-size",

@@ -1,6 +1,7 @@
 package com.naodab.productservice.services.impl;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -9,11 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
-
-import com.naodab.productservice.client.UploadFileClient;
 import org.springframework.stereotype.Service;
 
 import com.naodab.commonservice.exception.AppException;
@@ -28,6 +25,7 @@ import com.naodab.productservice.models.Attribute;
 import com.naodab.productservice.models.AttributeValue;
 import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Product;
+import com.naodab.productservice.models.ProductMedia;
 import com.naodab.productservice.models.ProductSubCategory;
 import com.naodab.productservice.models.ProductSubCategoryId;
 import com.naodab.productservice.models.ProductVariant;
@@ -56,7 +54,6 @@ public class ProductServiceImpl implements ProductService {
   ProductSearchService productSearchService;
   ProductMapper productMapper;
   ProductVariantMapper productVariantMapper;
-  UploadFileClient uploadFileClient;
 
   @Override
   @Transactional
@@ -87,7 +84,8 @@ public class ProductServiceImpl implements ProductService {
 
     final int[] sequence = { 1 };
     product.setVariants(request.getVariants().stream()
-        .map(variantRequest -> toProductVariant(product, variantRequest, requestData.attributeValueById(), sequence[0]++))
+        .map(variantRequest -> toProductVariant(product, variantRequest, requestData.attributeValueById(),
+            sequence[0]++))
         .toList());
 
     Product savedProduct = productRepository.save(product);
@@ -138,7 +136,8 @@ public class ProductServiceImpl implements ProductService {
     final int[] sequence = { 1 };
     product.getVariants().clear();
     product.getVariants().addAll(request.getVariants().stream()
-        .map(variantRequest -> toProductVariant(product, variantRequest, requestData.attributeValueById(), sequence[0]++))
+        .map(variantRequest -> toProductVariant(product, variantRequest, requestData.attributeValueById(),
+            sequence[0]++))
         .toList());
 
     Product savedProduct = productRepository.save(product);
@@ -295,15 +294,15 @@ public class ProductServiceImpl implements ProductService {
   public void uploadProductImages(
       String profileId,
       String id,
-      MultipartFile thumbnailImage,
-      List<MultipartFile> productImages) {
+      String thumbnailUrl,
+      List<String> productImages) {
     if (!StringUtils.hasText(id) || !StringUtils.hasText(profileId)) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
-    if (thumbnailImage == null || thumbnailImage.isEmpty()) {
+    if (!StringUtils.hasText(thumbnailUrl)) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
-    if (CollectionUtils.isEmpty(productImages) || productImages.stream().anyMatch(MultipartFile::isEmpty)) {
+    if (productImages == null || productImages.isEmpty() || productImages.stream().anyMatch(url -> !StringUtils.hasText(url))) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
@@ -313,7 +312,28 @@ public class ProductServiceImpl implements ProductService {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
 
-    uploadFileClient.uploadProductImages(id, thumbnailImage, productImages);
+    List<ProductMedia> medias = new ArrayList<>();
+    medias.add(ProductMedia.builder()
+        .product(product)
+        .mediaUrl(thumbnailUrl.trim())
+        .isThumbnail(true)
+        .mediaType(ProductMedia.MediaType.IMAGE)
+        .sortOrder(0)
+        .build());
+
+    for (int i = 0; i < productImages.size(); i++) {
+      medias.add(ProductMedia.builder()
+          .product(product)
+          .mediaUrl(productImages.get(i).trim())
+          .isThumbnail(false)
+          .mediaType(ProductMedia.MediaType.IMAGE)
+          .sortOrder(i + 1)
+          .build());
+    }
+
+    product.setMedias(medias);
+    Product savedProduct = productRepository.save(product);
+    productSearchService.sync(savedProduct);
   }
 
   @Override

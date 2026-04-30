@@ -26,4 +26,6 @@ export interface AddProductSubmitPayload {
     attributeValueIds: string[];
   }[];
   previewUrl: string;
+  coverFile: File | null;
+  otherImageFiles: File[];
 }

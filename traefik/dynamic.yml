@@ -89,10 +89,6 @@ http:
       loadBalancer:
         servers:
           - url: "http://location-service:8085"
-    upload-service:
-      loadBalancer:
-        servers:
-          - url: "http://upload-service:8084"
     product-service:
       loadBalancer:
         servers:

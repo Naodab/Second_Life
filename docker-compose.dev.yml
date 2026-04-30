@@ -70,24 +70,6 @@ services:
           ignore:
             - "**/target/**"
 
-  upload-service:
-    environment:
-      SPRING_PROFILES_ACTIVE: dev
-    develop:
-      watch:
-        - action: rebuild
-          path: ./pom.xml
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./commonservice
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./uploadservice
-          ignore:
-            - "**/target/**"
-
   location-service:
     environment:
       SPRING_PROFILES_ACTIVE: dev

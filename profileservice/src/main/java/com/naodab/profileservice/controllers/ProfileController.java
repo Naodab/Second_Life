@@ -28,7 +28,6 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
 
@@ -130,7 +129,7 @@ public class ProfileController {
   @PutMapping("/upload-avatar")
   public ResponseEntity<ApiResponse<Void>> uploadAvatar(
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileId,
-      @RequestParam MultipartFile avatar) {
+      @RequestBody @Validated UploadAvatarRequest request) {
 
     if (!StringUtils.hasText(profileId)) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -140,11 +139,7 @@ public class ProfileController {
               .build());
     }
 
-    UploadAvatarRequest request = UploadAvatarRequest.builder()
-        .profileId(profileId.trim())
-        .avatar(avatar)
-        .build();
-
+    request.setProfileId(profileId.trim());
     profileService.uploadAvatarFromEvent(request);
     return ResponseEntity.ok(
         ApiResponse.<Void>builder()

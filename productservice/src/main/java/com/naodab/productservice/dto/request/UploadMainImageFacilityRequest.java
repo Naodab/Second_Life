@@ -1,7 +1,6 @@
-package com.naodab.profileservice.dto.event;
+package com.naodab.productservice.dto.request;
 
-import org.springframework.web.multipart.MultipartFile;
-
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,7 +14,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class UploadAvatarEvent {
-  String profileId;
-  MultipartFile avatar;
+public class UploadMainImageFacilityRequest {
+  @NotBlank(message = "REQUIRED_FIELD")
+  String imageUrl;
 }

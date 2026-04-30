@@ -10,9 +10,7 @@ import org.springframework.util.StringUtils;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
-import com.naodab.profileservice.clients.UploadFileClient;
 import com.naodab.profileservice.dto.event.CreateProfileEvent;
-import com.naodab.profileservice.dto.event.UpdateAvatarEvent;
 import com.naodab.profileservice.dto.request.ProfileCreateRequest;
 import com.naodab.profileservice.dto.request.ProfileUpdateRequest;
 import com.naodab.profileservice.dto.request.UploadAvatarRequest;
@@ -37,7 +35,6 @@ public class ProfileServiceImpl implements ProfileService {
   ProfileRepository profileRepository;
   ProfileMapper profileMapper;
   ProfileLinkedToAccountProducer profileLinkedToAccountProducer;
-  UploadFileClient uploadFileClient;
 
   @Override
   public ProfileResponse createProfile(ProfileCreateRequest request) {
@@ -151,22 +148,6 @@ public class ProfileServiceImpl implements ProfileService {
 
   @Override
   @Transactional
-  public void updateAvatarFromEvent(UpdateAvatarEvent event) {
-    if (event == null)
-      return;
-
-    if (event.getProfileId() == null)
-      return;
-
-    profileRepository.findById(event.getProfileId())
-        .ifPresent(profile -> {
-          profile.setAvatarUrl(event.getAvatarUrl());
-          profileRepository.save(profile);
-        });
-  }
-
-  @Override
-  @Transactional
   public void uploadAvatarFromEvent(UploadAvatarRequest request) {
     if (request == null)
       return;
@@ -175,12 +156,16 @@ public class ProfileServiceImpl implements ProfileService {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
 
-    if (request.getAvatar() == null) {
-      log.error("Avatar is null or blank");
+    if (!StringUtils.hasText(request.getAvatarUrl())) {
+      log.error("Avatar URL is null or blank");
       throw new AppException(ErrorCode.AVATAR_IS_NULL);
     }
 
-    uploadFileClient.uploadAvatar(request.getProfileId(), request.getAvatar());
+    profileRepository.findById(request.getProfileId())
+        .ifPresent(profile -> {
+          profile.setAvatarUrl(request.getAvatarUrl().trim());
+          profileRepository.save(profile);
+        });
   }
 
   @Override

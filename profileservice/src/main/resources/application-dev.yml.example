@@ -22,9 +22,6 @@ spring:
     serialization:
       "[indent_output]": true
 
-upload-service:
-  url: ${UPLOAD_SERVICE_URL:http://localhost:8084/api/v1}
-
 external:
   cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:8080}
 

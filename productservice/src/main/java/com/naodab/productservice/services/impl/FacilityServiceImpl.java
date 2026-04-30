@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.StringUtils;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
@@ -18,7 +18,6 @@ import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.repositories.FacilityRepository;
 import com.naodab.productservice.mapper.FacilityMapper;
 import com.naodab.productservice.client.LocationClient;
-import com.naodab.productservice.client.UploadFileClient;
 import com.naodab.productservice.specification.FacilitySpecification;
 
 import org.springframework.data.domain.Pageable;
@@ -40,7 +39,6 @@ public class FacilityServiceImpl implements FacilityService {
   FacilitySpecification facilitySpecification;
   FacilityMapper facilityMapper;
   LocationClient locationClient;
-  UploadFileClient uploadFileClient;
 
   @NonFinal
   @Value("${sort.facilities.default:created_at}")
@@ -151,21 +149,18 @@ public class FacilityServiceImpl implements FacilityService {
   }
 
   @Override
-  public void uploadMainImageFacility(String id, String ownerId, MultipartFile image) {
+  public void uploadMainImageFacility(String id, String ownerId, String imageUrl) {
     Facility facility = facilityRepository.findByIdAndOwnerIdAndDeletedAtIsNull(id, ownerId)
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
     if (!facility.getOwnerId().equals(ownerId)) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
+    if (!StringUtils.hasText(imageUrl)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
 
-    uploadFileClient.uploadMainImageFacility(facility.getId(), image);
-  }
-
-  @Override
-  public void updateMainImageFacility(String id, String imageUrl) {
-    Facility facility = facilityRepository.findByIdAndDeletedAtIsNull(id)
-        .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
-    facility.setImageUrl(imageUrl);
+    facility.setImageUrl(imageUrl.trim());
     facilityRepository.save(facility);
   }
+
 }

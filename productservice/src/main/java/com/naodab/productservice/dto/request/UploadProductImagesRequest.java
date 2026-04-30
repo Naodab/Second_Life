@@ -1,7 +1,9 @@
-package com.naodab.profileservice.dto.request;
+package com.naodab.productservice.dto.request;
+
+import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
-
+import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,9 +17,10 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class UploadAvatarRequest {
-  String profileId;
-
+public class UploadProductImagesRequest {
   @NotBlank(message = "REQUIRED_FIELD")
-  String avatarUrl;
+  String thumbnailUrl;
+
+  @NotEmpty(message = "REQUIRED_FIELD")
+  List<String> productImageUrls;
 }

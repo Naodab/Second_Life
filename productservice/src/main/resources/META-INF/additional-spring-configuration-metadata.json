@@ -26,16 +26,6 @@
       "description": "Location service URL"
     },
     {
-      "name": "external.upload-service.url",
-      "type": "java.lang.String",
-      "description": "Upload service URL"
-    },
-    {
-      "name": "spring.kafka.topics.update-main-image-facility",
-      "type": "java.lang.String",
-      "description": "Update main image facility topic"
-    },
-    {
       "name": "logging.level.org.springframework.data.elasticsearch.core",
       "type": "java.lang.String",
       "description": "Logging level for Spring Data Elasticsearch Core"

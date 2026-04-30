@@ -9,6 +9,7 @@ import {
 } from "@/api/facility";
 import { getProvinces, getWards } from "@/api/location";
 import { MOCK_PRODUCTS } from "@/lib/mock-data";
+import { uploadImageToCloudinary } from "@/lib/cloudinary";
 import { useToast } from "@/hooks/use-toast";
 import { AddFacilityModal } from "./AddFacilityModal";
 import { AddProductPage } from "./AddProductPage";
@@ -115,9 +116,17 @@ export default function Listings() {
     setView("facility-product");
   };
 
-  const handleAddProductSubmit = (data: AddProductSubmitPayload) => {
+  const handleAddProductSubmit = async (data: AddProductSubmitPayload) => {
     setIsUploadingModal(true);
-    setTimeout(() => {
+    try {
+      const uploadedCoverUrl = data.coverFile
+        ? await uploadImageToCloudinary(data.coverFile, "second-life/products")
+        : data.previewUrl;
+      const uploadedGalleryUrls = await Promise.all(
+        data.otherImageFiles.map((file) => uploadImageToCloudinary(file, "second-life/products")),
+      );
+
+      // Product creation endpoint is still mocked in current FE flow, so keep pending queue locally.
       setIsUploadingModal(false);
       setView("facility");
       const pending: PendingProduct = {
@@ -128,15 +137,23 @@ export default function Listings() {
         attributeIds: data.attributeIds,
         variantCount: data.variants.length,
         totalQty: data.variants.reduce((sum, variant) => sum + variant.quantity, 0),
-        previewUrl: data.previewUrl,
+        previewUrl: uploadedCoverUrl || uploadedGalleryUrls[0] || data.previewUrl,
         facilityId: data.facilityId,
       };
       setPendingProducts((prev) => [...prev, pending]);
       toast({
         title: "Upload hoàn tất!",
-        description: "Sản phẩm đã được xử lý. Vào 'Sản phẩm chưa đăng' để định giá và đăng.",
+        description: "Ảnh sản phẩm đã upload lên Cloudinary. Vào 'Sản phẩm chưa đăng' để định giá và đăng.",
       });
-    }, 2500);
+    } catch (e) {
+      setIsUploadingModal(false);
+      toast({
+        title: "Upload thất bại",
+        description: e instanceof Error ? e.message : "Không thể upload ảnh sản phẩm.",
+        variant: "destructive",
+      });
+      throw e;
+    }
   };
 
   const handlePublish = (id: string, price?: number) => {
@@ -157,11 +174,11 @@ export default function Listings() {
   const handleUpdateFacilityAvatar = async (file: File) => {
     if (!activeFacilityId) return;
     try {
-      await uploadFacilityMainImage(activeFacilityId, file);
-      const previewUrl = URL.createObjectURL(file);
+      const uploadedUrl = await uploadImageToCloudinary(file, "second-life/facilities");
+      await uploadFacilityMainImage(activeFacilityId, uploadedUrl);
       setFacilities((prev) =>
         prev.map((facility) =>
-          facility.id === activeFacilityId ? { ...facility, imageUrl: previewUrl } : facility,
+          facility.id === activeFacilityId ? { ...facility, imageUrl: uploadedUrl } : facility,
         ),
       );
       toast({

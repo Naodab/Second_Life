@@ -80,12 +80,10 @@ export async function getMyFacilities(): Promise<FacilityResponse[]> {
   return unwrapApiData(raw);
 }
 
-export async function uploadFacilityMainImage(id: string, image: File): Promise<void> {
-  const formData = new FormData();
-  formData.append("image", image);
-
+export async function uploadFacilityMainImage(id: string, imageUrl: string): Promise<void> {
   await customFetch<ApiResponseEnvelope<null>>(`/api/v1/facilities/${id}/main-image`, {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ imageUrl }),
   });
 }

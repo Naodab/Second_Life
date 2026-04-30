@@ -19,20 +19,6 @@ spring:
   jackson:
     deserialization:
       fail-on-unknown-properties: false
-  kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: ${KAFKA_CONSUMER_GROUP_ID:product-consumer}
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      auto-offset-reset: earliest
-      properties:
-        "[spring.json.trusted.packages]": "*"
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-    topics:
-      update-main-image-facility: "facility.update-main-image"
   elasticsearch:
     uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
 
@@ -43,8 +29,6 @@ sort:
 external:
   location-service:
     url: ${LOCATION_SERVICE_URL:}
-  upload-service:
-    url: ${UPLOAD_SERVICE_URL:}
   cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:}
 
 logging:
