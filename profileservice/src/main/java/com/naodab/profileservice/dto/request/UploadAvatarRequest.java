@@ -1,6 +1,6 @@
 package com.naodab.profileservice.dto.request;
 
-import org.springframework.web.multipart.MultipartFile;
+import jakarta.validation.constraints.NotBlank;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,5 +17,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class UploadAvatarRequest {
   String profileId;
-  MultipartFile avatar;
+
+  @NotBlank(message = "REQUIRED_FIELD")
+  String avatarUrl;
 }

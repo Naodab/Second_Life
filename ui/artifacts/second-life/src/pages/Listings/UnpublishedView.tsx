@@ -10,9 +10,9 @@ export function UnpublishedView({
   onPublish,
 }: {
   products: PendingProduct[];
-  onPublish: (id: string, rentPrice?: number, buyPrice?: number) => void;
+  onPublish: (id: string, price?: number) => void;
 }) {
-  const [prices, setPrices] = useState<Record<string, { rent: string; buy: string }>>({});
+  const [prices, setPrices] = useState<Record<string, string>>({});
 
   if (products.length === 0) {
     return (
@@ -33,14 +33,11 @@ export function UnpublishedView({
         </p>
       </div>
       {products.map((p) => {
-        const priceState = prices[p.id] || {
-          rent: p.rentPrice ? String(p.rentPrice) : "",
-          buy: p.buyPrice ? String(p.buyPrice) : "",
-        };
-        const setPrice = (field: "rent" | "buy", val: string) =>
+        const price = prices[p.id] || (p.price ? String(p.price) : "");
+        const setPrice = (val: string) =>
           setPrices((prev) => ({
             ...prev,
-            [p.id]: { ...(prev[p.id] || { rent: "", buy: "" }), [field]: val },
+            [p.id]: val,
           }));
         return (
           <div key={p.id} className="bg-white rounded-2xl border shadow-sm p-5 flex gap-4">
@@ -53,41 +50,24 @@ export function UnpublishedView({
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mb-3 line-clamp-1">{p.description}</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                {p.variantCount} variants • Tong so luong: {p.totalQty}
+              </p>
               <div className="flex flex-wrap gap-3 items-end">
-                {p.forBuy && (
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Giá bán (VND)</label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={priceState.buy}
-                      onChange={(e) => setPrice("buy", e.target.value)}
-                      className="h-8 w-36 text-sm rounded-lg"
-                    />
-                  </div>
-                )}
-                {p.forRent && (
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">Giá thuê/ngày (VND)</label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={priceState.rent}
-                      onChange={(e) => setPrice("rent", e.target.value)}
-                      className="h-8 w-36 text-sm rounded-lg"
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Gia (VND)</label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    className="h-8 w-36 text-sm rounded-lg"
+                  />
+                </div>
                 <Button
                   size="sm"
                   className="rounded-full h-8"
-                  onClick={() =>
-                    onPublish(
-                      p.id,
-                      priceState.rent ? Number(priceState.rent) : undefined,
-                      priceState.buy ? Number(priceState.buy) : undefined
-                    )
-                  }
+                  onClick={() => onPublish(p.id, price ? Number(price) : undefined)}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Đăng ngay
                 </Button>

@@ -1,3 +1,10 @@
+export type PagedItemsResponse<T> = {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  items: T[];
+};
+
 export type ApiResponseEnvelope<T> = {
   code?: number;
   message?: string | null;

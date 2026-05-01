@@ -23,17 +23,18 @@ public class CategoryMapper {
         .id(category.getId())
         .name(category.getName())
         .description(category.getDescription())
+        .code(category.getCode())
         .items(category.getSubCategories() == null ? List.of()
             : category.getSubCategories().stream().map(subCategoryMapper::toSubCategoryResponse).toList())
         .build();
   }
 
   public Category toCategory(CategoryCreateRequest request) {
-    return Category.builder()
-        .id(UUID.randomUUID().toString())
-        .name(request.getName())
-        .description(request.getDescription())
-        .build();
+    Category category = new Category();
+    category.setId(UUID.randomUUID().toString());
+    category.setName(request.getName());
+    category.setDescription(request.getDescription());
+    return category;
   }
 
 }

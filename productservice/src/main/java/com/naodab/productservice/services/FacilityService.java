@@ -6,7 +6,6 @@ import com.naodab.productservice.dto.request.FacilityCreateRequest;
 import com.naodab.productservice.dto.request.FacilitySearchRequest;
 import com.naodab.productservice.dto.request.FacilityUpdateRequest;
 import com.naodab.productservice.dto.response.FacilityResponse;
-import org.springframework.web.multipart.MultipartFile;
 
 public interface FacilityService {
   FacilityResponse createFacility(String profileId, FacilityCreateRequest request);
@@ -21,7 +20,5 @@ public interface FacilityService {
 
   void deleteFacility(String id);
 
-  void uploadMainImageFacility(String id, String ownerId, MultipartFile image);
-
-  void updateMainImageFacility(String id, String imageUrl);
+  void uploadMainImageFacility(String id, String ownerId, String imageUrl);
 }

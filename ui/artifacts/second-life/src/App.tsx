@@ -1,5 +1,6 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { useEffect } from "react";
+import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,6 +20,14 @@ import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders";
 import Messages from "@/pages/Messages";
 import Listings from "@/pages/Listings/index";
+
+function SellerHubLegacyRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(SELLER_HUB_HOME, { replace: true });
+  }, [setLocation]);
+  return null;
+}
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import OAuthCallback from "@/pages/OAuthCallback";
@@ -54,6 +63,7 @@ function ProfileSetupRedirect() {
 
 function Router() {
   const [location] = useLocation();
+  const isSellerHub = location.startsWith("/manage") || location.startsWith("/listings");
   const isAuthPage =
     location === "/login" ||
     location === "/register" ||
@@ -63,8 +73,7 @@ function Router() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <ProfileSetupRedirect />
-      {!isAuthPage && <Header />}
+      {!isAuthPage && !isSellerHub && <Header />}
       <main className="flex-1">
         <Switch>
           <Route path="/" component={Home} />
@@ -76,7 +85,8 @@ function Router() {
           <Route path="/checkout" component={Checkout} />
           <ProtectedRoute path="/orders" component={Orders} />
           <ProtectedRoute path="/messages" component={Messages} />
-          <ProtectedRoute path="/listings" component={Listings} />
+          <ProtectedRoute path="/listings" component={SellerHubLegacyRedirect} />
+          <ProtectedRoute path="/manage/*?" component={Listings} />
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
           <Route path="/oauth2/callback/google" component={OAuthCallback} />
@@ -85,7 +95,7 @@ function Router() {
           <Route component={NotFound} />
         </Switch>
       </main>
-      {!isAuthPage && <Footer />}
+      {!isAuthPage && !isSellerHub && <Footer />}
     </div>
   );
 }
@@ -96,12 +106,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+        {/* Wouter must wrap AuthProvider so route hooks and auth share one stable tree (avoids useAuth/useLocation ordering issues during HMR or nested roots). */}
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <AuthProvider>
+            <ProfileSetupRedirect />
             <Router />
-          </WouterRouter>
-          <Toaster />
-        </AuthProvider>
+            <Toaster />
+          </AuthProvider>
+        </WouterRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -1,0 +1,34 @@
+package com.naodab.productservice.repositories;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.naodab.productservice.models.Product;
+
+public interface ProductRepository extends JpaRepository<Product, String> {
+    boolean existsByFacilityIdAndDeletedAtIsNull(String facilityId);
+
+    Optional<Product> findByIdAndDeletedAtIsNull(String id);
+
+    @Query(value = "SELECT p.id FROM Product p WHERE p.deletedAt IS NULL ORDER BY p.id", countQuery = "SELECT count(p) FROM Product p WHERE p.deletedAt IS NULL")
+    Page<String> findIdsForElasticsearchReindex(Pageable pageable);
+
+    @EntityGraph(attributePaths = {
+            "facility",
+            "primarySubCategory",
+            "primarySubCategory.category",
+            "productSubCategories",
+            "productSubCategories.subCategory",
+            "productSubCategories.subCategory.category",
+    })
+    @Query("SELECT p FROM Product p WHERE p.id IN :ids")
+    List<Product> findAllByIdInWithElasticsearchGraph(@Param("ids") Collection<String> ids);
+}

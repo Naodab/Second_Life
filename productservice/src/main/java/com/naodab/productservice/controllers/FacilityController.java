@@ -17,6 +17,7 @@ import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.productservice.dto.request.FacilitySearchRequest;
 import com.naodab.productservice.dto.request.FacilityUpdateRequest;
+import com.naodab.productservice.dto.request.UploadMainImageFacilityRequest;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
+import jakarta.validation.Valid;
 
 @Slf4j
 @RestController
@@ -120,10 +121,10 @@ public class FacilityController {
   public ResponseEntity<ApiResponse<Void>> uploadMainImageFacility(
       @PathVariable String id,
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
-      @RequestParam MultipartFile image) {
+      @RequestBody @Valid UploadMainImageFacilityRequest request) {
     log.info("Uploading main image for facility: {}", id);
     String profileId = validateProfileId(profileIdHeader);
-    facilityService.uploadMainImageFacility(id, profileId, image);
+    facilityService.uploadMainImageFacility(id, profileId, request.getImageUrl());
     return ResponseEntity.ok(ApiResponse.<Void>builder().build());
   }
 

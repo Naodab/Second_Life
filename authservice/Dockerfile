@@ -12,7 +12,6 @@ COPY commonservice/pom.xml commonservice/pom.xml
 COPY authservice/pom.xml authservice/pom.xml
 COPY profileservice/pom.xml profileservice/pom.xml
 COPY mailservice/pom.xml mailservice/pom.xml
-COPY uploadservice/pom.xml uploadservice/pom.xml
 COPY locationservice/pom.xml locationservice/pom.xml
 COPY productservice/pom.xml productservice/pom.xml
 

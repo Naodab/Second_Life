@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { updateCurrentProfile } from "@/api";
 import { toast } from "@/hooks/use-toast";
 import { ApiError } from "@workspace/api-client-react";
+import { uploadImageToCloudinary } from "@/lib/cloudinary";
 
 const schema = z.object({
   firstName: z
@@ -32,6 +33,9 @@ export default function ProfileSetup() {
   const [, setLocation] = useLocation();
   const { isLoggedIn, isLoading, needsProfileSetup, refreshSessionProfile } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -54,10 +58,16 @@ export default function ProfileSetup() {
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitting(true);
     try {
+      let avatarUrl: string | undefined;
+      if (avatarFile) {
+        setUploadingAvatar(true);
+        avatarUrl = await uploadImageToCloudinary(avatarFile, "second-life/avatars");
+      }
       await updateCurrentProfile({
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         ...(values.phoneNumber ? { phoneNumber: values.phoneNumber.trim() } : {}),
+        ...(avatarUrl ? { avatarUrl } : {}),
       });
       await refreshSessionProfile();
       toast({ title: "Đã lưu hồ sơ", description: "Bạn có thể tiếp tục sử dụng ứng dụng." });
@@ -71,6 +81,7 @@ export default function ProfileSetup() {
             : "Không thể cập nhật hồ sơ.";
       toast({ title: "Cập nhật thất bại", description: msg, variant: "destructive" });
     } finally {
+      setUploadingAvatar(false);
       setSubmitting(false);
     }
   });
@@ -127,6 +138,26 @@ export default function ProfileSetup() {
 
           <form onSubmit={onSubmit} className="space-y-5">
             <div>
+              <label htmlFor="avatar" className="text-sm font-semibold mb-1.5 block">
+                Ảnh đại diện (tùy chọn)
+              </label>
+              <Input
+                id="avatar"
+                type="file"
+                accept="image/*"
+                className="h-12 rounded-xl bg-white/50"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setAvatarFile(file);
+                  setAvatarPreview(file ? URL.createObjectURL(file) : "");
+                }}
+              />
+              {avatarPreview && (
+                <img src={avatarPreview} alt="Avatar preview" className="mt-2 h-20 w-20 rounded-full border object-cover" />
+              )}
+              {uploadingAvatar && <p className="text-xs text-muted-foreground mt-1.5">Đang upload ảnh avatar...</p>}
+            </div>
+            <div>
               <label htmlFor="firstName" className="text-sm font-semibold mb-1.5 block">
                 Tên
               </label>
@@ -174,9 +205,9 @@ export default function ProfileSetup() {
             <Button
               type="submit"
               className="w-full h-12 rounded-xl text-lg shadow-lg shadow-primary/20 mt-4"
-              disabled={submitting}
+              disabled={submitting || uploadingAvatar}
             >
-              {submitting ? "Đang lưu…" : "Lưu và tiếp tục"}
+              {submitting || uploadingAvatar ? "Đang lưu…" : "Lưu và tiếp tục"}
             </Button>
           </form>
         </div>

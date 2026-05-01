@@ -3,15 +3,12 @@ package com.naodab.profileservice.services;
 import java.util.List;
 
 import com.naodab.profileservice.dto.event.CreateProfileEvent;
-import com.naodab.profileservice.dto.event.UpdateAvatarEvent;
 import com.naodab.profileservice.dto.request.ProfileCreateRequest;
 import com.naodab.profileservice.dto.request.ProfileUpdateRequest;
 import com.naodab.profileservice.dto.request.UploadAvatarRequest;
 import com.naodab.profileservice.dto.response.ProfileResponse;
 
 public interface ProfileService {
-  void updateAvatarFromEvent(UpdateAvatarEvent event);
-
   ProfileResponse createProfile(ProfileCreateRequest request);
 
   List<ProfileResponse> getAllProfiles(int page, int pageSize);

@@ -36,12 +36,7 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
     topics:
       create-profile: "profile.create"
-      update-avatar: "profile.update-avatar"
-      upload-avatar: "upload.upload-avatar"
       account-profile-linked: "auth.account-profile-linked"
-
-upload-service:
-  url: ${UPLOAD_SERVICE_URL:}
 
 external:
   cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:}

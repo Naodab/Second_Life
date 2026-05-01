@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.StringUtils;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
@@ -18,7 +18,6 @@ import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.repositories.FacilityRepository;
 import com.naodab.productservice.mapper.FacilityMapper;
 import com.naodab.productservice.client.LocationClient;
-import com.naodab.productservice.client.UploadFileClient;
 import com.naodab.productservice.specification.FacilitySpecification;
 
 import org.springframework.data.domain.Pageable;
@@ -40,11 +39,14 @@ public class FacilityServiceImpl implements FacilityService {
   FacilitySpecification facilitySpecification;
   FacilityMapper facilityMapper;
   LocationClient locationClient;
-  UploadFileClient uploadFileClient;
 
   @NonFinal
   @Value("${sort.facilities.default:created_at}")
   String defaultSort;
+
+  @NonFinal
+  @Value("${default.page-size:20}")
+  int defaultPageSize;
 
   @Override
   public FacilityResponse createFacility(String profileId, FacilityCreateRequest request) {
@@ -66,14 +68,7 @@ public class FacilityServiceImpl implements FacilityService {
   @Override
   public List<FacilityResponse> getAllFacilities(Integer page, Integer pageSize) {
     Sort sort = Sort.by(Sort.Direction.DESC, defaultSort);
-    if (page == null || pageSize == null || page == 0 || pageSize == 0) {
-      return facilityRepository.findAllByDeletedAtIsNull(sort)
-          .stream()
-          .map(facilityMapper::toFacilityResponse)
-          .toList();
-    }
-
-    Pageable pageable = PageRequest.of(page, pageSize, sort);
+    Pageable pageable = PageRequest.of(normalizePage(page), normalizePageSize(pageSize), sort);
     return facilityRepository.findAllByDeletedAtIsNull(pageable)
         .stream()
         .map(facilityMapper::toFacilityResponse)
@@ -85,18 +80,19 @@ public class FacilityServiceImpl implements FacilityService {
     Specification<Facility> specification = facilitySpecification.build(request);
     Sort sort = Sort.by(Sort.Direction.DESC, defaultSort);
 
-    if (page == null || pageSize == null || page == 0 || pageSize == 0) {
-      return facilityRepository.findAll(specification, sort)
-          .stream()
-          .map(facilityMapper::toFacilityResponse)
-          .toList();
-    }
-
-    Pageable pageable = PageRequest.of(page, pageSize, sort);
+    Pageable pageable = PageRequest.of(normalizePage(page), normalizePageSize(pageSize), sort);
     return facilityRepository.findAll(specification, pageable)
         .stream()
         .map(facilityMapper::toFacilityResponse)
         .toList();
+  }
+
+  private int normalizePage(Integer page) {
+    return page == null || page < 0 ? 0 : page;
+  }
+
+  private int normalizePageSize(Integer pageSize) {
+    return pageSize == null || pageSize <= 0 ? defaultPageSize : pageSize;
   }
 
   @Override
@@ -153,21 +149,18 @@ public class FacilityServiceImpl implements FacilityService {
   }
 
   @Override
-  public void uploadMainImageFacility(String id, String ownerId, MultipartFile image) {
+  public void uploadMainImageFacility(String id, String ownerId, String imageUrl) {
     Facility facility = facilityRepository.findByIdAndOwnerIdAndDeletedAtIsNull(id, ownerId)
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
     if (!facility.getOwnerId().equals(ownerId)) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
+    if (!StringUtils.hasText(imageUrl)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
 
-    uploadFileClient.uploadMainImageFacility(facility.getId(), image);
-  }
-
-  @Override
-  public void updateMainImageFacility(String id, String imageUrl) {
-    Facility facility = facilityRepository.findByIdAndDeletedAtIsNull(id)
-        .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
-    facility.setImageUrl(imageUrl);
+    facility.setImageUrl(imageUrl.trim());
     facilityRepository.save(facility);
   }
+
 }

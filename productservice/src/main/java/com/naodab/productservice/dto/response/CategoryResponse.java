@@ -19,6 +19,7 @@ public class CategoryResponse {
   String id;
   String name;
   String description;
+  String code;
 
   List<SubCategoryResponse> items;
 }

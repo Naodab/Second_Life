@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCart } from "@/hooks/use-mock-api";
 import { cn } from "@/lib/utils";
+import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 
@@ -39,7 +40,7 @@ const MOCK_NOTIFICATIONS: Notification[] = [
   {
     id: "n2", type: "order", title: "Đơn hàng mới",
     body: "Linh Nguyễn vừa đặt mua Ghế Mây Bohemian. Vui lòng xác nhận đơn.",
-    time: new Date(Date.now() - 1000 * 60 * 30), read: false, link: "/listings"
+    time: new Date(Date.now() - 1000 * 60 * 30), read: false, link: SELLER_HUB_HOME
   },
   {
     id: "n3", type: "delivery", title: "Đơn hàng đang giao",
@@ -160,7 +161,7 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [notifOpen]);
 
-  if (location.startsWith('/listings')) return null;
+  if (location.startsWith("/manage") || location.startsWith("/listings")) return null;
 
   return (
     <header className="sticky top-0 z-50 w-full glass border-b transition-all duration-300">
@@ -269,7 +270,7 @@ export function Header() {
                         <Package className="mr-2 h-4 w-4 text-primary" /> Đơn hàng của tôi
                       </DropdownMenuItem>
                     </Link>
-                    <Link href="/listings">
+                    <Link href={SELLER_HUB_HOME}>
                       <DropdownMenuItem className="cursor-pointer py-3 rounded-xl font-medium">
                         <Store className="mr-2 h-4 w-4 text-secondary" /> Quản lý bán hàng
                       </DropdownMenuItem>

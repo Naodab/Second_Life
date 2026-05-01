@@ -84,6 +84,7 @@ public class AttributeSeedBootstrap {
           AttributeValue attributeValue = AttributeValue.builder()
               .id(seed.id)
               .value(seed.value)
+              .code(seed.code)
               .build();
           attribute.addAttributeValue(attributeValue);
         }
@@ -99,5 +100,6 @@ public class AttributeSeedBootstrap {
   public static class AttributeValueSeed {
     String id;
     String value;
+    String code;
   }
 }

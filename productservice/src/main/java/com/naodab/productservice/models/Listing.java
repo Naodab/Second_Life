@@ -40,12 +40,6 @@ public class Listing {
 
   String description;
 
-  Double price;
-
-  @Enumerated(EnumType.STRING)
-  @Builder.Default
-  RentUnit rentUnit = RentUnit.DAY;
-
   @Enumerated(EnumType.STRING)
   @Builder.Default
   ListingType listingType = ListingType.BUY;
@@ -54,12 +48,8 @@ public class Listing {
   @Builder.Default
   ListingStatus listingStatus = ListingStatus.ACTIVE;
 
-  public enum RentUnit {
-    HOUR,
-    DAY,
-    WEEK,
-    MONTH,
-  }
+  Double minPrice;
+  Double maxPrice;
 
   public enum ListingType {
     BUY,

@@ -45,4 +45,8 @@ public interface FacilityRepository extends JpaRepository<Facility, String>, Jpa
       """, nativeQuery = true)
   List<Facility> findByLonAndLat(@Param("lon") Float lon, @Param("lat") Float lat,
       @Param("radiusMeters") Float radiusMeters);
+
+  boolean existsByIdAndDeletedAtIsNull(String facilityId);
+
+  Optional<Facility> findByOwnerIdAndIdAndDeletedAtIsNull(String ownerId, String id);
 }

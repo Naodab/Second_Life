@@ -4,73 +4,99 @@ attributes:
     attributeValues:
       - id: val-new
         value: "New"
+        code: "NEW"
       - id: val-like-new
         value: "Like New"
+        code: "LIKENEW"
       - id: val-good
         value: "Good"
+        code: "GOOD"
       - id: val-fair
         value: "Fair"
+        code: "FAIR"
       - id: val-poor
         value: "Poor"
+        code: "POOR"
 
   - id: attr-color
     name: "Color"
     attributeValues:
       - id: val-red
         value: "Red"
+        code: "RED"
       - id: val-blue
         value: "Blue"
+        code: "BLUE"
       - id: val-black
         value: "Black"
+        code: "BLACK"
       - id: val-white
         value: "White"
+        code: "WHITE"
       - id: val-yellow
         value: "Yellow"
+        code: "YELLOW"
 
   - id: attr-material
     name: "Material"
     attributeValues:
       - id: val-wood
         value: "Wood"
+        code: "WOOD"
       - id: val-metal
         value: "Metal"
+        code: "METAL"
       - id: val-plastic
         value: "Plastic"
+        code: "PLASTIC"
       - id: val-leather
         value: "Leather"
+        code: "LEATHER"
       - id: val-fabric
         value: "Fabric"
+        code: "FABRIC"
 
   - id: attr-usage-type
     name: "Usage Type"
     attributeValues:
       - id: val-sell
         value: "Sell"
+        code: "SELL"
       - id: val-rent
         value: "Rent"
+        code: "RENT"
       - id: val-both
         value: "Sell & Rent"
+        code: "BOTH"
 
   - id: attr-size
     name: "Size"
     attributeValues:
       - id: val-small
         value: "Small"
+        code: "S"
       - id: val-medium
         value: "Medium"
+        code: "M"
       - id: val-large
         value: "Large"
+        code: "L"
 
   - id: attr-brand
     name: "Brand"
     attributeValues:
       - id: val-ikea
         value: "IKEA"
+        code: "IKEA"
       - id: val-sony
         value: "Sony"
+        code: "SONY"
       - id: val-samsung
         value: "Samsung"
+        code: "SAMSUNG"
       - id: val-apple
         value: "Apple"
+        code: "APPLE"
       - id: val-other
         value: "Other"
+        code: "OTHER"
