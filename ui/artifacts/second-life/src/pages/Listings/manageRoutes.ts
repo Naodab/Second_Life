@@ -1,0 +1,87 @@
+export const MANAGE_BASE = "/manage";
+
+export type ManageRouteParsed =
+  | { tag: "dashboard" }
+  | { tag: "facility"; facilityId: string }
+  | { tag: "add-product"; facilityId: string }
+  | { tag: "product"; facilityId: string; productId: string }
+  | { tag: "unpublished"; facilityId: string }
+  | { tag: "orders"; facilityId: string };
+
+export function manageDashboardPath(): string {
+  return `${MANAGE_BASE}/dashboard`;
+}
+
+export function manageFacilityPath(facilityId: string): string {
+  return `${MANAGE_BASE}/facilities/${encodeURIComponent(facilityId)}`;
+}
+
+export function manageAddProductPath(facilityId: string): string {
+  return `${manageFacilityPath(facilityId)}/add-product`;
+}
+
+export function manageProductDetailPath(facilityId: string, productId: string): string {
+  return `${manageFacilityPath(facilityId)}/products/${encodeURIComponent(productId)}`;
+}
+
+export function manageUnpublishedPath(facilityId: string): string {
+  return `${manageFacilityPath(facilityId)}/unpublished`;
+}
+
+export function manageOrdersPath(facilityId: string): string {
+  return `${manageFacilityPath(facilityId)}/orders`;
+}
+
+export function parseManageRoute(pathname: string): ManageRouteParsed | null {
+  if (!pathname.startsWith(MANAGE_BASE)) {
+    return null;
+  }
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length < 2 || segments[0] !== "manage") {
+    return null;
+  }
+
+  const second = segments[1];
+
+  if (second === "dashboard") {
+    return segments.length === 2 ? { tag: "dashboard" } : null;
+  }
+
+  if (second !== "facilities") {
+    return null;
+  }
+
+  const facilityId = segments[2];
+  if (!facilityId) {
+    return null;
+  }
+
+  if (segments.length === 3) {
+    return { tag: "facility", facilityId };
+  }
+
+  const fourth = segments[3];
+
+  switch (fourth) {
+    case "add-product":
+      return segments.length === 4 ? { tag: "add-product", facilityId } : null;
+    case "unpublished":
+      return segments.length === 4 ? { tag: "unpublished", facilityId } : null;
+    case "orders":
+      return segments.length === 4 ? { tag: "orders", facilityId } : null;
+    case "products": {
+      const productId = segments[4];
+      return segments.length === 5 && productId ? { tag: "product", facilityId, productId } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+export function facilityScopeActive(route: ManageRouteParsed, facilityId: string): boolean {
+  if (route.tag === "dashboard") {
+    return false;
+  }
+
+  return route.facilityId === facilityId;
+}

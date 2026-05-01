@@ -58,13 +58,13 @@ http:
         - web
       priority: 1
     product-api-options:
-      rule: "(PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`) || PathPrefix(`/api/v1/attributes`) || PathPrefix(`/api/v1/products`)) && Method(`OPTIONS`)"
+      rule: "(PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`) || PathPrefix(`/api/v1/attributes`) || PathPrefix(`/api/v1/products`) || PathPrefix(`/api/v1/listings`)) && Method(`OPTIONS`)"
       service: product-service
       entryPoints:
         - web
       priority: 100
     product-api:
-      rule: "PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`) || PathPrefix(`/api/v1/attributes`) || PathPrefix(`/api/v1/products`)"
+      rule: "PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`) || PathPrefix(`/api/v1/attributes`) || PathPrefix(`/api/v1/products`) || PathPrefix(`/api/v1/listings`)"
       service: product-service
       entryPoints:
         - web

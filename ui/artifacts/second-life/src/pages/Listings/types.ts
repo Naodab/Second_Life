@@ -1,5 +1,3 @@
-export type ListingsView = "dashboard" | "facility" | "facility-add-product" | "facility-product" | "unpublished" | "orders";
-
 export interface PendingProduct {
   id: string;
   name: string;

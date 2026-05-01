@@ -11,6 +11,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.CascadeType;
 
+import org.hibernate.annotations.BatchSize;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,6 +48,7 @@ public class ProductVariant extends BaseEntity {
 
   Long quantity;
 
+  @BatchSize(size = 32)
   @OneToMany(mappedBy = "productVariant", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   List<ProductVariantAttributeValue> variantAttributeValues = new ArrayList<>();

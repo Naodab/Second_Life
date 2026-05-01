@@ -30,3 +30,5 @@ logging:
   level:
     root: INFO
     "[com.naodab.productservice]": DEBUG
+    "[org.springframework.data.elasticsearch.client.WIRE]": TRACE
+    "[org.elasticsearch.client.RestClient]": DEBUG

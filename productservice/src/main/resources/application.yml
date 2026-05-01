@@ -17,6 +17,8 @@ spring:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
   jackson:
+    serialization:
+      write-dates-as-timestamps: false
     deserialization:
       fail-on-unknown-properties: false
   elasticsearch:

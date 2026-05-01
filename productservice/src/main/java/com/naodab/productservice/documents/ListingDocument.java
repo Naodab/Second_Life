@@ -9,10 +9,10 @@ import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 import org.springframework.data.elasticsearch.annotations.GeoPointField;
-import org.springframework.data.elasticsearch.annotations.InnerField;
-import org.springframework.data.elasticsearch.annotations.MultiField;
 import org.springframework.data.elasticsearch.core.geo.GeoPoint;
 
+import com.naodab.productservice.models.Listing.ListingStatus;
+import com.naodab.productservice.models.Listing.ListingType;
 import com.naodab.productservice.models.Product.ProductStatus;
 
 import lombok.AllArgsConstructor;
@@ -22,14 +22,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
-@Document(indexName = "products")
+@Document(indexName = "listings")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class ProductDocument {
+public class ListingDocument {
   @Getter
   @Setter
   @Builder
@@ -47,8 +47,25 @@ public class ProductDocument {
   @Id
   String id;
 
-  @MultiField(mainField = @Field(type = FieldType.Text, analyzer = "standard"), otherFields = {
-      @InnerField(suffix = "keyword", type = FieldType.Keyword) })
+  @Field(type = FieldType.Text, analyzer = "standard")
+  String title;
+
+  @Field(type = FieldType.Text, analyzer = "standard")
+  String listingDescription;
+
+  @Field(type = FieldType.Double)
+  Double minPrice;
+
+  @Field(type = FieldType.Double)
+  Double maxPrice;
+
+  @Field(type = FieldType.Keyword)
+  ListingType listingType;
+
+  @Field(type = FieldType.Keyword)
+  ListingStatus listingStatus;
+
+  @Field(type = FieldType.Text, analyzer = "standard")
   String name;
 
   @Field(type = FieldType.Text, analyzer = "standard")
@@ -89,6 +106,9 @@ public class ProductDocument {
 
   @Field(type = FieldType.Keyword)
   ProductStatus status;
+
+  @Field(type = FieldType.Keyword)
+  String productId;
 
   @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
   LocalDateTime createdAt;

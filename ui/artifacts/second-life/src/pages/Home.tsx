@@ -7,6 +7,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CornerAngleQuickFilter } from "@/components/CornerAngleQuickFilter";
 import { buildFreshSearchPath } from "@/lib/search-url";
+import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +50,7 @@ export default function Home() {
                     Khám phá chợ
                   </Button>
                 </Link>
-                <Link href="/listings">
+                <Link href={SELLER_HUB_HOME}>
                   <Button size="lg" variant="secondary" className="rounded-full px-8 text-base bg-white border shadow-sm h-14">
                     Bắt đầu bán
                   </Button>

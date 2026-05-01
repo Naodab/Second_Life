@@ -1,9 +1,10 @@
 import { Link, useLocation } from "wouter";
+import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { Facebook, Instagram } from "lucide-react";
 
 export function Footer() {
   const [location] = useLocation();
-  if (location.startsWith('/listings')) return null;
+  if (location.startsWith("/manage") || location.startsWith("/listings")) return null;
 
   return (
     <footer className="bg-white border-t mt-20">
@@ -35,7 +36,7 @@ export function Footer() {
               <li><Link href="/search?type=buy" className="hover:text-primary">Tất cả sản phẩm</Link></li>
               <li><Link href="/search?type=rent" className="hover:text-primary">Cho thuê</Link></li>
               <li><Link href="/search" className="hover:text-primary">Danh mục</Link></li>
-              <li><Link href="/listings" className="hover:text-primary">Đăng bán</Link></li>
+              <li><Link href={SELLER_HUB_HOME} className="hover:text-primary">Đăng bán</Link></li>
             </ul>
           </div>
           

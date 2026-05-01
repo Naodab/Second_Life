@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import {
@@ -20,7 +20,15 @@ import { OwnerProductDetail } from "./OwnerProductDetail";
 import { OrdersView } from "./OrdersView";
 import { UnpublishedView } from "./UnpublishedView";
 import { UploadingModal } from "./UploadingModal";
-import type { AddProductSubmitPayload, ListingsView, PendingProduct } from "./types";
+import {
+  manageAddProductPath,
+  manageDashboardPath,
+  manageFacilityPath,
+  manageProductDetailPath,
+  manageUnpublishedPath,
+  parseManageRoute,
+} from "./manageRoutes";
+import type { AddProductSubmitPayload, PendingProduct } from "./types";
 
 async function attachPlaceNames(
   facilities: FacilityResponse[],
@@ -51,14 +59,13 @@ async function attachPlaceNames(
 }
 
 export default function Listings() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const route = parseManageRoute(location);
   const { toast } = useToast();
 
-  const [view, setView] = useState<ListingsView>("dashboard");
   const [facilities, setFacilities] = useState<FacilityWithPlaceNames[]>([]);
-  const [activeFacilityId, setActiveFacilityId] = useState("");
+  const [contextFacilityId, setContextFacilityId] = useState("");
   const [facilitiesLoading, setFacilitiesLoading] = useState(true);
-  const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [facilitiesOpen, setFacilitiesOpen] = useState(true);
   const [facilitySearch, setFacilitySearch] = useState("");
   const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
@@ -76,7 +83,7 @@ export default function Listings() {
         if (cancelled) return;
         setFacilities(list);
         if (list.length > 0) {
-          setActiveFacilityId((prev) =>
+          setContextFacilityId((prev) =>
             prev && list.some((s) => s.id === prev) ? prev : list[0].id,
           );
         }
@@ -98,23 +105,43 @@ export default function Listings() {
     };
   }, [toast]);
 
-  const activeFacility = useMemo(
-    () => facilities.find((s) => s.id === activeFacilityId),
-    [facilities, activeFacilityId],
-  );
+  useEffect(() => {
+    if (!route || route.tag === "dashboard") {
+      return;
+    }
 
-  const facilityPendingProducts = pendingProducts.filter((p) => p.facilityId === activeFacilityId);
+    setContextFacilityId(route.facilityId);
+  }, [route]);
 
-  const handleSelectFacility = (id: string) => {
-    setActiveFacilityId(id);
-    setView("facility");
-    setActiveProductId(null);
-  };
+  useEffect(() => {
+    if (facilitiesLoading || !route || route.tag === "dashboard") {
+      return;
+    }
+    const { facilityId } = route;
+    if (!facilities.some((f) => f.id === facilityId)) {
+      toast({
+        title: "Không tìm thấy cơ sở",
+        description: "Cơ sở trong đường dẫn không tồn tại hoặc đã bị xóa.",
+        variant: "destructive",
+      });
+      setLocation(manageDashboardPath(), { replace: true });
+    }
+  }, [facilitiesLoading, facilities, route, setLocation, toast]);
 
-  const handleViewProduct = (productId: string) => {
-    setActiveProductId(productId);
-    setView("facility-product");
-  };
+  useEffect(() => {
+    if (!location.startsWith("/manage")) {
+      return;
+    }
+    const parsed = parseManageRoute(location);
+    if (!parsed) {
+      setLocation(manageDashboardPath(), { replace: true });
+    }
+  }, [location, setLocation]);
+
+  const activeFacility =
+    route && route.tag !== "dashboard"
+      ? facilities.find((s) => s.id === route.facilityId)
+      : undefined;
 
   const handleAddProductSubmit = async (data: AddProductSubmitPayload) => {
     setIsUploadingModal(true);
@@ -128,7 +155,6 @@ export default function Listings() {
 
       // Product creation endpoint is still mocked in current FE flow, so keep pending queue locally.
       setIsUploadingModal(false);
-      setView("facility");
       const pending: PendingProduct = {
         id: `pending-${Date.now()}`,
         name: data.name,
@@ -143,8 +169,11 @@ export default function Listings() {
       setPendingProducts((prev) => [...prev, pending]);
       toast({
         title: "Upload hoàn tất!",
-        description: "Ảnh sản phẩm đã upload lên Cloudinary. Vào 'Sản phẩm chưa đăng' để định giá và đăng.",
+        description:
+          "Ảnh sản phẩm đã upload lên Cloudinary. Vào 'Sản phẩm chưa đăng' để định giá và đăng.",
       });
+
+      setLocation(manageFacilityPath(data.facilityId));
     } catch (e) {
       setIsUploadingModal(false);
       toast({
@@ -156,29 +185,32 @@ export default function Listings() {
     }
   };
 
-  const handlePublish = (id: string, price?: number) => {
-    setPendingProducts((prev) => prev.filter((p) => p.id !== id));
+  const handlePublish = (_id: string, _price?: number) => {
+    setPendingProducts((prev) => prev.filter((p) => p.id !== _id));
     toast({ title: "Đã đăng sản phẩm!", description: "Sản phẩm của bạn đã được đăng bán." });
   };
 
   const handleFacilityCreated = (facility: FacilityWithPlaceNames) => {
     setFacilities((prev) => [...prev, facility]);
-    setActiveFacilityId(facility.id);
-    setView("facility");
+    setContextFacilityId(facility.id);
     toast({
       title: "Đã tạo cơ sở",
       description: `${facility.name} đã được thêm vào danh sách.`,
     });
+    setLocation(manageFacilityPath(facility.id));
   };
 
   const handleUpdateFacilityAvatar = async (file: File) => {
-    if (!activeFacilityId) return;
+    const fid =
+      route && route.tag !== "dashboard" ? route.facilityId : contextFacilityId;
+    if (!fid) return;
+
     try {
       const uploadedUrl = await uploadImageToCloudinary(file, "second-life/facilities");
-      await uploadFacilityMainImage(activeFacilityId, uploadedUrl);
+      await uploadFacilityMainImage(fid, uploadedUrl);
       setFacilities((prev) =>
         prev.map((facility) =>
-          facility.id === activeFacilityId ? { ...facility, imageUrl: uploadedUrl } : facility,
+          facility.id === fid ? { ...facility, imageUrl: uploadedUrl } : facility,
         ),
       );
       toast({
@@ -195,15 +227,18 @@ export default function Listings() {
     }
   };
 
-  const activeProduct = activeProductId ? MOCK_PRODUCTS.find((p) => p.id === activeProductId) : null;
+  const activeProduct =
+    route?.tag === "product" ? MOCK_PRODUCTS.find((p) => p.id === route.productId) : null;
+
+  const unpublishedFacilityId =
+    route?.tag === "unpublished" ? route.facilityId : contextFacilityId;
+  const unpublishedProducts = pendingProducts.filter((p) => p.facilityId === unpublishedFacilityId);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <ListingsSidebar
-        view={view}
-        setView={setView}
-        activeFacilityId={activeFacilityId}
-        onSelectFacility={handleSelectFacility}
+        route={route ?? null}
+        contextFacilityId={contextFacilityId}
         facilitiesOpen={facilitiesOpen}
         setFacilitiesOpen={setFacilitiesOpen}
         facilitySearch={facilitySearch}
@@ -223,36 +258,47 @@ export default function Listings() {
             </div>
           ) : (
             <>
-              {view === "dashboard" && <DashboardView facilityId={activeFacilityId} />}
+              {route?.tag === "dashboard" && !!contextFacilityId && (
+                <DashboardView facilityId={contextFacilityId} />
+              )}
 
-              {view === "facility" && activeFacility && (
+              {route?.tag === "facility" && activeFacility && (
                 <FacilityView
                   facility={activeFacility}
-                  onViewProduct={handleViewProduct}
-                  onAddProduct={() => setView("facility-add-product")}
-                  onViewUnpublished={() => setView("unpublished")}
+                  onViewProduct={(productId) =>
+                    setLocation(manageProductDetailPath(activeFacility.id, productId))
+                  }
+                  onAddProduct={() => setLocation(manageAddProductPath(activeFacility.id))}
+                  onViewUnpublished={() => setLocation(manageUnpublishedPath(activeFacility.id))}
                   onUpdateAvatar={handleUpdateFacilityAvatar}
-                  pendingCount={facilityPendingProducts.length}
+                  pendingCount={
+                    pendingProducts.filter((p) => p.facilityId === activeFacility.id).length
+                  }
                 />
               )}
 
-              {view === "facility-add-product" && activeFacilityId && (
+              {route?.tag === "add-product" && route.facilityId && (
                 <AddProductPage
-                  facilityId={activeFacilityId}
-                  onBack={() => setView("facility")}
+                  facilityId={route.facilityId}
+                  onBack={() => setLocation(manageFacilityPath(route.facilityId))}
                   onSubmit={handleAddProductSubmit}
                 />
               )}
 
-              {view === "facility-product" && activeProduct && (
-                <OwnerProductDetail product={activeProduct} onBack={() => setView("facility")} />
+              {route?.tag === "product" && activeProduct && (
+                <OwnerProductDetail
+                  product={activeProduct}
+                  onBack={() => setLocation(manageFacilityPath(route.facilityId))}
+                />
               )}
 
-              {view === "unpublished" && (
-                <UnpublishedView products={facilityPendingProducts} onPublish={handlePublish} />
+              {route?.tag === "unpublished" && (
+                <UnpublishedView products={unpublishedProducts} onPublish={handlePublish} />
               )}
 
-              {view === "orders" && <OrdersView facilityId={activeFacilityId} />}
+              {route?.tag === "orders" && !!route.facilityId && (
+                <OrdersView facilityId={route.facilityId} />
+              )}
             </>
           )}
         </div>

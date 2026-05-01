@@ -10,17 +10,23 @@ import {
   FileText,
   Plus,
 } from "lucide-react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { facilityAvatarUrl, type FacilityWithPlaceNames } from "@/api/facility";
-import type { ListingsView, PendingProduct } from "./types";
+import type { PendingProduct } from "./types";
+import type { ManageRouteParsed } from "./manageRoutes";
+import {
+  facilityScopeActive,
+  manageDashboardPath,
+  manageFacilityPath,
+  manageOrdersPath,
+} from "./manageRoutes";
 
 export function ListingsSidebar({
-  view,
-  setView,
-  activeFacilityId,
-  onSelectFacility,
+  route,
+  contextFacilityId,
   facilitiesOpen,
   setFacilitiesOpen,
   facilitySearch,
@@ -30,10 +36,8 @@ export function ListingsSidebar({
   facilities,
   onAddFacilityClick,
 }: {
-  view: ListingsView;
-  setView: (v: ListingsView) => void;
-  activeFacilityId: string;
-  onSelectFacility: (id: string) => void;
+  route: ManageRouteParsed | null;
+  contextFacilityId: string;
   facilitiesOpen: boolean;
   setFacilitiesOpen: (v: boolean) => void;
   facilitySearch: string;
@@ -47,18 +51,22 @@ export function ListingsSidebar({
     (s) => !facilitySearch || s.name.toLowerCase().includes(facilitySearch.toLowerCase()),
   );
 
-  const navItem = (label: string, icon: ReactNode, isActive: boolean, onClick: () => void) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left",
-        isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-gray-100 hover:text-foreground"
-      )}
-    >
-      {icon} {label}
-    </button>
-  );
+  const ordersHref =
+    contextFacilityId.length > 0 ? manageOrdersPath(contextFacilityId) : manageDashboardPath();
+
+  function navLink(label: string, icon: ReactNode, href: string, active: boolean) {
+    return (
+      <Link
+        href={href}
+        className={cn(
+          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left",
+          active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
+        )}
+      >
+        {icon} {label}
+      </Link>
+    );
+  }
 
   return (
     <aside className="w-60 bg-white border-r h-screen sticky top-0 flex flex-col flex-shrink-0 shadow-sm">
@@ -74,7 +82,12 @@ export function ListingsSidebar({
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navItem("Dashboard", <LayoutDashboard className="w-4 h-4" />, view === "dashboard", () => setView("dashboard"))}
+        {navLink(
+          "Dashboard",
+          <LayoutDashboard className="w-4 h-4" />,
+          manageDashboardPath(),
+          route?.tag === "dashboard",
+        )}
 
         <div>
           <button
@@ -111,14 +124,12 @@ export function ListingsSidebar({
               </Button>
               <div className="max-h-[min(280px,42vh)] overflow-y-auto space-y-1 pr-0.5 -mr-0.5">
                 {filteredFacilities.map((f) => (
-                  <button
+                  <Link
                     key={f.id}
-                    type="button"
-                    onClick={() => onSelectFacility(f.id)}
+                    href={manageFacilityPath(f.id)}
                     className={cn(
-                      "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-all",
-                      activeFacilityId === f.id &&
-                        (view === "facility" || view === "facility-add-product" || view === "facility-product" || view === "unpublished")
+                      "flex w-full items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-all text-left min-w-0",
+                      route && facilityScopeActive(route, f.id)
                         ? "bg-primary/10 text-primary font-medium"
                         : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
                     )}
@@ -134,14 +145,14 @@ export function ListingsSidebar({
                         {pendingProducts.filter((p) => p.facilityId === f.id).length}
                       </span>
                     )}
-                  </button>
+                  </Link>
                 ))}
               </div>
             </div>
           )}
         </div>
 
-        {navItem("Đơn hàng", <FileText className="w-4 h-4" />, view === "orders", () => setView("orders"))}
+        {navLink("Đơn hàng", <FileText className="w-4 h-4" />, ordersHref, route?.tag === "orders")}
       </nav>
 
       <div className="p-3 border-t space-y-1">

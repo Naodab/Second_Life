@@ -14,6 +14,8 @@ import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.CascadeType;
 
+import org.hibernate.annotations.BatchSize;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,9 +59,11 @@ public class Product extends BaseEntity {
   @JoinColumn(name = "primary_sub_category_id", nullable = false)
   SubCategory primarySubCategory;
 
+  @BatchSize(size = 32)
   @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
   List<ProductMedia> medias;
 
+  @BatchSize(size = 32)
   @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   List<ProductVariant> variants = new ArrayList<>();
