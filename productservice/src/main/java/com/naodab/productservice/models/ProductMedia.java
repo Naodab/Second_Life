@@ -41,7 +41,7 @@ public class ProductMedia extends BaseEntity {
   @JoinColumn(name = "product_id", nullable = false)
   Product product;
 
-  @Column(name = "url", nullable = false)
+  @Column(name = "url", nullable = false, length = 2048)
   String mediaUrl;
 
   @Enumerated(EnumType.STRING)

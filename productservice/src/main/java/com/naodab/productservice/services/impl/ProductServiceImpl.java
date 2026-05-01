@@ -94,7 +94,7 @@ public class ProductServiceImpl implements ProductService {
           .setId(new ProductSubCategoryId(savedProduct.getId(), productSubCategory.getSubCategory().getId()));
     }
 
-    productSearchService.sync(savedProduct);
+    productSearchService.sync(savedProduct.getId());
     return productMapper.toProductResponse(savedProduct, requestData.attributes());
   }
 
@@ -141,7 +141,7 @@ public class ProductServiceImpl implements ProductService {
         .toList());
 
     Product savedProduct = productRepository.save(product);
-    productSearchService.sync(savedProduct);
+    productSearchService.sync(savedProduct.getId());
     return productMapper.toProductResponse(savedProduct, requestData.attributes());
   }
 
@@ -291,20 +291,21 @@ public class ProductServiceImpl implements ProductService {
   }
 
   @Override
+  @Transactional
   public void uploadProductImages(
       String profileId,
       String id,
       String thumbnailUrl,
-      List<String> productImages) {
+      List<String> productImages,
+      String videoUrl) {
     if (!StringUtils.hasText(id) || !StringUtils.hasText(profileId)) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
     if (!StringUtils.hasText(thumbnailUrl)) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
-    if (productImages == null || productImages.isEmpty() || productImages.stream().anyMatch(url -> !StringUtils.hasText(url))) {
-      throw new AppException(ErrorCode.INVALID_INPUT);
-    }
+    List<String> gallery = productImages == null ? List.of()
+        : productImages.stream().map(String::trim).filter(StringUtils::hasText).toList();
 
     Product product = productRepository.findByIdAndDeletedAtIsNull(id)
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
@@ -321,19 +322,34 @@ public class ProductServiceImpl implements ProductService {
         .sortOrder(0)
         .build());
 
-    for (int i = 0; i < productImages.size(); i++) {
+    for (int i = 0; i < gallery.size(); i++) {
       medias.add(ProductMedia.builder()
           .product(product)
-          .mediaUrl(productImages.get(i).trim())
+          .mediaUrl(gallery.get(i))
           .isThumbnail(false)
           .mediaType(ProductMedia.MediaType.IMAGE)
           .sortOrder(i + 1)
           .build());
     }
 
-    product.setMedias(medias);
+    if (StringUtils.hasText(videoUrl)) {
+      medias.add(ProductMedia.builder()
+          .product(product)
+          .mediaUrl(videoUrl.trim())
+          .isThumbnail(false)
+          .mediaType(ProductMedia.MediaType.VIDEO)
+          .sortOrder(gallery.size() + 1)
+          .build());
+    }
+
+    if (product.getMedias() == null) {
+      product.setMedias(new ArrayList<>());
+    } else {
+      product.getMedias().clear();
+    }
+    product.getMedias().addAll(medias);
     Product savedProduct = productRepository.save(product);
-    productSearchService.sync(savedProduct);
+    productSearchService.sync(savedProduct.getId());
   }
 
   @Override

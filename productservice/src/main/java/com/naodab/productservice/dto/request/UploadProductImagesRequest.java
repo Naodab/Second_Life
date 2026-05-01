@@ -1,9 +1,9 @@
 package com.naodab.productservice.dto.request;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,6 +21,8 @@ public class UploadProductImagesRequest {
   @NotBlank(message = "REQUIRED_FIELD")
   String thumbnailUrl;
 
-  @NotEmpty(message = "REQUIRED_FIELD")
-  List<String> productImageUrls;
+  @Builder.Default
+  List<String> productImageUrls = new ArrayList<>();
+
+  String videoUrl;
 }

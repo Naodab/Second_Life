@@ -9,7 +9,8 @@ import {
 } from "@/api/facility";
 import { getProvinces, getWards } from "@/api/location";
 import { MOCK_PRODUCTS } from "@/lib/mock-data";
-import { uploadImageToCloudinary } from "@/lib/cloudinary";
+import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/lib/cloudinary";
+import { createProduct, uploadProductImages } from "@/api/product";
 import { useToast } from "@/hooks/use-toast";
 import { AddFacilityModal } from "./AddFacilityModal";
 import { AddProductPage } from "./AddProductPage";
@@ -144,41 +145,98 @@ export default function Listings() {
       : undefined;
 
   const handleAddProductSubmit = async (data: AddProductSubmitPayload) => {
-    setIsUploadingModal(true);
-    try {
-      const uploadedCoverUrl = data.coverFile
-        ? await uploadImageToCloudinary(data.coverFile, "second-life/products")
-        : data.previewUrl;
-      const uploadedGalleryUrls = await Promise.all(
-        data.otherImageFiles.map((file) => uploadImageToCloudinary(file, "second-life/products")),
-      );
+    const uploads: File[] = [data.thumbnailFile, ...data.galleryImageFiles];
+    const hadVideo = Boolean(data.videoFile);
+    if (data.videoFile) {
+      uploads.push(data.videoFile);
+    }
+    const totalUploads = uploads.length;
 
-      // Product creation endpoint is still mocked in current FE flow, so keep pending queue locally.
+    setIsUploadingModal(true);
+
+    try {
+      let thumbnailUrl = "";
+      const galleryUrls: string[] = [];
+      let videoUrl: string | undefined;
+
+      for (let i = 0; i < uploads.length; i++) {
+        const file = uploads[i];
+        const isVideoSlot = hadVideo && i === uploads.length - 1;
+        toast({
+          title: "Đang upload lên Cloudinary",
+          description:
+            `${i + 1}/${totalUploads}` +
+            (isVideoSlot ? " — video" : i === 0 ? " — ảnh đại diện" : " — ảnh phụ"),
+        });
+
+        const url = isVideoSlot
+          ? await uploadVideoToCloudinary(file, "second-life/products")
+          : await uploadImageToCloudinary(file, "second-life/products");
+
+        if (i === 0) {
+          thumbnailUrl = url;
+        } else if (isVideoSlot) {
+          videoUrl = url;
+        } else {
+          galleryUrls.push(url);
+        }
+      }
+
+      toast({
+        title: "Đang lưu sản phẩm",
+        description: "Gửi thông tin sản phẩm (bước 1)…",
+      });
+
+      const created = await createProduct({
+        name: data.name.trim(),
+        description: data.description.trim() || undefined,
+        facilityId: data.facilityId,
+        subCategoryIds: data.subCategoryIds,
+        primarySubCategoryId: data.primarySubCategoryId,
+        attributeIds: data.attributeIds,
+        variants: data.variants.map((v) => ({
+          quantity: v.quantity,
+          attributeValueIds: v.attributeValueIds,
+        })),
+      });
+
+      toast({
+        title: "Đang gắn ảnh & đồng bộ",
+        description: "Cập nhật media và chỉ mục tìm kiếm…",
+      });
+
+      await uploadProductImages(created.id, {
+        thumbnailUrl,
+        productImageUrls: galleryUrls,
+        videoUrl: videoUrl || undefined,
+      });
+
       setIsUploadingModal(false);
+
       const pending: PendingProduct = {
-        id: `pending-${Date.now()}`,
+        id: created.id,
         name: data.name,
         description: data.description,
         subCategoryIds: data.subCategoryIds,
         attributeIds: data.attributeIds,
         variantCount: data.variants.length,
         totalQty: data.variants.reduce((sum, variant) => sum + variant.quantity, 0),
-        previewUrl: uploadedCoverUrl || uploadedGalleryUrls[0] || data.previewUrl,
+        previewUrl: thumbnailUrl,
         facilityId: data.facilityId,
       };
       setPendingProducts((prev) => [...prev, pending]);
       toast({
-        title: "Upload hoàn tất!",
+        title: "Đã tạo sản phẩm",
         description:
-          "Ảnh sản phẩm đã upload lên Cloudinary. Vào 'Sản phẩm chưa đăng' để định giá và đăng.",
+          "Ảnh/video đã lên Cloudinary; sản phẩm lưu ở trạng thái nháp và đã đồng bộ tìm kiếm. Vào Sản phẩm chưa đăng để định giá.",
       });
 
       setLocation(manageFacilityPath(data.facilityId));
     } catch (e) {
       setIsUploadingModal(false);
       toast({
-        title: "Upload thất bại",
-        description: e instanceof Error ? e.message : "Không thể upload ảnh sản phẩm.",
+        title: "Tạo sản phẩm thất bại",
+        description: e instanceof Error ? e.message : "Vui lòng thử lại.",
         variant: "destructive",
       });
       throw e;

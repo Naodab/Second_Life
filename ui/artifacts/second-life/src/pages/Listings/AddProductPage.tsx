@@ -17,6 +17,13 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { AddProductSubmitPayload } from "./types";
 
+/** 1 thumbnail + tối đa 11 ảnh phụ = 12 ảnh */
+const MAX_GALLERY_IMAGES = 11;
+
+function revokeIfBlob(url: string) {
+  if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+}
+
 export function AddProductPage({
   facilityId,
   onBack,
@@ -38,6 +45,7 @@ export function AddProductPage({
     selectedAttributeValueByAttributeId: {},
   });
 
+  const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -46,43 +54,102 @@ export function AddProductPage({
     subCategoryIds: [] as string[],
     primarySubCategoryId: "",
     variants: [createEmptyVariant()],
-    coverFile: null as File | null,
-    coverPreview: "",
-    otherFiles: [] as { name: string; preview: string; type: string; file: File }[],
   });
+  const [media, setMedia] = useState<{
+    thumbnailFile: File | null;
+    thumbnailPreview: string;
+    gallery: { key: string; file: File; preview: string }[];
+    videoFile: File | null;
+    videoPreview: string;
+  }>({
+    thumbnailFile: null,
+    thumbnailPreview: "",
+    gallery: [],
+    videoFile: null,
+    videoPreview: "",
+  });
+  const [mediaError, setMediaError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [attributes, setAttributes] = useState<AttributeResponse[]>([]);
   const [isLoadingFilters, setIsLoadingFilters] = useState(false);
   const [filterLoadError, setFilterLoadError] = useState("");
   const [lastChangedVariantId, setLastChangedVariantId] = useState<string>("");
-  const coverRef = useRef<HTMLInputElement>(null);
-  const otherRef = useRef<HTMLInputElement>(null);
+  const thumbInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const setField = (field: string, value: unknown) => setForm((prev) => ({ ...prev, [field]: value }));
 
-  const handleCoverChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setField("coverFile", file);
-    setField("coverPreview", url);
+    if (!file || !file.type.startsWith("image/")) return;
+    setMedia((prev) => {
+      revokeIfBlob(prev.thumbnailPreview);
+      return {
+        ...prev,
+        thumbnailFile: file,
+        thumbnailPreview: URL.createObjectURL(file),
+      };
+    });
+    e.target.value = "";
   };
 
-  const handleOtherFiles = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const remaining = 10 - form.otherFiles.length;
-    files.slice(0, remaining).forEach((f) => {
-      const url = URL.createObjectURL(f);
-      setForm((prev) => ({
-        ...prev,
-        otherFiles: [...prev.otherFiles, { name: f.name, preview: f.type.startsWith("video") ? "" : url, type: f.type, file: f }],
-      }));
+  const clearThumbnail = () => {
+    setMedia((prev) => {
+      revokeIfBlob(prev.thumbnailPreview);
+      return { ...prev, thumbnailFile: null, thumbnailPreview: "" };
     });
   };
 
-  const removeOtherFile = (i: number) =>
-    setForm((prev) => ({ ...prev, otherFiles: prev.otherFiles.filter((_, idx) => idx !== i) }));
+  const handleGalleryChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith("image/"));
+    setMedia((prev) => {
+      const remaining = MAX_GALLERY_IMAGES - prev.gallery.length;
+      const slice = files.slice(0, Math.max(0, remaining));
+      return {
+        ...prev,
+        gallery: [
+          ...prev.gallery,
+          ...slice.map((file) => ({
+            key: `g-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            file,
+            preview: URL.createObjectURL(file),
+          })),
+        ],
+      };
+    });
+    e.target.value = "";
+  };
+
+  const removeGalleryItem = (key: string) => {
+    setMedia((prev) => {
+      const item = prev.gallery.find((g) => g.key === key);
+      if (item) revokeIfBlob(item.preview);
+      return { ...prev, gallery: prev.gallery.filter((g) => g.key !== key) };
+    });
+  };
+
+  const handleVideoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("video/")) return;
+    setMedia((prev) => {
+      revokeIfBlob(prev.videoPreview);
+      return {
+        ...prev,
+        videoFile: file,
+        videoPreview: URL.createObjectURL(file),
+      };
+    });
+    e.target.value = "";
+  };
+
+  const clearVideo = () => {
+    setMedia((prev) => {
+      revokeIfBlob(prev.videoPreview);
+      return { ...prev, videoFile: null, videoPreview: "" };
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -343,9 +410,14 @@ export function AddProductPage({
     selectedConcreteAttributeIds,
   ]);
 
-  const handleSubmit = async () => {
+  const handleFinalSubmit = async () => {
     if (hasDuplicateVariants) return;
     if (!canSubmit) return;
+    if (!media.thumbnailFile) {
+      setMediaError("Vui lòng chọn ảnh đại diện (thumbnail).");
+      return;
+    }
+    setMediaError("");
     const variants = variantPreviewRows.map((row) => ({
       skuPreview: row.title,
       quantity: row.quantity,
@@ -362,12 +434,9 @@ export function AddProductPage({
         primarySubCategoryId: form.primarySubCategoryId,
         attributeIds: selectedConcreteAttributeIds,
         variants,
-        previewUrl:
-          form.coverPreview || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&h=200&fit=crop",
-        coverFile: form.coverFile,
-        otherImageFiles: form.otherFiles
-          .filter((item) => item.type.startsWith("image/"))
-          .map((item) => item.file),
+        thumbnailFile: media.thumbnailFile,
+        galleryImageFiles: media.gallery.map((g) => g.file),
+        videoFile: media.videoFile,
       });
     } finally {
       setSubmitting(false);
@@ -376,6 +445,20 @@ export function AddProductPage({
 
   const reset = () => {
     setLastChangedVariantId("");
+    setStep(1);
+    setMediaError("");
+    setMedia((prev) => {
+      revokeIfBlob(prev.thumbnailPreview);
+      prev.gallery.forEach((g) => revokeIfBlob(g.preview));
+      revokeIfBlob(prev.videoPreview);
+      return {
+        thumbnailFile: null,
+        thumbnailPreview: "",
+        gallery: [],
+        videoFile: null,
+        videoPreview: "",
+      };
+    });
     setForm({
       name: "",
       description: "",
@@ -384,9 +467,6 @@ export function AddProductPage({
       subCategoryIds: [],
       primarySubCategoryId: "",
       variants: [createEmptyVariant()],
-      coverFile: null,
-      coverPreview: "",
-      otherFiles: [],
     });
   };
 
@@ -407,22 +487,34 @@ export function AddProductPage({
 
       <div className="relative z-20 px-1 sm:px-2 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-display text-emerald-900">Thêm mặt hàng mới</h2>
-          <p className="text-sm text-emerald-700/80">Thiết lập thông tin sản phẩm và thuộc tính để tạo bài đăng nhanh.</p>
+          <h2 className="text-2xl font-display text-emerald-900">
+            {step === 1 ? "Thêm mặt hàng mới" : "Ảnh & video sản phẩm"}
+          </h2>
+          <p className="text-sm text-emerald-700/80">
+            {step === 1
+              ? "Thiết lập thông tin và thuộc tính ở bước 1, sau đó tải ảnh/video ở bước 2."
+              : `Ảnh đại diện bắt buộc; tối đa ${MAX_GALLERY_IMAGES} ảnh phụ (tối đa 12 ảnh). Có thể thêm một video. Nhấn Tạo để upload lên Cloudinary và lưu sản phẩm.`}
+          </p>
         </div>
         <Button
           variant="outline"
           onClick={() => {
+            if (step === 2) {
+              setStep(1);
+              return;
+            }
             onBack();
             reset();
           }}
           className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
         >
-          <ArrowLeft className="w-4 h-4 mr-1.5" /> Quay lại
+          <ArrowLeft className="w-4 h-4 mr-1.5" /> {step === 2 ? "Về bước 1" : "Quay lại"}
         </Button>
       </div>
 
       <div className="relative z-20 flex flex-col gap-4 py-3 px-1 sm:px-2">
+        {step === 1 ? (
+          <>
         <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -799,10 +891,131 @@ export function AddProductPage({
             </div>
           </div>
         </div>
+          </>
+        ) : (
+          <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-6 space-y-6">
+            <input
+              ref={thumbInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleThumbnailChange}
+            />
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleGalleryChange}
+            />
+            <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} />
+
+            <div>
+              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Bước 2 / 2</p>
+              <label className="text-sm font-semibold mt-3 mb-2 block">
+                Ảnh đại diện (thumbnail) <span className="text-destructive">*</span>
+              </label>
+              <div className="flex flex-wrap gap-4 items-start">
+                {media.thumbnailPreview ? (
+                  <div className="relative w-40 h-40 rounded-2xl overflow-hidden border border-emerald-200 shadow-sm bg-emerald-50">
+                    <img src={media.thumbnailPreview} alt="" className="w-full h-full object-cover" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-2 right-2 h-8 w-8 rounded-full shadow-md"
+                      aria-label="Xóa ảnh đại diện"
+                      onClick={clearThumbnail}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => thumbInputRef.current?.click()}
+                    className="w-40 h-40 rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 flex flex-col items-center justify-center gap-2 text-sm text-emerald-800 hover:bg-emerald-50 transition-colors"
+                  >
+                    <ImageIcon className="w-8 h-8 opacity-70" />
+                    Chọn ảnh
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <label className="text-sm font-semibold block">
+                  Ảnh phụ <span className="text-muted-foreground font-normal">({media.gallery.length}/{MAX_GALLERY_IMAGES})</span>
+                </label>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                {media.gallery.map((g) => (
+                  <div key={g.key} className="relative aspect-square rounded-xl overflow-hidden border border-emerald-100 bg-emerald-50 shadow-sm">
+                    <img src={g.preview} alt="" className="w-full h-full object-cover" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="secondary"
+                      className="absolute top-1 right-1 h-7 w-7 rounded-full shadow-md bg-background/90"
+                      aria-label="Xóa ảnh"
+                      onClick={() => removeGalleryItem(g.key)}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+                {media.gallery.length < MAX_GALLERY_IMAGES && (
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="aspect-square rounded-xl border-2 border-dashed border-emerald-200 flex flex-col items-center justify-center gap-1 text-xs text-emerald-700 hover:bg-emerald-50/80"
+                  >
+                    <Plus className="w-6 h-6" />
+                    Thêm ảnh
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Tối đa {MAX_GALLERY_IMAGES} ảnh phụ; có thể xóa và chọn lại.</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold mb-2 block">Video giới thiệu (tuỳ chọn)</label>
+              <div className="space-y-3">
+                {media.videoPreview && (
+                  <div className="relative rounded-xl overflow-hidden border border-emerald-100 bg-black max-h-64">
+                    <video src={media.videoPreview} controls className="w-full max-h-64" playsInline />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      className="absolute top-2 right-2 rounded-full"
+                      onClick={clearVideo}
+                    >
+                      <X className="w-4 h-4 mr-1" /> Xóa video
+                    </Button>
+                  </div>
+                )}
+                {!media.videoFile && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    onClick={() => videoInputRef.current?.click()}
+                  >
+                    <Video className="w-4 h-4 mr-2" />
+                    Chọn video
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
 
-      {!canSubmit && validationMessage && (
+      {step === 1 && !canSubmit && validationMessage && (
         <div
           className={cn(
             "mt-3 flex items-center gap-2 rounded-xl p-3 text-sm",
@@ -816,24 +1029,56 @@ export function AddProductPage({
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          onClick={() => {
-            onBack();
-            reset();
-          }}
-          className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-        >
-          Quay lại
-        </Button>
-        <Button
-          disabled={!canSubmit || submitting}
-          onClick={() => void handleSubmit()}
-          className="rounded-full px-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
-        >
-          {submitting ? "Đang upload ảnh..." : "Tiếp theo"} <ChevronRight className="w-4 h-4 ml-1" />
-        </Button>
+      {step === 2 && mediaError && (
+        <div className="mt-3 flex items-center gap-2 rounded-xl p-3 text-sm text-destructive bg-destructive/10">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{mediaError}</span>
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-2 mt-2">
+        {step === 1 ? (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                onBack();
+                reset();
+              }}
+              className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+            >
+              Quay lại
+            </Button>
+            <Button
+              disabled={!canSubmit}
+              onClick={() => {
+                setMediaError("");
+                setStep(2);
+              }}
+              className="rounded-full px-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
+            >
+              Tiếp theo <ChevronRight className="w-4 h-4 ml-1 inline" />
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setStep(1)}
+              className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              disabled={submitting}
+            >
+              Quay lại
+            </Button>
+            <Button
+              disabled={!media.thumbnailFile || submitting}
+              onClick={() => void handleFinalSubmit()}
+              className="rounded-full px-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
+            >
+              {submitting ? "Đang tạo…" : "Tạo sản phẩm"}
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

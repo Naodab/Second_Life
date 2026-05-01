@@ -60,6 +60,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
 
   ElasticsearchOperations elasticsearchOperations;
   ProductMapper productMapper;
+  ProductElasticsearchIndexWriter productElasticsearchIndexWriter;
   ProductRepository productRepository;
   SubCategoryRepository subCategoryRepository;
 
@@ -69,8 +70,12 @@ public class ProductSearchServiceImpl implements ProductSearchService {
 
   @Override
   @Async
-  public void sync(Product product) {
-    saveProductDocument(product);
+  public void sync(String productId) {
+    try {
+      productElasticsearchIndexWriter.writeProductDocumentById(productId);
+    } catch (Exception e) {
+      log.error("Async Elasticsearch sync failed for product id={}", productId, e);
+    }
   }
 
   @Override

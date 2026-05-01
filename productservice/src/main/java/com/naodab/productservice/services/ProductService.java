@@ -14,7 +14,12 @@ public interface ProductService {
 
   ProductResponse getProductById(String id);
 
-  void uploadProductImages(String profileId, String id, String thumbnailUrl, List<String> productImageUrls);
+  void uploadProductImages(
+      String profileId,
+      String id,
+      String thumbnailUrl,
+      List<String> productImageUrls,
+      String videoUrl);
 
   void deleteProduct(String id);
 }

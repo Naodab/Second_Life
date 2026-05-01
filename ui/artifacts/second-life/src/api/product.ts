@@ -70,3 +70,55 @@ export async function getFacilityPrimarySubcategories(
   );
   return unwrapApiData(raw);
 }
+
+export type ProductCreateBody = {
+  name: string;
+  description?: string;
+  facilityId: string;
+  subCategoryIds: string[];
+  primarySubCategoryId: string;
+  attributeIds: string[];
+  variants: { quantity: number; attributeValueIds: string[] }[];
+};
+
+export type ProductCreateResponse = {
+  id: string;
+  name: string;
+  description?: string | null;
+  thumbnailUrl?: string | null;
+  status?: ProductStatus;
+};
+
+export type UploadProductImagesBody = {
+  thumbnailUrl: string;
+  productImageUrls: string[];
+  /** Cloudinary secure_url; optional */
+  videoUrl?: string | null;
+};
+
+export async function createProduct(body: ProductCreateBody): Promise<ProductCreateResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<ProductCreateResponse>>(`/api/v1/products`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return unwrapApiData(raw);
+}
+
+export async function uploadProductImages(
+  productId: string,
+  body: UploadProductImagesBody,
+): Promise<void> {
+  const payload: Record<string, unknown> = {
+    thumbnailUrl: body.thumbnailUrl.trim(),
+    productImageUrls: body.productImageUrls.map((u) => u.trim()).filter(Boolean),
+  };
+  if (body.videoUrl?.trim()) {
+    payload.videoUrl = body.videoUrl.trim();
+  }
+  await customFetch<ApiResponseEnvelope<unknown>>(`/api/v1/products/${encodeURIComponent(productId)}/images`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}

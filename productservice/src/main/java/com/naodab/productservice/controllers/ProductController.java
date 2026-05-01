@@ -112,7 +112,12 @@ public class ProductController {
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
       @RequestBody @Valid UploadProductImagesRequest request) {
     String profileId = validateProfileId(profileIdHeader);
-    productService.uploadProductImages(profileId, id, request.getThumbnailUrl(), request.getProductImageUrls());
+    productService.uploadProductImages(
+        profileId,
+        id,
+        request.getThumbnailUrl(),
+        request.getProductImageUrls(),
+        request.getVideoUrl());
     return ResponseEntity.ok(ApiResponse.<Void>builder().build());
   }
 

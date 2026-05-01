@@ -7,10 +7,8 @@ import com.naodab.productservice.dto.response.PagedItemsResponse;
 import com.naodab.productservice.dto.response.PrimarySubcategorySummaryResponse;
 import com.naodab.productservice.dto.response.ProductItemResponse;
 import com.naodab.productservice.documents.ProductDocument;
-import com.naodab.productservice.models.Product;
-
 public interface ProductSearchService {
-  void sync(Product product);
+  void sync(String productId);
 
   int reindexAllProductsFromDatabase();
 
