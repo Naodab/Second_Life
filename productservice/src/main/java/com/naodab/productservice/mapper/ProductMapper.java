@@ -1,9 +1,11 @@
 package com.naodab.productservice.mapper;
 
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 import org.springframework.data.elasticsearch.core.geo.GeoPoint;
@@ -15,6 +17,8 @@ import com.naodab.productservice.dto.response.CategoryResponse;
 import com.naodab.productservice.dto.response.FacilityResponse;
 import com.naodab.productservice.dto.response.ProductItemResponse;
 import com.naodab.productservice.dto.response.ProductResponse;
+import com.naodab.productservice.dto.response.ProductVariantSummaryResponse;
+import com.naodab.productservice.models.AttributeValue;
 import com.naodab.productservice.models.Attribute;
 import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Category;
@@ -169,8 +173,7 @@ public class ProductMapper {
     List<ProductVariant> variants = product.getVariants() == null ? List.of() : product.getVariants();
     int variantCount = variants.size();
     String subName = product.getPrimarySubCategory() == null ? null : product.getPrimarySubCategory().getName();
-    String subId =
-        product.getPrimarySubCategory() == null ? null : product.getPrimarySubCategory().getId();
+    String subId = product.getPrimarySubCategory() == null ? null : product.getPrimarySubCategory().getId();
 
     return ProductItemResponse.builder()
         .id(product.getId())
@@ -260,7 +263,61 @@ public class ProductMapper {
                 .build())
             .toList())
         .medias(product.getMedias())
+        .variants(resolveVariantSummaries(product))
         .status(product.getStatus())
         .build();
+  }
+
+  private List<ProductVariantSummaryResponse> resolveVariantSummaries(Product product) {
+    if (product.getVariants() == null || product.getVariants().isEmpty()) {
+      return List.of();
+    }
+    return product.getVariants().stream().map(this::toVariantSummary).toList();
+  }
+
+  public List<ProductVariantSummaryResponse> toProductVariantSummaryResponses(List<ProductVariant> variants) {
+    if (variants == null || variants.isEmpty()) {
+      return List.of();
+    }
+    return variants.stream().map(this::toVariantSummary).toList();
+  }
+
+  public ProductVariantSummaryResponse toVariantSummary(ProductVariant v) {
+    return ProductVariantSummaryResponse.builder()
+        .id(v.getId())
+        .sku(v.getSku())
+        .quantity(v.getQuantity())
+        .label(buildProductVariantLabel(v))
+        .build();
+  }
+
+  private String buildProductVariantLabel(ProductVariant v) {
+    if (v.getVariantAttributeValues() == null || v.getVariantAttributeValues().isEmpty()) {
+      if (StringUtils.hasText(v.getSku())) {
+        return v.getSku().trim();
+      }
+      String idPart = v.getId() != null && v.getId().length() >= 8 ? v.getId().substring(0, 8) : "—";
+      return "SKU " + idPart;
+    }
+    return v.getVariantAttributeValues().stream()
+        .map(ProductVariantAttributeValue::getAttributeValue)
+        .filter(Objects::nonNull)
+        .sorted(Comparator.comparing(av -> {
+          Attribute attribute = av.getAttribute();
+          return attribute != null && StringUtils.hasText(attribute.getName())
+              ? attribute.getName().trim()
+              : "";
+        }))
+        .map(av -> attributeValueLabel(av))
+        .collect(Collectors.joining(" · "));
+  }
+
+  private static String attributeValueLabel(AttributeValue av) {
+    Attribute attribute = av.getAttribute();
+    String prefix = attribute != null && StringUtils.hasText(attribute.getName())
+        ? attribute.getName().trim()
+        : "?";
+    String value = av.getValue() != null ? av.getValue().trim() : "";
+    return value.isEmpty() ? prefix : prefix + ": " + value;
   }
 }

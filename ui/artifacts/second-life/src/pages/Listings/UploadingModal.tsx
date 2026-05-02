@@ -16,7 +16,7 @@ export function UploadingModal({ open }: { open: boolean }) {
               Hệ thống đang tải ảnh lên và phân tích để đề xuất giá phù hợp. Vui lòng chờ trong giây lát.
             </p>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
             <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: "70%" }} />
           </div>
         </div>

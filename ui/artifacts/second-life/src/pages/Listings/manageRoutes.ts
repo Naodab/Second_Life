@@ -4,6 +4,7 @@ export type ManageRouteParsed =
   | { tag: "dashboard" }
   | { tag: "facility"; facilityId: string }
   | { tag: "add-product"; facilityId: string }
+  | { tag: "add-listing"; facilityId: string }
   | { tag: "product"; facilityId: string; productId: string }
   | { tag: "unpublished"; facilityId: string }
   | { tag: "orders"; facilityId: string };
@@ -20,6 +21,12 @@ export function manageAddProductPath(facilityId: string): string {
   return `${manageFacilityPath(facilityId)}/add-product`;
 }
 
+export function manageAddListingPath(facilityId: string, productId?: string): string {
+  const base = `${manageFacilityPath(facilityId)}/add-listing`;
+  const pid = productId?.trim();
+  return pid ? `${base}?product=${encodeURIComponent(pid)}` : base;
+}
+
 export function manageProductDetailPath(facilityId: string, productId: string): string {
   return `${manageFacilityPath(facilityId)}/products/${encodeURIComponent(productId)}`;
 }
@@ -33,10 +40,11 @@ export function manageOrdersPath(facilityId: string): string {
 }
 
 export function parseManageRoute(pathname: string): ManageRouteParsed | null {
-  if (!pathname.startsWith(MANAGE_BASE)) {
+  const pathOnly = pathname.split("?")[0] ?? pathname;
+  if (!pathOnly.startsWith(MANAGE_BASE)) {
     return null;
   }
-  const segments = pathname.split("/").filter(Boolean);
+  const segments = pathOnly.split("/").filter(Boolean);
   if (segments.length < 2 || segments[0] !== "manage") {
     return null;
   }
@@ -65,6 +73,8 @@ export function parseManageRoute(pathname: string): ManageRouteParsed | null {
   switch (fourth) {
     case "add-product":
       return segments.length === 4 ? { tag: "add-product", facilityId } : null;
+    case "add-listing":
+      return segments.length === 4 ? { tag: "add-listing", facilityId } : null;
     case "unpublished":
       return segments.length === 4 ? { tag: "unpublished", facilityId } : null;
     case "orders":

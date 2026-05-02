@@ -12,7 +12,7 @@ export function StatCard({
   color?: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border shadow-sm p-5">
+    <div className="rounded-2xl border bg-card p-5 shadow-sm">
       <p className="text-sm text-muted-foreground mb-1">{label}</p>
       <p className={cn("text-2xl font-bold", color)}>{value}</p>
       {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
@@ -25,7 +25,7 @@ export function RevenueBar({ label, value, max }: { label: string; value: number
   return (
     <div className="flex items-center gap-3">
       <span className="text-xs text-muted-foreground w-8 flex-shrink-0">{label}</span>
-      <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-5 flex-1 overflow-hidden rounded-full bg-muted">
         <div className="h-full bg-primary/80 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs font-medium w-20 text-right">{formatCurrency(value)}</span>

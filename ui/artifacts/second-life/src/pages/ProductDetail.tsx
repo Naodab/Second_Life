@@ -32,7 +32,7 @@ function ImageSlider({ images, productName }: { images: string[]; productName: s
 
   return (
     <div className="space-y-4">
-      <div className="aspect-square rounded-3xl overflow-hidden bg-white border shadow-sm relative group">
+      <div className="relative aspect-square overflow-hidden rounded-3xl border border-border bg-card shadow-sm group">
         <img
           src={images[active]}
           alt={productName}
@@ -42,13 +42,13 @@ function ImageSlider({ images, productName }: { images: string[]; productName: s
           <>
             <button
               onClick={prev}
-              className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-md hover:bg-white text-foreground shadow-md rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-background/90 p-2 text-foreground opacity-0 shadow-md backdrop-blur-md transition-opacity hover:bg-background group-hover:opacity-100 dark:bg-card/90 dark:hover:bg-card"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               onClick={next}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-md hover:bg-white text-foreground shadow-md rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-background/90 p-2 text-foreground opacity-0 shadow-md backdrop-blur-md transition-opacity hover:bg-background group-hover:opacity-100 dark:bg-card/90 dark:hover:bg-card"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -60,16 +60,24 @@ function ImageSlider({ images, productName }: { images: string[]; productName: s
           </>
         )}
         <div className="absolute top-4 right-4 flex gap-2">
-          <Button variant="secondary" size="icon" className="rounded-full bg-white/80 backdrop-blur-md hover:bg-white text-foreground shadow-sm">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="rounded-full bg-background/90 text-foreground shadow-sm backdrop-blur-md hover:bg-background dark:bg-card/90 dark:hover:bg-card"
+          >
             <Heart className="w-5 h-5" />
           </Button>
-          <Button variant="secondary" size="icon" className="rounded-full bg-white/80 backdrop-blur-md hover:bg-white text-foreground shadow-sm">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="rounded-full bg-background/90 text-foreground shadow-sm backdrop-blur-md hover:bg-background dark:bg-card/90 dark:hover:bg-card"
+          >
             <Share2 className="w-5 h-5" />
           </Button>
         </div>
         <button
           onClick={() => setLightbox(active)}
-          className="absolute bottom-4 right-4 bg-white/80 backdrop-blur-md hover:bg-white text-foreground shadow-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute bottom-4 right-4 rounded-full bg-background/90 p-2 text-foreground opacity-0 shadow-sm backdrop-blur-md transition-opacity hover:bg-background group-hover:opacity-100 dark:bg-card/90 dark:hover:bg-card"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
@@ -131,7 +139,13 @@ function StarDisplay({ rating, max = 5, size = "sm" }: { rating: number; max?: n
   return (
     <div className="flex">
       {[...Array(max)].map((_, i) => (
-        <Star key={i} className={cn(sz, i < Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-gray-200 text-gray-200")} />
+        <Star
+          key={i}
+          className={cn(
+            sz,
+            i < Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-muted text-muted-foreground/40",
+          )}
+        />
       ))}
     </div>
   );
@@ -170,7 +184,10 @@ function RecommendSlider({ products }: { products: any[] }) {
 
   return (
     <div className="relative">
-      <button onClick={() => scroll(-1)} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white border shadow-md rounded-full p-2 hover:bg-gray-50">
+      <button
+        onClick={() => scroll(-1)}
+        className="absolute -left-4 top-1/2 z-10 -translate-y-1/2 rounded-full border border-border bg-card p-2 shadow-md hover:bg-muted"
+      >
         <ChevronLeft className="w-5 h-5" />
       </button>
       <div ref={ref} className="overflow-x-auto hide-scrollbar space-y-4 pb-2 px-1">
@@ -191,7 +208,10 @@ function RecommendSlider({ products }: { products: any[] }) {
           </div>
         )}
       </div>
-      <button onClick={() => scroll(1)} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white border shadow-md rounded-full p-2 hover:bg-gray-50">
+      <button
+        onClick={() => scroll(1)}
+        className="absolute -right-4 top-1/2 z-10 -translate-y-1/2 rounded-full border border-border bg-card p-2 shadow-md hover:bg-muted"
+      >
         <ChevronRight className="w-5 h-5" />
       </button>
     </div>
@@ -282,8 +302,8 @@ export default function ProductDetail() {
   const avgRating = reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : product.rating;
 
   return (
-    <div className="min-h-screen bg-gray-50/30 pb-20">
-      <div className="border-b bg-white">
+    <div className="min-h-screen bg-muted/40 pb-20 dark:bg-background">
+      <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-sm text-muted-foreground flex gap-2">
           <Link href="/" className="hover:text-primary">Trang chủ</Link>
           <span>/</span>
@@ -308,10 +328,14 @@ export default function ProductDetail() {
 
           {/* RIGHT: Product Info */}
           <div className="lg:col-span-7 flex flex-col gap-6">
-            <div className="bg-white rounded-3xl border p-8 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">{product.subCategoryName}</Badge>
-                <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">Tình trạng: {product.condition}</Badge>
+            <div className="rounded-3xl border border-border bg-card p-8 shadow-sm">
+              <div className="mb-3 flex items-center gap-2">
+                <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
+                  {product.subCategoryName}
+                </Badge>
+                <Badge variant="outline" className="border-border bg-muted text-muted-foreground">
+                  Tình trạng: {product.condition}
+                </Badge>
               </div>
 
               <h1 className="text-3xl font-display font-bold text-foreground mb-3 leading-tight">{product.name}</h1>
@@ -321,8 +345,10 @@ export default function ProductDetail() {
               {/* Pricing */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 {(product.type === 'buy' || product.type === 'both') && product.buyPrice && (
-                  <div className="border rounded-2xl p-5 bg-gradient-to-br from-white to-primary/5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl">MUA</div>
+                  <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card to-primary/10 p-5 dark:to-primary/15">
+                    <div className="absolute top-0 right-0 rounded-bl-xl bg-primary px-3 py-1 text-[10px] font-bold text-primary-foreground">
+                      MUA
+                    </div>
                     <p className="text-xs text-muted-foreground mb-1">Giá bán</p>
                     <p className="text-2xl font-bold text-foreground">{formatCurrency(product.buyPrice)}</p>
                     {product.aiSuggestedBuyPrice && (
@@ -334,8 +360,10 @@ export default function ProductDetail() {
                   </div>
                 )}
                 {(product.type === 'rent' || product.type === 'both') && product.rentPrice && (
-                  <div className="border rounded-2xl p-5 bg-gradient-to-br from-white to-secondary/5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-secondary text-secondary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-xl">THUÊ</div>
+                  <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card to-secondary/10 p-5 dark:to-secondary/15">
+                    <div className="absolute top-0 right-0 rounded-bl-xl bg-secondary px-3 py-1 text-[10px] font-bold text-secondary-foreground">
+                      THUÊ
+                    </div>
                     <p className="text-xs text-muted-foreground mb-1">Giá thuê / ngày</p>
                     <p className="text-2xl font-bold text-foreground">{formatCurrency(product.rentPrice)}</p>
                     {product.aiSuggestedRentPrice && (
@@ -401,7 +429,7 @@ export default function ProductDetail() {
 
             {/* Facility info */}
             {facility && (
-              <div className="bg-white rounded-3xl border p-6 shadow-sm">
+              <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <img src={facility.avatar} alt={facility.name} className="w-16 h-16 rounded-full object-cover border-2 border-primary/20" />
@@ -449,13 +477,13 @@ export default function ProductDetail() {
         </div>
 
         {/* Reviews Block */}
-        <div className="mt-12 bg-white rounded-3xl border p-8 shadow-sm">
+        <div className="mt-12 rounded-3xl border border-border bg-card p-8 shadow-sm">
           <div className="flex items-center gap-4 mb-8">
             <div>
               <h2 className="text-2xl font-display font-bold">Đánh giá sản phẩm</h2>
               <p className="text-muted-foreground text-sm mt-1">{reviews.length} đánh giá từ người mua</p>
             </div>
-            <div className="ml-auto flex items-center gap-3 bg-amber-50 px-5 py-3 rounded-2xl border border-amber-200">
+            <div className="ml-auto flex items-center gap-3 rounded-2xl border border-amber-200/60 bg-amber-50/90 px-5 py-3 dark:border-amber-900/50 dark:bg-amber-950/40">
               <span className="text-4xl font-bold text-amber-500">{avgRating.toFixed(1)}</span>
               <div>
                 <StarDisplay rating={avgRating} size="md" />
@@ -522,16 +550,22 @@ export default function ProductDetail() {
             <div className="flex items-center justify-between">
               <span className="font-semibold">Số lượng</span>
               <div className="flex items-center gap-3 border rounded-xl px-2 py-1">
-                <button onClick={() => setBuyQty(q => Math.max(1, q - 1))} className="p-1 rounded-lg hover:bg-gray-100">
+                <button
+                  onClick={() => setBuyQty((q) => Math.max(1, q - 1))}
+                  className="rounded-lg p-1 hover:bg-muted"
+                >
                   <Minus className="w-4 h-4" />
                 </button>
-                <span className="font-bold w-8 text-center">{buyQty}</span>
-                <button onClick={() => setBuyQty(q => Math.min(product.stock, q + 1))} className="p-1 rounded-lg hover:bg-gray-100">
+                <span className="w-8 text-center font-bold">{buyQty}</span>
+                <button
+                  onClick={() => setBuyQty((q) => Math.min(product.stock, q + 1))}
+                  className="rounded-lg p-1 hover:bg-muted"
+                >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
             </div>
-            <div className="mt-4 bg-gray-50 rounded-xl p-3 flex justify-between text-sm">
+            <div className="mt-4 flex justify-between rounded-xl bg-muted/60 p-3 text-sm">
               <span className="text-muted-foreground">Tổng cộng</span>
               <span className="font-bold text-primary text-base">{formatCurrency((product.buyPrice || 0) * buyQty)}</span>
             </div>
@@ -580,18 +614,32 @@ export default function ProductDetail() {
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-sm">Số lượng</span>
                 <div className="flex items-center gap-3 border rounded-xl px-2 py-1">
-                  <button onClick={() => { setRentQty(q => Math.max(1, q - 1)); setRentValid(false); setRentError(null); }} className="p-1 rounded-lg hover:bg-gray-100">
+                  <button
+                    onClick={() => {
+                      setRentQty((q) => Math.max(1, q - 1));
+                      setRentValid(false);
+                      setRentError(null);
+                    }}
+                    className="rounded-lg p-1 hover:bg-muted"
+                  >
                     <Minus className="w-4 h-4" />
                   </button>
-                  <span className="font-bold w-8 text-center">{rentQty}</span>
-                  <button onClick={() => { setRentQty(q => Math.min(product.stock, q + 1)); setRentValid(false); setRentError(null); }} className="p-1 rounded-lg hover:bg-gray-100">
+                  <span className="w-8 text-center font-bold">{rentQty}</span>
+                  <button
+                    onClick={() => {
+                      setRentQty((q) => Math.min(product.stock, q + 1));
+                      setRentValid(false);
+                      setRentError(null);
+                    }}
+                    className="rounded-lg p-1 hover:bg-muted"
+                  >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
               {rentDays > 0 && (
-                <div className="bg-gray-50 rounded-xl p-3 text-sm">
+                <div className="rounded-xl bg-muted/60 p-3 text-sm">
                   <div className="flex justify-between text-muted-foreground mb-1">
                     <span>Thời gian thuê</span>
                     <span className="font-medium text-foreground">{rentDays} ngày</span>
@@ -611,7 +659,7 @@ export default function ProductDetail() {
               )}
 
               {rentValid && (
-                <div className="flex items-start gap-2 bg-green-50 border border-green-200 text-green-700 rounded-xl p-3 text-sm">
+                <div className="flex items-start gap-2 rounded-xl border border-green-200/60 bg-green-50/90 p-3 text-sm text-green-800 dark:border-green-900/50 dark:bg-green-950/40 dark:text-green-300">
                   <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>Thời gian và số lượng hợp lệ! Bạn có thể thêm vào giỏ.</span>
                 </div>

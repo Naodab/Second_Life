@@ -16,7 +16,7 @@ export function UnpublishedView({
 
   if (products.length === 0) {
     return (
-      <div className="text-center py-20 bg-white rounded-2xl border">
+      <div className="rounded-2xl border bg-card py-20 text-center">
         <CheckCircle2 className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-40" />
         <h3 className="font-bold text-lg mb-1">Không có sản phẩm nào chờ đăng</h3>
         <p className="text-muted-foreground text-sm">Tất cả sản phẩm đã được đăng.</p>
@@ -40,7 +40,7 @@ export function UnpublishedView({
             [p.id]: val,
           }));
         return (
-          <div key={p.id} className="bg-white rounded-2xl border shadow-sm p-5 flex gap-4">
+          <div key={p.id} className="flex gap-4 rounded-2xl border bg-card p-5 shadow-sm">
             <img src={p.previewUrl} className="w-20 h-20 rounded-xl object-cover border flex-shrink-0" alt="" />
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2 mb-2">

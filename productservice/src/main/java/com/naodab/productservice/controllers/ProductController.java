@@ -27,6 +27,7 @@ import com.naodab.productservice.dto.response.PagedItemsResponse;
 import com.naodab.productservice.dto.response.PrimarySubcategorySummaryResponse;
 import com.naodab.productservice.dto.response.ProductItemResponse;
 import com.naodab.productservice.dto.response.ProductResponse;
+import com.naodab.productservice.dto.response.ProductVariantSummaryResponse;
 import com.naodab.productservice.services.ProductSearchService;
 import com.naodab.productservice.services.ProductService;
 
@@ -80,6 +81,26 @@ public class ProductController {
       @PathVariable String facilityId) {
     return ResponseEntity.ok(ApiResponse.<List<PrimarySubcategorySummaryResponse>>builder()
         .data(productSearchService.listPrimarySubcategorySummariesForFacility(facilityId))
+        .build());
+  }
+
+  @GetMapping("/{id}")
+  public ResponseEntity<ApiResponse<ProductResponse>> getOwnedProductWithVariants(
+      @PathVariable String id,
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
+    String profileId = validateProfileId(profileIdHeader);
+    return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
+        .data(productService.getOwnedProductWithVariants(profileId, id))
+        .build());
+  }
+
+  @GetMapping("/{id}/variants")
+  public ResponseEntity<ApiResponse<List<ProductVariantSummaryResponse>>> getProductVariants(
+      @PathVariable String id,
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID) String profileIdHeader) {
+    String profileId = validateProfileId(profileIdHeader);
+    return ResponseEntity.ok(ApiResponse.<List<ProductVariantSummaryResponse>>builder()
+        .data(productService.getProductVariants(profileId, id))
         .build());
   }
 

@@ -2,6 +2,8 @@ import { customFetch } from "@workspace/api-client-react";
 import { unwrapApiData, type ApiResponseEnvelope, type PagedItemsResponse } from "./types";
 
 export type ListingType = "BUY" | "RENT";
+
+export type RentUnit = "HOUR" | "DAY" | "WEEK" | "MONTH";
 export type ListingStatus =
   | "ACTIVE"
   | "INACTIVE"
@@ -41,6 +43,42 @@ export async function getFacilityListingPage(
   const raw = await customFetch<ApiResponseEnvelope<PagedItemsResponse<ListingItemResponse>>>(path, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
+  });
+  return unwrapApiData(raw);
+}
+
+export type ListingVariantCreateBody = {
+  productVariantId: string;
+  buyPrice?: number | null;
+  rentPrice?: number | null;
+  rentUnit?: RentUnit | null;
+  isActive?: boolean | null;
+};
+
+export type ListingCreateBody = {
+  productId: string;
+  title: string;
+  description?: string | null;
+  listingType: ListingType;
+  variants: ListingVariantCreateBody[];
+};
+
+export type ListingCreateResponse = {
+  id: string;
+  productId?: string | null;
+  title: string;
+  description?: string | null;
+  listingType: ListingType;
+};
+
+export async function createListing(body: ListingCreateBody): Promise<ListingCreateResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<ListingCreateResponse>>(`/api/v1/listings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...body,
+      description: body.description?.trim() ? body.description.trim() : null,
+    }),
   });
   return unwrapApiData(raw);
 }

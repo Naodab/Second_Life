@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import {
@@ -14,6 +14,7 @@ import { createProduct, uploadProductImages } from "@/api/product";
 import { useToast } from "@/hooks/use-toast";
 import { AddFacilityModal } from "./AddFacilityModal";
 import { AddProductPage } from "./AddProductPage";
+import { CreateListingPage } from "./CreateListingPage";
 import { DashboardView } from "./DashboardView";
 import { FacilityView } from "./FacilityView";
 import { ListingsSidebar } from "./ListingsSidebar";
@@ -22,6 +23,7 @@ import { OrdersView } from "./OrdersView";
 import { UnpublishedView } from "./UnpublishedView";
 import { UploadingModal } from "./UploadingModal";
 import {
+  manageAddListingPath,
   manageAddProductPath,
   manageDashboardPath,
   manageFacilityPath,
@@ -62,6 +64,12 @@ async function attachPlaceNames(
 export default function Listings() {
   const [location, setLocation] = useLocation();
   const route = parseManageRoute(location);
+  const addListingInitialProductId = useMemo(() => {
+    const i = location.indexOf("?");
+    if (i < 0) return undefined;
+    const id = new URLSearchParams(location.slice(i)).get("product");
+    return id?.trim() || undefined;
+  }, [location]);
   const { toast } = useToast();
 
   const [facilities, setFacilities] = useState<FacilityWithPlaceNames[]>([]);
@@ -293,7 +301,7 @@ export default function Listings() {
   const unpublishedProducts = pendingProducts.filter((p) => p.facilityId === unpublishedFacilityId);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="flex min-h-screen bg-muted/40 dark:bg-background">
       <ListingsSidebar
         route={route ?? null}
         contextFacilityId={contextFacilityId}
@@ -327,6 +335,10 @@ export default function Listings() {
                     setLocation(manageProductDetailPath(activeFacility.id, productId))
                   }
                   onAddProduct={() => setLocation(manageAddProductPath(activeFacility.id))}
+                  onCreateListing={() => setLocation(manageAddListingPath(activeFacility.id))}
+                  onCreateListingForProduct={(productId) =>
+                    setLocation(manageAddListingPath(activeFacility.id, productId))
+                  }
                   onViewUnpublished={() => setLocation(manageUnpublishedPath(activeFacility.id))}
                   onUpdateAvatar={handleUpdateFacilityAvatar}
                   pendingCount={
@@ -340,6 +352,14 @@ export default function Listings() {
                   facilityId={route.facilityId}
                   onBack={() => setLocation(manageFacilityPath(route.facilityId))}
                   onSubmit={handleAddProductSubmit}
+                />
+              )}
+
+              {route?.tag === "add-listing" && route.facilityId && (
+                <CreateListingPage
+                  facilityId={route.facilityId}
+                  initialProductId={addListingInitialProductId}
+                  onBack={() => setLocation(manageFacilityPath(route.facilityId))}
                 />
               )}
 

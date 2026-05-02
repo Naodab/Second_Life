@@ -13,7 +13,7 @@ export function RentalSchedule({ productId }: { productId: string }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border shadow-sm p-5">
+    <div className="rounded-2xl border bg-card p-5 shadow-sm">
       <h3 className="font-bold mb-4 flex items-center gap-2">
         <CalendarClock className="w-4 h-4 text-primary" /> Lịch cho thuê
       </h3>
@@ -35,7 +35,7 @@ export function RentalSchedule({ productId }: { productId: string }) {
                 month: "2-digit",
               });
               return (
-                <tr key={i} className="hover:bg-gray-50/50">
+                <tr key={i} className="hover:bg-muted/50">
                   <td className="py-2.5 pr-4 font-medium">{dateLabel}</td>
                   <td className="py-2.5 pr-4">
                     <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium border", cfg.cls)}>

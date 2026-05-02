@@ -37,5 +37,7 @@ public class ProductResponse {
 
   List<ProductMedia> medias;
 
+  List<ProductVariantSummaryResponse> variants;
+
   ProductStatus status;
 }

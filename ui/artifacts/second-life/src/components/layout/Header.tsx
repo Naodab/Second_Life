@@ -18,6 +18,7 @@ import {
 import { useCart } from "@/hooks/use-mock-api";
 import { cn } from "@/lib/utils";
 import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 
@@ -76,8 +77,8 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
   const markRead = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl border shadow-xl z-50 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50/60">
+    <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl border bg-card text-card-foreground shadow-xl z-50 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/50">
         <div className="flex items-center gap-2">
           <h3 className="font-bold">Thông báo</h3>
           {unreadCount > 0 && (
@@ -106,7 +107,7 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
               key={notif.id}
               onClick={() => { markRead(notif.id); if (notif.link) navigate(notif.link); onClose(); }}
               className={cn(
-                "flex gap-3 px-4 py-3.5 cursor-pointer hover:bg-gray-50 transition-colors border-b last:border-0",
+                "flex gap-3 px-4 py-3.5 cursor-pointer hover:bg-muted/60 transition-colors border-b last:border-0",
                 !notif.read && "bg-primary/3"
               )}
             >
@@ -134,7 +135,7 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
         )}
       </div>
 
-      <div className="px-4 py-2.5 border-t bg-gray-50/60">
+      <div className="border-t bg-muted/50 px-4 py-2.5">
         <Link href="/orders" onClick={onClose} className="text-xs text-primary hover:underline flex items-center justify-center gap-1">
           <Package className="w-3 h-3" /> Xem tất cả hoạt động
         </Link>
@@ -173,7 +174,7 @@ export function Header() {
             <Link href="/" className="flex items-center gap-2 group">
               <div className="bg-primary/20 p-2 rounded-xl group-hover:bg-primary/30 transition-colors">
                 <img
-                  src={`${import.meta.env.BASE_URL}images/logo-leaf.png`}
+                  src={`${import.meta.env.BASE_URL}favicon.png`}
                   alt="Logo Second Life"
                   className="w-8 h-8 object-contain"
                 />
@@ -223,6 +224,8 @@ export function Header() {
                     )}
                   </Button>
                 </Link>
+
+                <ThemeToggle />
 
                 {/* Notification Bell */}
                 <div ref={notifRef} className="relative hidden sm:block">
@@ -283,7 +286,8 @@ export function Header() {
                 </DropdownMenu>
               </>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <ThemeToggle />
                 <Link href="/login">
                   <Button variant="ghost" className="hidden sm:flex font-semibold hover:bg-primary/10 rounded-full px-6">Đăng nhập</Button>
                 </Link>

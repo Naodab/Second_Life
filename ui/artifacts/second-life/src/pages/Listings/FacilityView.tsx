@@ -267,6 +267,8 @@ export function FacilityView({
   facility,
   onViewProduct,
   onAddProduct,
+  onCreateListing,
+  onCreateListingForProduct,
   onViewUnpublished,
   onUpdateAvatar,
   pendingCount,
@@ -274,6 +276,9 @@ export function FacilityView({
   facility: FacilityWithPlaceNames;
   onViewProduct: (id: string) => void;
   onAddProduct: () => void;
+  onCreateListing: () => void;
+  /** Open create listing with product pre-selected via query. */
+  onCreateListingForProduct: (productId: string) => void;
   onViewUnpublished: () => void;
   onUpdateAvatar: (file: File) => Promise<void>;
   pendingCount: number;
@@ -569,7 +574,7 @@ export function FacilityView({
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border shadow-sm p-5">
+      <div className="rounded-2xl border bg-card p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <img
@@ -625,9 +630,6 @@ export function FacilityView({
                 <Upload className="w-3.5 h-3.5 mr-1.5" />
               )}
               Cập nhật avatar
-            </Button>
-            <Button size="sm" className="rounded-full shadow-md shadow-primary/20" onClick={onAddProduct}>
-              <Plus className="w-3.5 h-3.5 mr-1.5" /> Thêm mặt hàng
             </Button>
           </div>
         </div>
@@ -719,11 +721,6 @@ export function FacilityView({
                 <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden">
                   <div className="border-b border-border px-4 py-3 sm:px-5 bg-muted/40">
                     <p className="text-sm font-medium">Lọc & sắp xếp</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      Chỉ một request tải sản phẩm. Đa chọn danh mục chính gửi categoryIds — sản phẩm phải thuộc đủ từng
-                      danh mục đã chọn (AND). Trên danh mục con gửi subCategoryIds (AND) và luôn kèm categoryIds của các
-                      danh mục cha tương ứng.
-                    </p>
                   </div>
 
                   <div className="p-4 sm:p-5 space-y-5">
@@ -920,20 +917,31 @@ export function FacilityView({
                 </div>
               )}
 
-              <div>
-                <h3 className="font-bold mb-3 flex items-center gap-2 text-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="font-bold flex items-center gap-2 text-sm">
                   <Store className="w-4 h-4 text-primary" /> Sản phẩm ({productTotal})
                 </h3>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="rounded-full shadow-md shadow-primary/20 shrink-0 w-full sm:w-auto"
+                  onClick={onAddProduct}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Thêm mặt hàng
+                </Button>
+              </div>
+
+              <div>
 
                 {productsLoading ? (
-                  <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border text-muted-foreground gap-2">
+                  <div className="flex flex-col items-center justify-center py-16 bg-card rounded-2xl border text-muted-foreground gap-2">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     <p className="text-sm">Đang tải sản phẩm…</p>
                   </div>
                 ) : productsError ? (
-                  <div className="text-center py-12 bg-white rounded-2xl border text-destructive text-sm">{productsError}</div>
+                  <div className="text-center py-12 bg-card rounded-2xl border text-destructive text-sm">{productsError}</div>
                 ) : (productRows?.length ?? 0) === 0 ? (
-                  <div className="text-center py-12 bg-white rounded-2xl border">
+                  <div className="text-center py-12 bg-card rounded-2xl border">
                     <Package className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-40" />
                     <p className="text-muted-foreground">Chưa có sản phẩm nào</p>
                   </div>
@@ -944,35 +952,54 @@ export function FacilityView({
                       return (
                         <div
                           key={p.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => onViewProduct(p.id)}
-                          onKeyDown={(e) => e.key === "Enter" && onViewProduct(p.id)}
-                          className="bg-white rounded-2xl border hover:shadow-md transition-all cursor-pointer overflow-hidden group"
+                          className="group flex flex-col overflow-hidden rounded-2xl border bg-card transition-all hover:shadow-md"
                         >
-                          <div className="aspect-square overflow-hidden bg-muted">
-                            <img
-                              src={(p.thumbnailImage && p.thumbnailImage.trim()) || DEFAULT_PRODUCT_THUMB}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              alt=""
-                            />
-                          </div>
-                          <div className="p-3 space-y-1.5">
-                            <p className="font-semibold text-sm line-clamp-2 leading-snug">{p.name}</p>
-                            {createdLabel && (
-                              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                                <CalendarDays className="w-3 h-3 shrink-0 opacity-70" aria-hidden />
-                                <span>Ngày tạo: {createdLabel}</span>
-                              </p>
-                            )}
-                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                              <span className="text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                {productStatusLabel(p.status)}
-                              </span>
-                              <span className="text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                                {p.variantCount} biến thể
-                              </span>
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => onViewProduct(p.id)}
+                            onKeyDown={(e) => e.key === "Enter" && onViewProduct(p.id)}
+                            className="cursor-pointer text-left flex-1 min-w-0"
+                          >
+                            <div className="aspect-square overflow-hidden bg-muted">
+                              <img
+                                src={(p.thumbnailImage && p.thumbnailImage.trim()) || DEFAULT_PRODUCT_THUMB}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                alt=""
+                              />
                             </div>
+                            <div className="p-3 space-y-1.5">
+                              <p className="font-semibold text-sm line-clamp-2 leading-snug">{p.name}</p>
+                              {createdLabel && (
+                                <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                  <CalendarDays className="w-3 h-3 shrink-0 opacity-70" aria-hidden />
+                                  <span>Ngày tạo: {createdLabel}</span>
+                                </p>
+                              )}
+                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                <span className="text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                  {productStatusLabel(p.status)}
+                                </span>
+                                <span className="text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                  {p.variantCount} loại SP
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="px-3 pb-3 pt-0">
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="w-full rounded-full shadow-md shadow-primary/20 text-xs font-medium"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onCreateListingForProduct(p.id);
+                              }}
+                            >
+                              <FileText className="w-3.5 h-3.5 mr-1.5 shrink-0 opacity-95" aria-hidden />
+                              Đăng bài
+                            </Button>
                           </div>
                         </div>
                       );
@@ -997,19 +1024,29 @@ export function FacilityView({
 
             <TabsContent value="listings" className="space-y-4 mt-0 focus-visible:outline-none">
               <div>
-                <h3 className="font-bold mb-3 flex items-center gap-2 text-sm">
-                  <FileText className="w-4 h-4 text-primary" /> Bài đăng ({listingTotal})
-                </h3>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
+                  <h3 className="font-bold flex items-center gap-2 text-sm">
+                    <FileText className="w-4 h-4 text-primary" /> Bài đăng ({listingTotal})
+                  </h3>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-full shadow-md shadow-primary/20 shrink-0 w-full sm:w-auto"
+                    onClick={onCreateListing}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Tạo bài đăng
+                  </Button>
+                </div>
 
                 {listingsLoading ? (
-                  <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border text-muted-foreground gap-2">
+                  <div className="flex flex-col items-center justify-center py-16 bg-card rounded-2xl border text-muted-foreground gap-2">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     <p className="text-sm">Đang tải bài đăng…</p>
                   </div>
                 ) : listingsError ? (
-                  <div className="text-center py-12 bg-white rounded-2xl border text-destructive text-sm">{listingsError}</div>
+                  <div className="text-center py-12 bg-card rounded-2xl border text-destructive text-sm">{listingsError}</div>
                 ) : (listingRows?.length ?? 0) === 0 ? (
-                  <div className="text-center py-12 bg-white rounded-2xl border">
+                  <div className="text-center py-12 bg-card rounded-2xl border">
                     <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-40" />
                     <p className="text-muted-foreground">Chưa có bài đăng nào cho cơ sở này</p>
                   </div>
@@ -1020,7 +1057,7 @@ export function FacilityView({
                       return (
                         <div
                           key={row.id}
-                          className="bg-white rounded-2xl border shadow-sm flex overflow-hidden gap-3 p-3 items-stretch"
+                          className="flex items-stretch gap-3 overflow-hidden rounded-2xl border bg-card p-3 shadow-sm"
                         >
                           <div className="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-xl overflow-hidden bg-muted">
                             <img

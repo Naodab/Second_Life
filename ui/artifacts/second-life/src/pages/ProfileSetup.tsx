@@ -123,7 +123,7 @@ export default function ProfileSetup() {
             <Link href="/" className="flex items-center gap-2">
               <div className="bg-primary/20 p-2 rounded-xl">
                 <img
-                  src={`${import.meta.env.BASE_URL}images/logo-leaf.png`}
+                  src={`${import.meta.env.BASE_URL}favicon.png`}
                   alt="Logo"
                   className="w-8 h-8 object-contain"
                 />

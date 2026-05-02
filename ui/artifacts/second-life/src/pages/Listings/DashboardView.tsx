@@ -54,7 +54,7 @@ export function DashboardView({ facilityId }: { facilityId: string }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border shadow-sm p-5">
+        <div className="rounded-2xl border bg-card p-5 shadow-sm">
           <h3 className="font-bold mb-4 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-primary" /> Doanh thu theo tháng
           </h3>
@@ -65,7 +65,7 @@ export function DashboardView({ facilityId }: { facilityId: string }) {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border shadow-sm p-5">
+        <div className="rounded-2xl border bg-card p-5 shadow-sm">
           <h3 className="font-bold mb-4 flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" /> Trạng thái đơn hàng
           </h3>
@@ -73,7 +73,7 @@ export function DashboardView({ facilityId }: { facilityId: string }) {
             {(["pending_approval", "shipping", "waiting_confirm", "completed"] as OrderStatus[]).map((status) => {
               const count = orders.filter((o) => o.status === status).length;
               return (
-                <div key={status} className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
+                <div key={status} className="flex items-center justify-between rounded-xl bg-muted/60 p-3">
                   <div className="flex items-center gap-2">
                     <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", ORDER_STATUS_COLORS[status])}>
                       {ORDER_STATUS_LABELS[status]}

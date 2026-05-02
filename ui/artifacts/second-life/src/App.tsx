@@ -1,5 +1,6 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { useEffect } from "react";
+import { ThemeProvider } from "next-themes";
 import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -105,16 +106,18 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        {/* Wouter must wrap AuthProvider so route hooks and auth share one stable tree (avoids useAuth/useLocation ordering issues during HMR or nested roots). */}
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AuthProvider>
-            <ProfileSetupRedirect />
-            <Router />
-            <Toaster />
-          </AuthProvider>
-        </WouterRouter>
-      </TooltipProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <TooltipProvider>
+          {/* Wouter must wrap AuthProvider so route hooks and auth share one stable tree (avoids useAuth/useLocation ordering issues during HMR or nested roots). */}
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <AuthProvider>
+              <ProfileSetupRedirect />
+              <Router />
+              <Toaster />
+            </AuthProvider>
+          </WouterRouter>
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

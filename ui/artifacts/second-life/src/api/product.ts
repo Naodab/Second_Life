@@ -89,6 +89,23 @@ export type ProductCreateResponse = {
   status?: ProductStatus;
 };
 
+/** Returned by GET `/products/{id}` for sellers (includes variant ids). */
+export type ProductVariantSummaryResponse = {
+  id: string;
+  sku?: string | null;
+  quantity?: number | null;
+  label?: string | null;
+};
+
+export type OwnedProductDetailResponse = {
+  id: string;
+  name: string;
+  description?: string | null;
+  thumbnailUrl?: string | null;
+  status?: ProductStatus;
+  variants?: ProductVariantSummaryResponse[] | null;
+};
+
 export type UploadProductImagesBody = {
   thumbnailUrl: string;
   productImageUrls: string[];
@@ -102,6 +119,25 @@ export async function createProduct(body: ProductCreateBody): Promise<ProductCre
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  return unwrapApiData(raw);
+}
+
+export async function getOwnedProductWithVariants(
+  productId: string,
+): Promise<OwnedProductDetailResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<OwnedProductDetailResponse>>(
+    `/api/v1/products/${encodeURIComponent(productId)}`,
+    { method: "GET", headers: { "Content-Type": "application/json" } },
+  );
+  return unwrapApiData(raw);
+}
+
+/** Seller-only: variant ids + labels for listings (GET `/products/{id}/variants`). */
+export async function getProductVariants(productId: string): Promise<ProductVariantSummaryResponse[]> {
+  const raw = await customFetch<ApiResponseEnvelope<ProductVariantSummaryResponse[]>>(
+    `/api/v1/products/${encodeURIComponent(productId)}/variants`,
+    { method: "GET", headers: { "Content-Type": "application/json" } },
+  );
   return unwrapApiData(raw);
 }
 
