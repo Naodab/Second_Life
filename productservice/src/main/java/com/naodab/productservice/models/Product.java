@@ -51,6 +51,7 @@ public class Product extends BaseEntity {
   @JoinColumn(name = "facility_id", nullable = false)
   Facility facility;
 
+  @BatchSize(size = 32)
   @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   List<ProductSubCategory> productSubCategories = new ArrayList<>();
