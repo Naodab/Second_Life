@@ -1,5 +1,5 @@
-import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
-import { useMemo, useRef, useState, type RefObject } from "react";
+import { Canvas, useFrame, useLoader, type ThreeEvent } from "@react-three/fiber";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useLocation } from "wouter";
 import * as THREE from "three";
 import { cn } from "@/lib/utils";
@@ -70,18 +70,179 @@ function RingCircleLine({ radius }: { radius: number }) {
   );
 }
 
+const EARTH_MAP_URL = "/images/earth-map.jpg";
+
+const EARTH_VS = /* glsl */ `
+varying vec2 vUv;
+varying vec3 vNormal;
+void main() {
+  vUv = uv;
+  vNormal = normalize(normalMatrix * normal);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const EARTH_FS = /* glsl */ `
+uniform sampler2D uMask;
+uniform vec3 uOceanColor;
+uniform vec3 uLandColor;
+uniform float uBrightTheme;
+varying vec2 vUv;
+varying vec3 vNormal;
+void main() {
+  float seaMix = texture2D(uMask, vUv).r;
+  vec3 base = mix(uLandColor, uOceanColor, seaMix);
+  vec3 L = normalize(vec3(0.52, 0.74, 0.43));
+  vec3 N = normalize(vNormal);
+  float ndl = max(dot(N, L), 0.0);
+  /* uBrightTheme=1 (theme sáng): nền sáng đất + biển — tránh nửa cầu tối đen.
+     uBrightTheme=0 (theme tối): biển trầm, đất có chiều sâu. */
+  float ambLand = mix(0.13, 0.52, uBrightTheme);
+  float ambSea = mix(0.50, 0.88, uBrightTheme);
+  float ambient = mix(ambLand, ambSea, seaMix);
+
+  float diffLand = mix(0.86, 0.46, uBrightTheme);
+  float diffSea = mix(0.38, 0.14, uBrightTheme);
+  float diffuse = mix(diffLand, diffSea, seaMix);
+
+  vec3 lit = base * (ambient + diffuse * ndl);
+  gl_FragColor = vec4(lit, 1.0);
+}
+`;
+
+/** Smoothstep [edge0, edge1] — khớp GLSL để raster mask một lần trên Canvas */
+function jsSmoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+/** Đọc pixel ảnh Trái đất → một kênh 0..1 biển/đất, tránh lỗi lấy mẫu texture trong ShaderMaterial JSX/WebGL2. */
+function buildOceanLandMaskDataTexture(texture: THREE.Texture): THREE.DataTexture | null {
+  const img = texture.image as CanvasImageSource & { width?: number; height?: number };
+  const wRaw = typeof img.width === "number" ? img.width : 0;
+  const hRaw = typeof img.height === "number" ? img.height : 0;
+  if (!img || !wRaw || !hRaw) return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = wRaw;
+  canvas.height = hRaw;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+
+  try {
+    ctx.drawImage(img, 0, 0);
+    const { data } = ctx.getImageData(0, 0, wRaw, hRaw);
+    const buf = new Uint8Array(wRaw * hRaw);
+    const nPx = wRaw * hRaw;
+    for (let i = 0; i < nPx; i++) {
+      const o = i * 4;
+      const r = data[o] / 255;
+      const g = data[o + 1] / 255;
+      const b = data[o + 2] / 255;
+      const seaMix = jsSmoothstep(0.05, 0.26, b - Math.max(r, g));
+      buf[i] = Math.round(seaMix * 255);
+    }
+    const tex = new THREE.DataTexture(buf, wRaw, hRaw, THREE.RedFormat, THREE.UnsignedByteType);
+    tex.needsUpdate = true;
+    tex.flipY = texture.flipY;
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    tex.colorSpace = THREE.NoColorSpace;
+    return tex;
+  } catch {
+    return null;
+  }
+}
+
+function parseThemeRgbTriplet(css: string): [number, number, number] {
+  const parts = css
+    .trim()
+    .split(/\s+/)
+    .map(Number)
+    .filter((n) => Number.isFinite(n));
+  if (parts.length < 3) return [1, 0.96, 0.91];
+  return [parts[0] / 255, parts[1] / 255, parts[2] / 255];
+}
+
+function applyCssRgbToColor(cssVarName: string, target: THREE.Color) {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(cssVarName);
+  const [r, g, b] = parseThemeRgbTriplet(raw);
+  target.setRGB(r, g, b, THREE.SRGBColorSpace);
+}
+
 function EcoClusterMeshes({ innerRef }: { innerRef: RefObject<THREE.Mesh | null> }) {
+  const earthMap = useLoader(THREE.TextureLoader, EARTH_MAP_URL);
+
+  const oceanLandMask = useMemo(() => buildOceanLandMaskDataTexture(earthMap), [earthMap]);
+
+  useEffect(() => () => oceanLandMask?.dispose(), [oceanLandMask]);
+
+  useLayoutEffect(() => {
+    earthMap.colorSpace = THREE.SRGBColorSpace;
+    earthMap.anisotropy = 8;
+  }, [earthMap]);
+
+  const themedEarthMaterial = useMemo(() => {
+    if (!oceanLandMask) return null;
+
+    const uniOcean = new THREE.Color();
+    const uniLand = new THREE.Color();
+    applyCssRgbToColor("--hero-earth-ocean", uniOcean);
+    applyCssRgbToColor("--hero-earth-land", uniLand);
+
+    const bright = typeof document !== "undefined" ? !document.documentElement.classList.contains("dark") : true;
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uMask: { value: oceanLandMask },
+        uOceanColor: { value: uniOcean },
+        uLandColor: { value: uniLand },
+        uBrightTheme: { value: bright ? 1.0 : 0.0 },
+      },
+      vertexShader: EARTH_VS,
+      fragmentShader: EARTH_FS,
+      toneMapped: true,
+    });
+  }, [oceanLandMask]);
+
+  useEffect(
+    () => () => {
+      themedEarthMaterial?.dispose();
+    },
+    [themedEarthMaterial],
+  );
+
+  useFrame(() => {
+    if (!themedEarthMaterial) return;
+    themedEarthMaterial.uniforms.uBrightTheme.value =
+      typeof document !== "undefined" && !document.documentElement.classList.contains("dark") ? 1.0 : 0.0;
+    applyCssRgbToColor("--hero-earth-ocean", themedEarthMaterial.uniforms.uOceanColor.value as THREE.Color);
+    applyCssRgbToColor("--hero-earth-land", themedEarthMaterial.uniforms.uLandColor.value as THREE.Color);
+  });
+
+  if (oceanLandMask && themedEarthMaterial) {
+    return (
+      <>
+        <mesh ref={innerRef}>
+          <sphereGeometry args={[CLUSTER_ICO_RADIUS, 64, 64]} />
+          {/* imperative ShaderMaterial để uniform sampler + WebGL2 ổn định */}
+          <primitive object={themedEarthMaterial} attach="material" />
+        </mesh>
+        <mesh>
+          <icosahedronGeometry args={[1.28, 1]} />
+          <meshBasicMaterial color="#7dcca6" wireframe transparent opacity={0.26} depthWrite={false} />
+        </mesh>
+      </>
+    );
+  }
+
   return (
     <>
       <mesh ref={innerRef}>
-        <icosahedronGeometry args={[CLUSTER_ICO_RADIUS, 1]} />
-        <meshStandardMaterial
-          color="#5fae88"
-          metalness={0.28}
-          roughness={0.36}
-          emissive="#1e3d2f"
-          emissiveIntensity={0.2}
-        />
+        <sphereGeometry args={[CLUSTER_ICO_RADIUS, 64, 64]} />
+        <meshStandardMaterial map={earthMap} metalness={0.08} roughness={0.72} />
       </mesh>
       <mesh>
         <icosahedronGeometry args={[1.28, 1]} />
@@ -323,7 +484,9 @@ export default function HeroEcoCanvas({
         gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
         dpr={[1, 2]}
       >
-        <Scene pins={shown} onHoverPin={setHoverPin} />
+        <Suspense fallback={null}>
+          <Scene pins={shown} onHoverPin={setHoverPin} />
+        </Suspense>
       </Canvas>
 
       {hoverPin ? (

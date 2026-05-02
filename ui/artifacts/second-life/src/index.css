@@ -52,6 +52,10 @@
   --hero-ecanvas-bg: 255 246 232;
   --hero-ecanvas-bg-alpha: 0.45;
 
+  /* Quả đất theme sáng: biển kem ivory, đất xanh lá pastel (đủ tương phản nhưng không tối) */
+  --hero-earth-ocean: 255 252 244;
+  --hero-earth-land: 78 165 126;
+
   /* Pastel Green & White Theme */
   --background: 144 30% 98%;
   /* Very soft mint white #F4FBF7 */
@@ -97,6 +101,10 @@
 .dark {
   --hero-ecanvas-bg: 17 24 32;
   --hero-ecanvas-bg-alpha: 0.55;
+
+  /* Theme tối: biển xanh đen sâu vs đất mint sáng */
+  --hero-earth-ocean: 12 22 38;
+  --hero-earth-land: 72 215 168;
 
   --background: 152 18% 9%;
   --foreground: 144 22% 96%;
