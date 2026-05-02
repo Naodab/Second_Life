@@ -205,33 +205,35 @@ export default function Home() {
       {/* Trust & Features */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-primary/5 rounded-3xl p-8 md:p-12 border border-primary/10">
-            <div className="text-center max-w-2xl mx-auto mb-12">
-              <h2 className="text-3xl font-bold font-display mb-4">Tại sao chọn Second Life?</h2>
-              <p className="text-muted-foreground">Hàng nghìn người dùng đang lựa chọn mua sắm bền vững, tiết kiệm tiền và tìm kiếm những món đồ độc đáo.</p>
+          <div className="rounded-3xl border border-primary/10 bg-primary/5 p-8 md:p-12 dark:border-primary/25 dark:bg-primary/10">
+            <div className="mx-auto mb-12 max-w-2xl text-center">
+              <h2 className="mb-4 font-display text-3xl font-bold text-foreground">Tại sao chọn Second Life?</h2>
+              <p className="text-muted-foreground">
+                Hàng nghìn người dùng đang lựa chọn mua sắm bền vững, tiết kiệm tiền và tìm kiếm những món đồ độc đáo.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border text-center">
-                <div className="w-14 h-14 mx-auto bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
-                  <ShieldCheck className="w-7 h-7" />
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-950/55 dark:text-green-400">
+                  <ShieldCheck className="h-7 w-7" />
                 </div>
-                <h3 className="font-bold text-lg mb-2">Thanh toán an toàn</h3>
-                <p className="text-muted-foreground text-sm">Tiền được giữ an toàn cho đến khi bạn nhận và xác nhận sản phẩm.</p>
+                <h3 className="mb-2 text-lg font-bold text-foreground">Thanh toán an toàn</h3>
+                <p className="text-sm text-muted-foreground">Tiền được giữ an toàn cho đến khi bạn nhận và xác nhận sản phẩm.</p>
               </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border text-center">
-                <div className="w-14 h-14 mx-auto bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
-                  <RefreshCw className="w-7 h-7" />
+              <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-950/55 dark:text-blue-400">
+                  <RefreshCw className="h-7 w-7" />
                 </div>
-                <h3 className="font-bold text-lg mb-2">Thuê hoặc mua</h3>
-                <p className="text-muted-foreground text-sm">Chỉ cần dùng một lần? Hãy thuê. Muốn giữ lại? Hãy mua. Bạn có nhiều lựa chọn.</p>
+                <h3 className="mb-2 text-lg font-bold text-foreground">Thuê hoặc mua</h3>
+                <p className="text-sm text-muted-foreground">Chỉ cần dùng một lần? Hãy thuê. Muốn giữ lại? Hãy mua. Bạn có nhiều lựa chọn.</p>
               </div>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border text-center">
-                <div className="w-14 h-14 mx-auto bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-4">
-                  <Leaf className="w-7 h-7" />
+              <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-950/55 dark:text-orange-400">
+                  <Leaf className="h-7 w-7" />
                 </div>
-                <h3 className="font-bold text-lg mb-2">Thân thiện môi trường</h3>
-                <p className="text-muted-foreground text-sm">Mỗi lần mua đồ cũ giúp giảm đáng kể lượng khí thải carbon của bạn.</p>
+                <h3 className="mb-2 text-lg font-bold text-foreground">Thân thiện môi trường</h3>
+                <p className="text-sm text-muted-foreground">Mỗi lần mua đồ cũ giúp giảm đáng kể lượng khí thải carbon của bạn.</p>
               </div>
             </div>
           </div>
