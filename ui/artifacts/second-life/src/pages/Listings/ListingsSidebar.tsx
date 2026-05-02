@@ -60,7 +60,7 @@ export function ListingsSidebar({
         href={href}
         className={cn(
           "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left",
-          active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
+          active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
         )}
       >
         {icon} {label}
@@ -69,11 +69,11 @@ export function ListingsSidebar({
   }
 
   return (
-    <aside className="w-60 bg-white border-r h-screen sticky top-0 flex flex-col flex-shrink-0 shadow-sm">
+    <aside className="sticky top-0 flex h-screen w-60 flex-shrink-0 flex-col border-r border-border bg-card shadow-sm">
       <div className="p-4 border-b flex items-center gap-2">
         <div className="bg-primary/20 p-1.5 rounded-lg">
           <img
-            src={`${import.meta.env.BASE_URL}images/logo-leaf.png`}
+            src={`${import.meta.env.BASE_URL}favicon.png`}
             alt="Logo"
             className="w-5 h-5 object-contain"
           />
@@ -93,7 +93,7 @@ export function ListingsSidebar({
           <button
             type="button"
             onClick={() => setFacilitiesOpen(!facilitiesOpen)}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-gray-100 hover:text-foreground transition-all"
+            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-muted/80 hover:text-foreground"
           >
             <span className="flex items-center gap-3">
               <Building2 className="w-4 h-4" /> Cơ sở
@@ -109,7 +109,7 @@ export function ListingsSidebar({
                   placeholder="Tìm cơ sở..."
                   value={facilitySearch}
                   onChange={(e) => setFacilitySearch(e.target.value)}
-                  className="pl-7 h-7 text-xs rounded-lg border-gray-200"
+                  className="h-7 rounded-lg border-border pl-7 text-xs"
                 />
               </div>
               <Button
@@ -131,7 +131,7 @@ export function ListingsSidebar({
                       "flex w-full items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition-all text-left min-w-0",
                       route && facilityScopeActive(route, f.id)
                         ? "bg-primary/10 text-primary font-medium"
-                        : "text-muted-foreground hover:bg-gray-100 hover:text-foreground",
+                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
                     )}
                   >
                     <img
@@ -159,7 +159,7 @@ export function ListingsSidebar({
         <button
           type="button"
           onClick={onGoHome}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-gray-100 hover:text-foreground transition-all"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-muted/80 hover:text-foreground"
         >
           <Store className="w-4 h-4" /> Về trang chợ
         </button>

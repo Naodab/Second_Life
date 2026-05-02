@@ -22,16 +22,16 @@
 
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
-  
+
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
-  
+
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
-  
+
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
-  
+
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
 
@@ -48,48 +48,100 @@
 }
 
 :root {
+  /* RGB cho nền khối 3D hero (không có hsl()) — alpha riêng */
+  --hero-ecanvas-bg: 255 246 232;
+  --hero-ecanvas-bg-alpha: 0.45;
+
   /* Pastel Green & White Theme */
-  --background: 144 30% 98%;      /* Very soft mint white #F4FBF7 */
-  --foreground: 150 40% 15%;      /* Dark green-gray #173627 */
-  
-  --card: 0 0% 100%;              /* Pure white */
-  --card-foreground: 150 40% 15%; 
-  
+  --background: 144 30% 98%;
+  /* Very soft mint white #F4FBF7 */
+  --foreground: 150 40% 15%;
+  /* Dark green-gray #173627 */
+
+  --card: 0 0% 100%;
+  /* Pure white */
+  --card-foreground: 150 40% 15%;
+
   --popover: 0 0% 100%;
   --popover-foreground: 150 40% 15%;
-  
-  --primary: 152 50% 65%;         /* Soft Pastel Green #7DCCA6 */
-  --primary-foreground: 150 60% 15%; /* Darker green for contrast */
-  
-  --secondary: 10 80% 85%;        /* Pastel Peach/Coral #F7B5A7 for accents */
+
+  --primary: 152 50% 65%;
+  /* Soft Pastel Green #7DCCA6 */
+  --primary-foreground: 150 60% 15%;
+  /* Darker green for contrast */
+
+  --secondary: 10 80% 85%;
+  /* Pastel Peach/Coral #F7B5A7 for accents */
   --secondary-foreground: 10 60% 25%;
-  
-  --muted: 144 20% 92%;           /* Light grayish green */
+
+  --muted: 144 20% 92%;
+  /* Light grayish green */
   --muted-foreground: 150 20% 45%;
-  
-  --accent: 152 40% 90%;          /* Lighter green for hover states */
+
+  --accent: 152 40% 90%;
+  /* Lighter green for hover states */
   --accent-foreground: 150 50% 25%;
-  
-  --destructive: 350 80% 65%;     /* Soft red */
+
+  --destructive: 350 80% 65%;
+  /* Soft red */
   --destructive-foreground: 0 0% 100%;
 
   --border: 144 20% 90%;
   --input: 144 20% 90%;
   --ring: 152 50% 65%;
 
-  --radius: 1rem; /* Soft rounded corners everywhere */
+  --radius: 1rem;
+  /* Soft rounded corners everywhere */
+}
+
+.dark {
+  --hero-ecanvas-bg: 17 24 32;
+  --hero-ecanvas-bg-alpha: 0.55;
+
+  --background: 152 18% 9%;
+  --foreground: 144 22% 96%;
+
+  --card: 152 16% 12%;
+  --card-foreground: 144 22% 96%;
+
+  --popover: 152 16% 12%;
+  --popover-foreground: 144 22% 96%;
+
+  --primary: 152 42% 52%;
+  --primary-foreground: 152 60% 8%;
+
+  --secondary: 10 45% 42%;
+  --secondary-foreground: 10 85% 95%;
+
+  --muted: 152 14% 20%;
+  --muted-foreground: 144 12% 68%;
+
+  --accent: 152 22% 22%;
+  --accent-foreground: 144 20% 96%;
+
+  --destructive: 350 55% 48%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 152 14% 22%;
+  --input: 152 14% 22%;
+  --ring: 152 42% 52%;
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     @apply font-bold tracking-tight text-foreground;
   }
@@ -99,18 +151,25 @@
   .glass {
     @apply bg-white/70 backdrop-blur-xl border border-white/50 shadow-sm;
   }
-  
-  .glass-card {
-    @apply bg-white/60 backdrop-blur-md border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl;
+
+  .dark .glass {
+    @apply border-zinc-700/60 bg-zinc-950/65 shadow-sm;
   }
-  
+
+  /* box-shadow tách khỏi @apply — arbitrary shadow có khoảng trắng gây lỗi Tailwind v4 generate */
+  .glass-card {
+    @apply rounded-3xl border border-white/40 bg-white/60 backdrop-blur-md;
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+  }
+
   .text-balance {
     text-wrap: balance;
   }
-  
+
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -122,13 +181,16 @@
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--muted));
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--primary));
 }

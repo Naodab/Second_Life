@@ -574,7 +574,7 @@ export function FacilityView({
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border shadow-sm p-5">
+      <div className="rounded-2xl border bg-card p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <img
@@ -934,14 +934,14 @@ export function FacilityView({
               <div>
 
                 {productsLoading ? (
-                  <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border text-muted-foreground gap-2">
+                  <div className="flex flex-col items-center justify-center py-16 bg-card rounded-2xl border text-muted-foreground gap-2">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     <p className="text-sm">Đang tải sản phẩm…</p>
                   </div>
                 ) : productsError ? (
-                  <div className="text-center py-12 bg-white rounded-2xl border text-destructive text-sm">{productsError}</div>
+                  <div className="text-center py-12 bg-card rounded-2xl border text-destructive text-sm">{productsError}</div>
                 ) : (productRows?.length ?? 0) === 0 ? (
-                  <div className="text-center py-12 bg-white rounded-2xl border">
+                  <div className="text-center py-12 bg-card rounded-2xl border">
                     <Package className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-40" />
                     <p className="text-muted-foreground">Chưa có sản phẩm nào</p>
                   </div>
@@ -952,7 +952,7 @@ export function FacilityView({
                       return (
                         <div
                           key={p.id}
-                          className="bg-white rounded-2xl border hover:shadow-md transition-all overflow-hidden group flex flex-col"
+                          className="group flex flex-col overflow-hidden rounded-2xl border bg-card transition-all hover:shadow-md"
                         >
                           <div
                             role="button"
@@ -1039,14 +1039,14 @@ export function FacilityView({
                 </div>
 
                 {listingsLoading ? (
-                  <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border text-muted-foreground gap-2">
+                  <div className="flex flex-col items-center justify-center py-16 bg-card rounded-2xl border text-muted-foreground gap-2">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     <p className="text-sm">Đang tải bài đăng…</p>
                   </div>
                 ) : listingsError ? (
-                  <div className="text-center py-12 bg-white rounded-2xl border text-destructive text-sm">{listingsError}</div>
+                  <div className="text-center py-12 bg-card rounded-2xl border text-destructive text-sm">{listingsError}</div>
                 ) : (listingRows?.length ?? 0) === 0 ? (
-                  <div className="text-center py-12 bg-white rounded-2xl border">
+                  <div className="text-center py-12 bg-card rounded-2xl border">
                     <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-40" />
                     <p className="text-muted-foreground">Chưa có bài đăng nào cho cơ sở này</p>
                   </div>
@@ -1057,7 +1057,7 @@ export function FacilityView({
                       return (
                         <div
                           key={row.id}
-                          className="bg-white rounded-2xl border shadow-sm flex overflow-hidden gap-3 p-3 items-stretch"
+                          className="flex items-stretch gap-3 overflow-hidden rounded-2xl border bg-card p-3 shadow-sm"
                         >
                           <div className="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-xl overflow-hidden bg-muted">
                             <img

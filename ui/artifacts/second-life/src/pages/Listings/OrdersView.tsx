@@ -25,7 +25,7 @@ export function OrdersView({ facilityId }: { facilityId: string }) {
         <p className="text-sm text-muted-foreground">{allOrders.length} đơn hàng tổng cộng</p>
       </div>
 
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex w-fit gap-1 rounded-xl bg-muted p-1">
         {tabs.map((t) => {
           const cnt = allOrders.filter((o) => o.status === t.key).length;
           return (
@@ -35,7 +35,7 @@ export function OrdersView({ facilityId }: { facilityId: string }) {
               onClick={() => setActiveTab(t.key)}
               className={cn(
                 "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5",
-                activeTab === t.key ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                activeTab === t.key ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {t.label}
@@ -43,7 +43,7 @@ export function OrdersView({ facilityId }: { facilityId: string }) {
                 <span
                   className={cn(
                     "text-xs rounded-full px-1.5",
-                    activeTab === t.key ? "bg-primary text-white" : "bg-gray-300 text-gray-600"
+                    activeTab === t.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}
                 >
                   {cnt}
@@ -55,14 +55,14 @@ export function OrdersView({ facilityId }: { facilityId: string }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border">
+        <div className="rounded-2xl border bg-card py-16 text-center">
           <ShoppingBag className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-40" />
           <p className="text-muted-foreground">Không có đơn hàng nào trong mục này.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {filtered.map((order) => (
-            <div key={order.id} className="bg-white rounded-2xl border shadow-sm p-5">
+            <div key={order.id} className="rounded-2xl border bg-card p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">

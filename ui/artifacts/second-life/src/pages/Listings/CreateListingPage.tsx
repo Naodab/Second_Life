@@ -302,7 +302,7 @@ export function CreateListingPage({
   const selectedPick = productOptions.find((p) => p.id === selectedProductId);
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-lime-50 p-5 sm:p-6 shadow-2xl shadow-emerald-900/10">
+    <div className="relative overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-lime-50 p-5 shadow-2xl shadow-emerald-900/10 dark:border-emerald-900/45 dark:from-emerald-950/50 dark:via-card dark:to-emerald-950/40 sm:p-6">
       <img
         src="/images/tree-form.png"
         alt=""
@@ -319,8 +319,8 @@ export function CreateListingPage({
       <div className="relative z-20 flex flex-col gap-5 px-1 sm:px-2">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-display text-emerald-900">Tạo bài đăng</h1>
-            <p className="text-sm text-emerald-700/80 mt-1 max-w-xl">
+            <h1 className="font-display text-2xl text-emerald-900 dark:text-emerald-100">Tạo bài đăng</h1>
+            <p className="mt-1 max-w-xl text-sm text-emerald-700/80 dark:text-emerald-300/90">
               Chọn sản phẩm, loại sản phẩm và giá.
             </p>
           </div>
@@ -328,14 +328,14 @@ export function CreateListingPage({
             type="button"
             variant="outline"
             onClick={onBack}
-            className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 shrink-0"
+            className="shrink-0 rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
           >
             <ArrowLeft className="w-4 h-4 mr-1.5" aria-hidden /> Quay lại
           </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-5 space-y-3">
+          <div className="rounded-2xl border border-emerald-100 bg-white/90 dark:border-emerald-900/45 dark:bg-card/95 backdrop-blur p-4 sm:p-5 space-y-3">
             <label className="text-sm font-semibold block">
               Sản phẩm <span className="text-destructive">*</span>
             </label>
@@ -346,13 +346,13 @@ export function CreateListingPage({
             ) : productsError ? (
               <p className="text-sm text-destructive">{productsError}</p>
             ) : productOptions.length === 0 ? (
-              <div className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-sm text-emerald-900/80">
+              <div className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-sm text-emerald-900/80 dark:border-emerald-900/45 dark:bg-emerald-950/35 dark:text-emerald-200">
                 <Package className="w-5 h-5 shrink-0 opacity-70" aria-hidden />
                 <span>Chưa có sản phẩm trong cơ sở — hãy tạo sản phẩm trước.</span>
               </div>
             ) : (
               <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                <SelectTrigger className="h-auto min-h-11 py-2 rounded-xl border-emerald-200 bg-white focus-visible:ring-emerald-500 [&>span]:flex [&>span]:w-full [&>span]:min-w-0">
+                <SelectTrigger className="h-auto min-h-11 py-2 rounded-xl border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card [&>span]:flex [&>span]:w-full [&>span]:min-w-0">
                   {selectedPick ? (
                     <span className="flex items-center gap-3 text-left py-0.5 min-w-0 flex-1">
                       <img
@@ -360,7 +360,9 @@ export function CreateListingPage({
                         alt=""
                         className="w-10 h-10 rounded-xl object-cover border border-emerald-100 bg-muted shrink-0"
                       />
-                      <span className="font-medium line-clamp-2 min-w-0 text-emerald-950">{selectedPick.name}</span>
+                      <span className="line-clamp-2 min-w-0 font-medium text-emerald-950 dark:text-emerald-100">
+                        {selectedPick.name}
+                      </span>
                     </span>
                   ) : (
                     <SelectValue placeholder="Chọn sản phẩm để đăng…" />
@@ -368,7 +370,7 @@ export function CreateListingPage({
                 </SelectTrigger>
                 <SelectContent
                   position="popper"
-                  className="max-h-[min(70vh,24rem)] w-[min(100vw-2rem,var(--radix-select-trigger-width))] rounded-xl border-emerald-100"
+                  className="max-h-[min(70vh,24rem)] w-[min(100vw-2rem,var(--radix-select-trigger-width))] rounded-xl border-emerald-100 dark:border-emerald-900/50"
                 >
                   {productOptions.map((p) => (
                     <SelectItem
@@ -395,18 +397,18 @@ export function CreateListingPage({
           </div>
 
           {!selectedProductId ? null : variantsLoading ? (
-            <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-6 flex items-center gap-2 text-sm text-emerald-800">
+            <div className="flex items-center gap-2 rounded-2xl border border-emerald-100 bg-white/90 p-6 text-sm text-emerald-800 backdrop-blur dark:border-emerald-900/45 dark:bg-card/95 dark:text-emerald-200">
               <Loader2 className="w-4 h-4 animate-spin text-emerald-600" aria-hidden /> Đang tải loại sản phẩm…
             </div>
           ) : variantsError ? (
             <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{variantsError}</div>
           ) : variants.length === 0 ? (
-            <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-emerald-100 bg-white/90 dark:border-emerald-900/45 dark:bg-card/95 backdrop-blur p-4 text-sm text-muted-foreground">
               Sản phẩm này chưa có loại sản phẩm — hãy cập nhật sản phẩm trong hệ thống.
             </div>
           ) : (
             <>
-              <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-5 space-y-3">
+              <div className="rounded-2xl border border-emerald-100 bg-white/90 dark:border-emerald-900/45 dark:bg-card/95 backdrop-blur p-4 sm:p-5 space-y-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                   <div>
                     <label className="text-sm font-semibold block">
@@ -419,7 +421,7 @@ export function CreateListingPage({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 h-8 text-xs"
+                      className="h-8 rounded-full border-emerald-300 text-xs text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
                       onClick={selectAllVariants}
                       disabled={variants.length === 0 || allVariantsSelected}
                     >
@@ -437,7 +439,7 @@ export function CreateListingPage({
                     </Button>
                   </div>
                 </div>
-                <ul className="rounded-xl border border-emerald-100 divide-y divide-emerald-100 bg-emerald-50/40 max-h-[min(50vh,20rem)] overflow-y-auto overscroll-contain">
+                <ul className="max-h-[min(50vh,20rem)] divide-y divide-emerald-100 overflow-y-auto overscroll-contain rounded-xl border border-emerald-100 bg-emerald-50/40 dark:divide-emerald-900/40 dark:border-emerald-900/45 dark:bg-emerald-950/25">
                   {variants.map((v) => {
                     const checked = selectedVariantIds.has(v.id);
                     const label = v.label?.trim() || v.sku?.trim() || v.id.slice(0, 8);
@@ -446,7 +448,7 @@ export function CreateListingPage({
                         <label
                           className={cn(
                             "flex cursor-pointer items-start gap-3 px-3 py-3 sm:px-4 transition-colors",
-                            checked ? "bg-emerald-100/60" : "hover:bg-white/80",
+                            checked ? "bg-emerald-100/60 dark:bg-emerald-950/50" : "hover:bg-white/80 dark:hover:bg-muted/80",
                           )}
                         >
                           <Checkbox
@@ -456,7 +458,7 @@ export function CreateListingPage({
                             aria-label={`Chọn ${label}`}
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sm leading-snug text-emerald-950">{label}</p>
+                            <p className="text-sm font-medium leading-snug text-emerald-950 dark:text-emerald-100">{label}</p>
                             {v.sku ? (
                               <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">SKU: {v.sku}</p>
                             ) : null}
@@ -468,7 +470,7 @@ export function CreateListingPage({
                 </ul>
               </div>
 
-              <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-5 space-y-4">
+              <div className="rounded-2xl border border-emerald-100 bg-white/90 dark:border-emerald-900/45 dark:bg-card/95 backdrop-blur p-4 sm:p-5 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2 sm:col-span-2">
                     <label htmlFor="listing-title" className="text-sm font-semibold block">
@@ -479,7 +481,7 @@ export function CreateListingPage({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Tiêu đề hiển thị cho người mua"
-                      className="rounded-xl border-emerald-200 focus-visible:ring-emerald-500 bg-white"
+                      className="rounded-xl border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
                     />
                   </div>
                   <div className="space-y-2 sm:col-span-2">
@@ -492,13 +494,13 @@ export function CreateListingPage({
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Mô tả chi tiết bài đăng (tuỳ chọn)"
                       rows={4}
-                      className="rounded-xl border-emerald-200 focus-visible:ring-emerald-500 bg-white resize-y min-h-[100px]"
+                      className="min-h-[100px] resize-y rounded-xl border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-5 space-y-3">
+              <div className="rounded-2xl border border-emerald-100 bg-white/90 dark:border-emerald-900/45 dark:bg-card/95 backdrop-blur p-4 sm:p-5 space-y-3">
                 <label className="text-sm font-semibold block">
                   Hình thức <span className="text-destructive">*</span>
                 </label>
@@ -512,7 +514,7 @@ export function CreateListingPage({
                       "flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors shadow-sm",
                       listingType === "BUY"
                         ? "border-emerald-600 bg-emerald-600 text-white"
-                        : "border-emerald-200 bg-white text-emerald-900 hover:border-emerald-400 hover:bg-emerald-50/80",
+                        : "border-emerald-200 bg-background text-emerald-900 hover:border-emerald-400 hover:bg-emerald-50/80 dark:border-emerald-900/50 dark:bg-card dark:text-emerald-100 dark:hover:bg-emerald-950/40",
                     )}
                   >
                     <RadioGroupItem value="BUY" id="lt-buy" />
@@ -523,7 +525,7 @@ export function CreateListingPage({
                       "flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors shadow-sm",
                       listingType === "RENT"
                         ? "border-emerald-600 bg-emerald-600 text-white"
-                        : "border-emerald-200 bg-white text-emerald-900 hover:border-emerald-400 hover:bg-emerald-50/80",
+                        : "border-emerald-200 bg-background text-emerald-900 hover:border-emerald-400 hover:bg-emerald-50/80 dark:border-emerald-900/50 dark:bg-card dark:text-emerald-100 dark:hover:bg-emerald-950/40",
                     )}
                   >
                     <RadioGroupItem value="RENT" id="lt-rent" />
@@ -538,7 +540,7 @@ export function CreateListingPage({
               </div>
 
               {selectedVariantIds.size > 0 && (
-                <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-5 space-y-4">
+                <div className="rounded-2xl border border-emerald-100 bg-white/90 dark:border-emerald-900/45 dark:bg-card/95 backdrop-blur p-4 sm:p-5 space-y-4">
                   <label className="text-sm font-semibold block">
                     {listingType === "BUY" ? "Giá bán theo loại (₫)" : "Giá thuê theo loại (₫)"}
                   </label>
@@ -550,45 +552,45 @@ export function CreateListingPage({
                       return (
                         <div
                           key={vid}
-                          className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3 shadow-sm"
+                          className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 shadow-sm dark:border-emerald-900/45 dark:bg-emerald-950/30"
                         >
-                          <p className="text-sm font-semibold text-emerald-900 leading-snug">{name}</p>
+                          <p className="text-sm font-semibold leading-snug text-emerald-900 dark:text-emerald-100">{name}</p>
 
                           {listingType === "BUY" ? (
                             <div className="space-y-1.5 max-w-md">
-                              <label className="text-xs font-medium text-emerald-800">Giá bán</label>
+                              <label className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Giá bán</label>
                               <Input
                                 type="text"
                                 inputMode="decimal"
                                 placeholder="vd. 199000"
                                 value={draft.buyPrice}
                                 onChange={(e) => setVariantField(vid, "buyPrice", e.target.value)}
-                                className="rounded-xl border-emerald-200 focus-visible:ring-emerald-500 bg-white tabular-nums"
+                                className="rounded-xl border-emerald-200 bg-background tabular-nums focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
                               />
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
                               <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-emerald-800">Giá thuê</label>
+                                <label className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Giá thuê</label>
                                 <Input
                                   type="text"
                                   inputMode="decimal"
                                   placeholder="vd. 50000"
                                   value={draft.rentPrice}
                                   onChange={(e) => setVariantField(vid, "rentPrice", e.target.value)}
-                                  className="rounded-xl border-emerald-200 focus-visible:ring-emerald-500 bg-white tabular-nums"
+                                  className="rounded-xl border-emerald-200 bg-background tabular-nums focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
                                 />
                               </div>
                               <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-emerald-800">Đơn vị thuê</label>
+                                <label className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Đơn vị thuê</label>
                                 <Select
                                   value={draft.rentUnit}
                                   onValueChange={(u) => setVariantField(vid, "rentUnit", u as RentUnit)}
                                 >
-                                  <SelectTrigger className="rounded-xl border-emerald-200 bg-white focus-visible:ring-emerald-500">
+                                  <SelectTrigger className="rounded-xl border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card">
                                     <SelectValue />
                                   </SelectTrigger>
-                                  <SelectContent position="popper" className="rounded-xl border-emerald-100">
+                                  <SelectContent position="popper" className="rounded-xl border-emerald-100 dark:border-emerald-900/50">
                                     {RENT_UNIT_OPTIONS.map((o) => (
                                       <SelectItem key={o.value} value={o.value}>
                                         {o.label}
@@ -625,7 +627,7 @@ export function CreateListingPage({
                   variant="outline"
                   onClick={onBack}
                   disabled={submitting}
-                  className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                  className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
                 >
                   Huỷ
                 </Button>

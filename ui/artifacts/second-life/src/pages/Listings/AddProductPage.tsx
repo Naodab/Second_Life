@@ -471,7 +471,7 @@ export function AddProductPage({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-lime-50 p-5 sm:p-6 shadow-2xl shadow-emerald-900/10">
+    <div className="relative overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-lime-50 p-5 shadow-2xl shadow-emerald-900/10 dark:border-emerald-900/45 dark:from-emerald-950/50 dark:via-card dark:to-emerald-950/40 sm:p-6">
       <img
         src="/images/tree-form.png"
         alt=""
@@ -487,10 +487,10 @@ export function AddProductPage({
 
       <div className="relative z-20 px-1 sm:px-2 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-display text-emerald-900">
+          <h2 className="font-display text-2xl text-emerald-900 dark:text-emerald-100">
             {step === 1 ? "Thêm mặt hàng mới" : "Ảnh & video sản phẩm"}
           </h2>
-          <p className="text-sm text-emerald-700/80">
+          <p className="text-sm text-emerald-700/80 dark:text-emerald-300/90">
             {step === 1
               ? "Thiết lập thông tin và thuộc tính ở bước 1, sau đó tải ảnh/video ở bước 2."
               : `Ảnh đại diện bắt buộc; tối đa ${MAX_GALLERY_IMAGES} ảnh phụ (tối đa 12 ảnh). Có thể thêm một video. Nhấn Tạo để upload lên Cloudinary và lưu sản phẩm.`}
@@ -506,394 +506,401 @@ export function AddProductPage({
             onBack();
             reset();
           }}
-          className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
         >
-          <ArrowLeft className="w-4 h-4 mr-1.5" /> {step === 2 ? "Về bước 1" : "Quay lại"}
+          <ArrowLeft className="mr-1.5 h-4 w-4" /> {step === 2 ? "Về bước 1" : "Quay lại"}
         </Button>
       </div>
 
       <div className="relative z-20 flex flex-col gap-4 py-3 px-1 sm:px-2">
         {step === 1 ? (
           <>
-        <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-semibold mb-1.5 block">
-                Tên sản phẩm <span className="text-destructive">*</span>
-              </label>
-              <Input
-                placeholder="Vd: Máy ảnh cổ điển"
-                value={form.name}
-                onChange={(e) => setField("name", e.target.value)}
-                className="rounded-xl border-emerald-200 focus-visible:ring-emerald-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="order-4 rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-5 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <label className="text-sm font-semibold block">
-              Loại sản phẩm <span className="text-destructive">*</span>
-            </label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-              onClick={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  variants: [...prev.variants, createEmptyVariant()],
-                }))
-              }
-            >
-              <Plus className="w-3.5 h-3.5 mr-1.5" /> Tạo loại sản phẩm mới
-            </Button>
-          </div>
-
-          {variantPreviewRows.length === 0 && (
-            <p className="text-xs text-muted-foreground">Chọn thuộc tính trước khi tạo biến thể.</p>
-          )}
-
-          {form.variants.map((variant) => {
-            const variantPreview = variantPreviewRows.find((row) => row.id === variant.id);
-            return (
-              <div
-                key={variant.id}
-                className={cn(
-                  "rounded-xl border p-3 space-y-3",
-                  isDuplicateVariant(variant.id)
-                    ? "border-destructive/40 bg-destructive/5"
-                    : "border-emerald-200 bg-emerald-50/40",
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_140px] gap-3 flex-1 min-w-0">
-                    <div>
-                      <p className="text-xs text-emerald-700 font-semibold">SKU biến thể</p>
-                      <p className="text-sm font-medium break-all text-emerald-900">{variantPreview?.title ?? "NA"}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Số lượng</label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={variant.quantity}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            variants: prev.variants.map((item) =>
-                              item.id === variant.id
-                                ? { ...item, quantity: Math.max(0, Number(e.target.value) || 0) }
-                                : item,
-                            ),
-                          }))
-                        }
-                        className="h-9 w-full rounded-lg border-emerald-200 focus-visible:ring-emerald-500"
-                      />
-                    </div>
-                  </div>
-                  {form.variants.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive h-9 w-9 hover:bg-destructive/10"
-                      aria-label="Xóa biến thể"
-                      onClick={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          variants: prev.variants.filter((item) => item.id !== variant.id),
-                        }))
-                      }
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  {selectedConcreteAttributeIds.map((attributeId) => {
-                    const attribute = attributes.find((item) => item.id === attributeId);
-                    const attributeValues = attribute?.attributeValues ?? [];
-                    return (
-                      <div key={`${variant.id}-${attributeId}`} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-3">
-                        <p className="text-xs font-semibold text-emerald-800 md:mt-2 md:min-w-32">{attribute?.name}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {attributeValues.map((value) => {
-                            const checked = variant.selectedAttributeValueByAttributeId[attributeId] === value.id;
-                            return (
-                              <button
-                                key={value.id}
-                                type="button"
-                                onClick={() => {
-                                  setLastChangedVariantId(variant.id);
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    variants: prev.variants.map((item) =>
-                                      item.id === variant.id
-                                        ? {
-                                          ...item,
-                                          selectedAttributeValueByAttributeId: {
-                                            ...item.selectedAttributeValueByAttributeId,
-                                            [attributeId]: checked ? "" : value.id,
-                                          },
-                                        }
-                                        : item,
-                                    ),
-                                  }));
-                                }}
-                                className={cn(
-                                  "px-3 py-2 rounded-xl text-sm border transition-colors shadow-sm",
-                                  checked
-                                    ? isDuplicateVariant(variant.id)
-                                      ? "bg-destructive text-white border-destructive"
-                                      : "bg-emerald-600 text-white border-emerald-600"
-                                    : "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50",
-                                )}
-                              >
-                                {value.value}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
+            <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur dark:border-emerald-900/45 dark:bg-card/95 p-4 sm:p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold mb-1.5 block">
+                    Tên sản phẩm <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    placeholder="Vd: Máy ảnh cổ điển"
+                    value={form.name}
+                    onChange={(e) => setField("name", e.target.value)}
+                    className="rounded-xl border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
+                  />
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </div>
 
-        <div className="order-2 rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-5">
-          <label className="text-sm font-semibold mb-1.5 block">Mô tả</label>
-          <textarea
-            className="w-full border border-emerald-200 rounded-xl p-3 text-sm min-h-[96px] resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-            placeholder="Mô tả tình trạng, thông số kỹ thuật..."
-            value={form.description}
-            onChange={(e) => setField("description", e.target.value)}
-          />
-        </div>
-
-        <div className="order-3 rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-5 space-y-5">
-          <div>
-            <label className="text-sm font-semibold mb-2 block">
-              Danh mục sản phẩm <span className="text-destructive">*</span>
-            </label>
-            <div className="space-y-3">
-              {isLoadingFilters && <p className="text-sm text-muted-foreground">Đang tải danh mục con...</p>}
-              {!isLoadingFilters &&
-                form.selectedCategoryIds.map((selectedCategoryId, index) => {
-                  const availableCategories = categories.filter(
-                    (category) =>
-                      category.id === selectedCategoryId ||
-                      !form.selectedCategoryIds.some((id, idx) => idx !== index && id === category.id),
-                  );
-
-                  const subCategoriesInGroup = selectedCategoryId
-                    ? (subCategoryIdsByCategoryId[selectedCategoryId] ?? [])
-                    : [];
-
-                  return (
-                    <div key={`category-group-${index}`} className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="relative min-w-0 flex-1">
-                          <select
-                            value={selectedCategoryId}
-                            onChange={(e) => {
-                              const nextCategoryId = e.target.value;
-                              setForm((prev) => {
-                                const prevCategoryId = prev.selectedCategoryIds[index];
-                                const nextSelectedCategoryIds = prev.selectedCategoryIds.map((id, idx) =>
-                                  idx === index ? nextCategoryId : id,
-                                );
-
-                                const removedSubCategoryIds = prevCategoryId
-                                  ? (subCategoryIdsByCategoryId[prevCategoryId] ?? []).map((item) => item.id)
-                                  : [];
-                                const nextSubCategoryIds = prev.subCategoryIds.filter(
-                                  (id) => !removedSubCategoryIds.includes(id),
-                                );
-
-                                return {
-                                  ...prev,
-                                  selectedCategoryIds: nextSelectedCategoryIds,
-                                  subCategoryIds: nextSubCategoryIds,
-                                  primarySubCategoryId: nextSubCategoryIds.includes(prev.primarySubCategoryId)
-                                    ? prev.primarySubCategoryId
-                                    : "",
-                                };
-                              });
-                            }}
-                            className="h-10 w-full rounded-lg border border-emerald-200 bg-white pl-3 pr-9 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                          >
-                            <option value="">{index === 0 ? "Chọn danh mục chính" : "Chọn danh mục phụ"}</option>
-                            {availableCategories.map((category) => (
-                              <option key={category.id} value={category.id}>
-                                {category.name}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        </div>
-
-                        {form.selectedCategoryIds.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive h-9 w-9 hover:bg-destructive/10"
-                            aria-label="Xóa nhóm danh mục"
-                            onClick={() =>
-                              setForm((prev) => {
-                                const removedCategoryId = prev.selectedCategoryIds[index];
-                                const nextSelectedCategoryIds = prev.selectedCategoryIds.filter((_, idx) => idx !== index);
-                                const removedSubCategoryIds = removedCategoryId
-                                  ? (subCategoryIdsByCategoryId[removedCategoryId] ?? []).map((item) => item.id)
-                                  : [];
-                                return {
-                                  ...prev,
-                                  selectedCategoryIds: nextSelectedCategoryIds.length > 0 ? nextSelectedCategoryIds : [""],
-                                  subCategoryIds: prev.subCategoryIds.filter((id) => !removedSubCategoryIds.includes(id)),
-                                  primarySubCategoryId: removedSubCategoryIds.includes(prev.primarySubCategoryId)
-                                    ? ""
-                                    : prev.primarySubCategoryId,
-                                };
-                              })
-                            }
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      {selectedCategoryId && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-emerald-800">
-                            {index === 0 ? "Danh mục con chính (PRIMARY)" : "Danh mục con phụ"}
-                          </p>
-                          <div className="flex flex-wrap gap-2 w-full">
-                            {subCategoriesInGroup.length === 0 && (
-                              <p className="text-xs text-muted-foreground">Danh mục này chưa có danh mục con.</p>
-                            )}
-                            {subCategoriesInGroup.map((item) => (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() =>
-                                  setForm((prev) => {
-                                    const checked = prev.subCategoryIds.includes(item.id);
-                                    return {
-                                      ...prev,
-                                      subCategoryIds: checked
-                                        ? prev.subCategoryIds.filter((id) => id !== item.id)
-                                        : [...prev.subCategoryIds, item.id],
-                                      primarySubCategoryId: checked
-                                        ? prev.primarySubCategoryId === item.id
-                                          ? ""
-                                          : prev.primarySubCategoryId
-                                        : index === 0 && !prev.primarySubCategoryId
-                                          ? item.id
-                                          : prev.primarySubCategoryId,
-                                    };
-                                  })
-                                }
-                                className={cn(
-                                  "px-3 py-2 rounded-xl text-sm border transition-colors shadow-sm",
-                                  form.subCategoryIds.includes(item.id)
-                                    ? "bg-emerald-600 text-white border-emerald-600"
-                                    : "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50",
-                                )}
-                              >
-                                {item.name}
-                                {form.primarySubCategoryId === item.id && (
-                                  <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold">
-                                    PRIMARY
-                                  </span>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-              {!isLoadingFilters && (
+            <div className="order-4 rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur dark:border-emerald-900/45 dark:bg-card/95 p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-sm font-semibold block">
+                  Loại sản phẩm <span className="text-destructive">*</span>
+                </label>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                  className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
                   onClick={() =>
                     setForm((prev) => ({
                       ...prev,
-                      selectedCategoryIds: [...prev.selectedCategoryIds, ""],
+                      variants: [...prev.variants, createEmptyVariant()],
                     }))
                   }
                 >
-                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Thêm category phụ
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Tạo loại sản phẩm mới
                 </Button>
-              )}
-              {!!filterLoadError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-                  {filterLoadError}
-                </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          <div>
-            <label className="text-sm font-semibold mb-2 block">
-              Thuộc tính sản phẩm <span className="text-destructive">*</span>
-            </label>
-            <div className="space-y-3 w-full">
-              {isLoadingFilters && <p className="text-sm text-muted-foreground">Đang tải thuộc tính...</p>}
-              {!isLoadingFilters && (
-                <div className="flex flex-wrap gap-2 w-full">
-                  {attributes.length === 0 && (
-                    <p className="text-xs text-muted-foreground">Chưa có thuộc tính khả dụng.</p>
-                  )}
-                  {attributes.map((attribute) => {
-                    const checked = form.selectedAttributeIds.includes(attribute.id);
-                    return (
-                      <button
-                        key={attribute.id}
-                        type="button"
-                        onClick={() =>
-                          setForm((prev) => {
-                            const nextAttributeIds = checked
-                              ? prev.selectedAttributeIds.filter((id) => id !== attribute.id)
-                              : [...prev.selectedAttributeIds, attribute.id];
-                            return {
-                              ...prev,
-                              selectedAttributeIds: nextAttributeIds,
-                              variants: syncVariantAttributeSelections(prev.variants, nextAttributeIds),
-                            };
-                          })
-                        }
-                        className={cn(
-                          "px-3 py-2 rounded-xl text-sm border transition-colors shadow-sm",
-                          checked
-                            ? "bg-emerald-600 text-white border-emerald-600"
-                            : "bg-white border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50",
-                        )}
-                      >
-                        {attribute.name}
-                      </button>
-                    );
-                  })}
-                </div>
+              {variantPreviewRows.length === 0 && (
+                <p className="text-xs text-muted-foreground">Chọn thuộc tính trước khi tạo biến thể.</p>
               )}
+
+              {form.variants.map((variant) => {
+                const variantPreview = variantPreviewRows.find((row) => row.id === variant.id);
+                return (
+                  <div
+                    key={variant.id}
+                    className={cn(
+                      "rounded-xl border p-3 space-y-3",
+                      isDuplicateVariant(variant.id)
+                        ? "border-destructive/40 bg-destructive/5"
+                        : "border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/30",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_140px] gap-3 flex-1 min-w-0">
+                        <div>
+                          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">SKU biến thể</p>
+                          <p className="break-all text-sm font-medium text-emerald-900 dark:text-emerald-100">
+                            {variantPreview?.title ?? "NA"}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">Số lượng</label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={variant.quantity}
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                variants: prev.variants.map((item) =>
+                                  item.id === variant.id
+                                    ? { ...item, quantity: Math.max(0, Number(e.target.value) || 0) }
+                                    : item,
+                                ),
+                              }))
+                            }
+                            className="h-9 w-full rounded-lg border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
+                          />
+                        </div>
+                      </div>
+                      {form.variants.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive h-9 w-9 hover:bg-destructive/10"
+                          aria-label="Xóa biến thể"
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              variants: prev.variants.filter((item) => item.id !== variant.id),
+                            }))
+                          }
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      {selectedConcreteAttributeIds.map((attributeId) => {
+                        const attribute = attributes.find((item) => item.id === attributeId);
+                        const attributeValues = attribute?.attributeValues ?? [];
+                        return (
+                          <div key={`${variant.id}-${attributeId}`} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-3">
+                            <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 md:mt-2 md:min-w-32">
+                              {attribute?.name}
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {attributeValues.map((value) => {
+                                const checked = variant.selectedAttributeValueByAttributeId[attributeId] === value.id;
+                                return (
+                                  <button
+                                    key={value.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setLastChangedVariantId(variant.id);
+                                      setForm((prev) => ({
+                                        ...prev,
+                                        variants: prev.variants.map((item) =>
+                                          item.id === variant.id
+                                            ? {
+                                              ...item,
+                                              selectedAttributeValueByAttributeId: {
+                                                ...item.selectedAttributeValueByAttributeId,
+                                                [attributeId]: checked ? "" : value.id,
+                                              },
+                                            }
+                                            : item,
+                                        ),
+                                      }));
+                                    }}
+                                    className={cn(
+                                      "px-3 py-2 rounded-xl text-sm border transition-colors shadow-sm",
+                                      checked
+                                        ? isDuplicateVariant(variant.id)
+                                          ? "bg-destructive text-white border-destructive"
+                                          : "bg-emerald-600 text-white border-emerald-600"
+                                        : "border-emerald-200 bg-background hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-card dark:hover:bg-emerald-950/35",
+                                    )}
+                                  >
+                                    {value.value}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        </div>
+
+            <div className="order-2 rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur dark:border-emerald-900/45 dark:bg-card/95 p-4 sm:p-5">
+              <label className="text-sm font-semibold mb-1.5 block">Mô tả</label>
+              <textarea
+                className="min-h-[96px] w-full resize-none rounded-xl border border-emerald-200 bg-background p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/40 dark:border-emerald-900/50 dark:bg-card"
+                placeholder="Mô tả tình trạng, thông số kỹ thuật..."
+                value={form.description}
+                onChange={(e) => setField("description", e.target.value)}
+              />
+            </div>
+
+            <div className="order-3 rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur dark:border-emerald-900/45 dark:bg-card/95 p-4 sm:p-5 space-y-5">
+              <div>
+                <label className="text-sm font-semibold mb-2 block">
+                  Danh mục sản phẩm <span className="text-destructive">*</span>
+                </label>
+                <div className="space-y-3">
+                  {isLoadingFilters && <p className="text-sm text-muted-foreground">Đang tải danh mục con...</p>}
+                  {!isLoadingFilters &&
+                    form.selectedCategoryIds.map((selectedCategoryId, index) => {
+                      const availableCategories = categories.filter(
+                        (category) =>
+                          category.id === selectedCategoryId ||
+                          !form.selectedCategoryIds.some((id, idx) => idx !== index && id === category.id),
+                      );
+
+                      const subCategoriesInGroup = selectedCategoryId
+                        ? (subCategoryIdsByCategoryId[selectedCategoryId] ?? [])
+                        : [];
+
+                      return (
+                        <div
+                          key={`category-group-${index}`}
+                          className="space-y-3 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 dark:border-emerald-900/45 dark:bg-emerald-950/30"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="relative min-w-0 flex-1">
+                              <select
+                                value={selectedCategoryId}
+                                onChange={(e) => {
+                                  const nextCategoryId = e.target.value;
+                                  setForm((prev) => {
+                                    const prevCategoryId = prev.selectedCategoryIds[index];
+                                    const nextSelectedCategoryIds = prev.selectedCategoryIds.map((id, idx) =>
+                                      idx === index ? nextCategoryId : id,
+                                    );
+
+                                    const removedSubCategoryIds = prevCategoryId
+                                      ? (subCategoryIdsByCategoryId[prevCategoryId] ?? []).map((item) => item.id)
+                                      : [];
+                                    const nextSubCategoryIds = prev.subCategoryIds.filter(
+                                      (id) => !removedSubCategoryIds.includes(id),
+                                    );
+
+                                    return {
+                                      ...prev,
+                                      selectedCategoryIds: nextSelectedCategoryIds,
+                                      subCategoryIds: nextSubCategoryIds,
+                                      primarySubCategoryId: nextSubCategoryIds.includes(prev.primarySubCategoryId)
+                                        ? prev.primarySubCategoryId
+                                        : "",
+                                    };
+                                  });
+                                }}
+                                className="h-10 w-full appearance-none rounded-lg border border-emerald-200 bg-background pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 dark:border-emerald-900/50 dark:bg-card"
+                              >
+                                <option value="">{index === 0 ? "Chọn danh mục chính" : "Chọn danh mục phụ"}</option>
+                                {availableCategories.map((category) => (
+                                  <option key={category.id} value={category.id}>
+                                    {category.name}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            </div>
+
+                            {form.selectedCategoryIds.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive h-9 w-9 hover:bg-destructive/10"
+                                aria-label="Xóa nhóm danh mục"
+                                onClick={() =>
+                                  setForm((prev) => {
+                                    const removedCategoryId = prev.selectedCategoryIds[index];
+                                    const nextSelectedCategoryIds = prev.selectedCategoryIds.filter((_, idx) => idx !== index);
+                                    const removedSubCategoryIds = removedCategoryId
+                                      ? (subCategoryIdsByCategoryId[removedCategoryId] ?? []).map((item) => item.id)
+                                      : [];
+                                    return {
+                                      ...prev,
+                                      selectedCategoryIds: nextSelectedCategoryIds.length > 0 ? nextSelectedCategoryIds : [""],
+                                      subCategoryIds: prev.subCategoryIds.filter((id) => !removedSubCategoryIds.includes(id)),
+                                      primarySubCategoryId: removedSubCategoryIds.includes(prev.primarySubCategoryId)
+                                        ? ""
+                                        : prev.primarySubCategoryId,
+                                    };
+                                  })
+                                }
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+
+                          {selectedCategoryId && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-emerald-800">
+                                {index === 0 ? "Danh mục con chính (PRIMARY)" : "Danh mục con phụ"}
+                              </p>
+                              <div className="flex flex-wrap gap-2 w-full">
+                                {subCategoriesInGroup.length === 0 && (
+                                  <p className="text-xs text-muted-foreground">Danh mục này chưa có danh mục con.</p>
+                                )}
+                                {subCategoriesInGroup.map((item) => (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() =>
+                                      setForm((prev) => {
+                                        const checked = prev.subCategoryIds.includes(item.id);
+                                        return {
+                                          ...prev,
+                                          subCategoryIds: checked
+                                            ? prev.subCategoryIds.filter((id) => id !== item.id)
+                                            : [...prev.subCategoryIds, item.id],
+                                          primarySubCategoryId: checked
+                                            ? prev.primarySubCategoryId === item.id
+                                              ? ""
+                                              : prev.primarySubCategoryId
+                                            : index === 0 && !prev.primarySubCategoryId
+                                              ? item.id
+                                              : prev.primarySubCategoryId,
+                                        };
+                                      })
+                                    }
+                                    className={cn(
+                                      "px-3 py-2 rounded-xl text-sm border transition-colors shadow-sm",
+                                      form.subCategoryIds.includes(item.id)
+                                        ? "bg-emerald-600 text-white border-emerald-600"
+                                        : "border-emerald-200 bg-background hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-card dark:hover:bg-emerald-950/35",
+                                    )}
+                                  >
+                                    {item.name}
+                                    {form.primarySubCategoryId === item.id && (
+                                      <span className="ml-2 rounded-full bg-background/25 px-2 py-0.5 text-[10px] font-semibold dark:bg-emerald-950/60">
+                                        PRIMARY
+                                      </span>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                  {!isLoadingFilters && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          selectedCategoryIds: [...prev.selectedCategoryIds, ""],
+                        }))
+                      }
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1.5" /> Thêm category phụ
+                    </Button>
+                  )}
+                  {!!filterLoadError && (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                      {filterLoadError}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold mb-2 block">
+                  Thuộc tính sản phẩm <span className="text-destructive">*</span>
+                </label>
+                <div className="space-y-3 w-full">
+                  {isLoadingFilters && <p className="text-sm text-muted-foreground">Đang tải thuộc tính...</p>}
+                  {!isLoadingFilters && (
+                    <div className="flex flex-wrap gap-2 w-full">
+                      {attributes.length === 0 && (
+                        <p className="text-xs text-muted-foreground">Chưa có thuộc tính khả dụng.</p>
+                      )}
+                      {attributes.map((attribute) => {
+                        const checked = form.selectedAttributeIds.includes(attribute.id);
+                        return (
+                          <button
+                            key={attribute.id}
+                            type="button"
+                            onClick={() =>
+                              setForm((prev) => {
+                                const nextAttributeIds = checked
+                                  ? prev.selectedAttributeIds.filter((id) => id !== attribute.id)
+                                  : [...prev.selectedAttributeIds, attribute.id];
+                                return {
+                                  ...prev,
+                                  selectedAttributeIds: nextAttributeIds,
+                                  variants: syncVariantAttributeSelections(prev.variants, nextAttributeIds),
+                                };
+                              })
+                            }
+                            className={cn(
+                              "px-3 py-2 rounded-xl text-sm border transition-colors shadow-sm",
+                              checked
+                                ? "bg-emerald-600 text-white border-emerald-600"
+                                : "border-emerald-200 bg-background hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-900/50 dark:bg-card dark:hover:bg-emerald-950/35",
+                            )}
+                          >
+                            {attribute.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </>
         ) : (
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur p-4 sm:p-6 space-y-6">
+          <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur dark:border-emerald-900/45 dark:bg-card/95 p-4 sm:p-6 space-y-6">
             <input
               ref={thumbInputRef}
               type="file"
@@ -918,7 +925,7 @@ export function AddProductPage({
               </label>
               <div className="flex flex-wrap gap-4 items-start">
                 {media.thumbnailPreview ? (
-                  <div className="relative w-40 h-40 rounded-2xl overflow-hidden border border-emerald-200 shadow-sm bg-emerald-50">
+                  <div className="relative h-40 w-40 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/40">
                     <img src={media.thumbnailPreview} alt="" className="w-full h-full object-cover" />
                     <Button
                       type="button"
@@ -935,7 +942,7 @@ export function AddProductPage({
                   <button
                     type="button"
                     onClick={() => thumbInputRef.current?.click()}
-                    className="w-40 h-40 rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 flex flex-col items-center justify-center gap-2 text-sm text-emerald-800 hover:bg-emerald-50 transition-colors"
+                    className="flex h-40 w-40 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 text-sm text-emerald-800 transition-colors hover:bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-200 dark:hover:bg-emerald-950/55"
                   >
                     <ImageIcon className="w-8 h-8 opacity-70" />
                     Chọn ảnh
@@ -952,7 +959,10 @@ export function AddProductPage({
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                 {media.gallery.map((g) => (
-                  <div key={g.key} className="relative aspect-square rounded-xl overflow-hidden border border-emerald-100 bg-emerald-50 shadow-sm">
+                  <div
+                    key={g.key}
+                    className="relative aspect-square overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50 shadow-sm dark:border-emerald-900/45 dark:bg-emerald-950/40"
+                  >
                     <img src={g.preview} alt="" className="w-full h-full object-cover" />
                     <Button
                       type="button"
@@ -970,7 +980,7 @@ export function AddProductPage({
                   <button
                     type="button"
                     onClick={() => galleryInputRef.current?.click()}
-                    className="aspect-square rounded-xl border-2 border-dashed border-emerald-200 flex flex-col items-center justify-center gap-1 text-xs text-emerald-700 hover:bg-emerald-50/80"
+                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-emerald-200 text-xs text-emerald-700 hover:bg-emerald-50/80 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
                   >
                     <Plus className="w-6 h-6" />
                     Thêm ảnh
@@ -1001,7 +1011,7 @@ export function AddProductPage({
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
                     onClick={() => videoInputRef.current?.click()}
                   >
                     <Video className="w-4 h-4 mr-2" />
@@ -1045,7 +1055,7 @@ export function AddProductPage({
                 onBack();
                 reset();
               }}
-              className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
             >
               Quay lại
             </Button>
@@ -1065,7 +1075,7 @@ export function AddProductPage({
             <Button
               variant="outline"
               onClick={() => setStep(1)}
-              className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
               disabled={submitting}
             >
               Quay lại

@@ -301,7 +301,7 @@ export default function Listings() {
   const unpublishedProducts = pendingProducts.filter((p) => p.facilityId === unpublishedFacilityId);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="flex min-h-screen bg-muted/40 dark:bg-background">
       <ListingsSidebar
         route={route ?? null}
         contextFacilityId={contextFacilityId}

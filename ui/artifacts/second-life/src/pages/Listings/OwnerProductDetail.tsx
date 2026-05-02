@@ -34,7 +34,9 @@ export function OwnerProductDetail({ product, onBack }: { product: Product; onBa
         <h2 className="text-xl font-bold truncate flex-1">{product.name}</h2>
         <Badge
           className={
-            isActive ? "bg-green-100 text-green-700 border-none" : "bg-gray-100 text-gray-500 border-none"
+            isActive
+              ? "border-none bg-green-100 text-green-700 dark:bg-green-950/55 dark:text-green-400"
+              : "border-none bg-muted text-muted-foreground"
           }
         >
           {isActive ? "Đang hoạt động" : "Đã ngưng"}
@@ -43,21 +45,21 @@ export function OwnerProductDetail({ product, onBack }: { product: Product; onBa
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-5 space-y-3">
-          <div className="aspect-square rounded-2xl overflow-hidden bg-white border relative group">
+          <div className="relative aspect-square overflow-hidden rounded-2xl border bg-card group">
             <img src={product.images[activeImage]} alt={product.name} className="w-full h-full object-cover" />
             {product.images.length > 1 && (
               <>
                 <button
                   type="button"
                   onClick={prev}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-background/90 p-1.5 opacity-0 shadow backdrop-blur-sm transition-opacity group-hover:opacity-100 dark:bg-card/90"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
                   onClick={next}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-background/90 p-1.5 opacity-0 shadow backdrop-blur-sm transition-opacity group-hover:opacity-100 dark:bg-card/90"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -84,12 +86,12 @@ export function OwnerProductDetail({ product, onBack }: { product: Product; onBa
         </div>
 
         <div className="lg:col-span-7 space-y-4">
-          <div className="bg-white rounded-2xl border p-5 shadow-sm">
-            <div className="flex gap-2 mb-3 flex-wrap">
+          <div className="rounded-2xl border bg-card p-5 shadow-sm">
+            <div className="mb-3 flex flex-wrap gap-2">
               <Badge variant="outline" className="bg-primary/5 text-primary">
                 {product.subCategoryName}
               </Badge>
-              <Badge variant="outline" className="bg-gray-100 text-gray-600">
+              <Badge variant="outline" className="bg-muted text-muted-foreground">
                 {product.condition}
               </Badge>
             </div>
@@ -168,19 +170,19 @@ export function OwnerProductDetail({ product, onBack }: { product: Product; onBa
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border p-5 shadow-sm">
-            <h4 className="font-bold mb-3 text-sm">Thống kê sản phẩm</h4>
+          <div className="rounded-2xl border bg-card p-5 shadow-sm">
+            <h4 className="mb-3 text-sm font-bold">Thống kê sản phẩm</h4>
             <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="bg-gray-50 rounded-xl p-3">
+              <div className="rounded-xl bg-muted/60 p-3">
                 <p className="text-lg font-bold text-primary">12</p>
                 <p className="text-xs text-muted-foreground">Lượt xem</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3">
+              <div className="rounded-xl bg-muted/60 p-3">
                 <p className="text-lg font-bold">{product.reviewsCount}</p>
                 <p className="text-xs text-muted-foreground">Đánh giá</p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-lg font-bold text-green-600">5</p>
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="text-lg font-bold text-green-600 dark:text-green-400">5</p>
                 <p className="text-xs text-muted-foreground">Đơn hoàn thành</p>
               </div>
             </div>

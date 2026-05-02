@@ -5,8 +5,8 @@ packages:
   "tailwind-merge": "Utility for merging tailwind classes without style conflicts"
 
 images:
-  - path: "artifacts/second-life/public/images/logo-leaf.png"
-    description: "A cute, modern, minimalist line-art logo of a stylized green leaf forming an infinity symbol, isolated on transparent background, soft pastel green colors."
+  - path: "artifacts/second-life/public/favicon.png"
+    description: "Leaf mark used as app favicon and in-header/footer logo (same asset)."
     aspect_ratio: "1:1"
   - path: "artifacts/second-life/public/images/hero-illustration.png"
     description: "A cute, flat vector illustration in pastel colors showing happy people exchanging boxes, clothing, and small furniture in a sunny park setting. Soft rounded shapes, clean modern style."

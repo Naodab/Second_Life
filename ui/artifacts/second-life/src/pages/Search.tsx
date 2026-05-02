@@ -170,12 +170,12 @@ export default function Search() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/30 pt-8 pb-20">
+    <div className="min-h-screen bg-muted/40 pt-8 pb-20 dark:bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Mobile Filter Toggle */}
         <div className="flex md:hidden items-center justify-between mb-4">
           <h1 className="text-2xl font-bold font-display">Khám phá</h1>
-          <Button variant="outline" size="sm" className="bg-white">
+          <Button variant="outline" size="sm" className="bg-card">
             <Filter className="w-4 h-4 mr-2" /> Bộ lọc
           </Button>
         </div>
@@ -188,13 +188,13 @@ export default function Search() {
                   <Filter className="w-5 h-5 text-primary" /> Bộ lọc
                 </h3>
 
-                <div className="space-y-6 bg-white p-5 rounded-2xl border shadow-sm overflow-visible">
+                <div className="space-y-6 overflow-visible rounded-2xl border border-border bg-card p-5 shadow-sm">
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
                       Loại tin
                     </h4>
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger className="bg-gray-50 border-transparent">
+                      <SelectTrigger className="border-transparent bg-muted/60 dark:bg-card">
                         <SelectValue placeholder="Chọn loại tin" />
                       </SelectTrigger>
                       <SelectContent>
@@ -287,7 +287,7 @@ export default function Search() {
                               typeof document !== "undefined" &&
                               createPortal(
                                 <div
-                                  className="fixed z-[1400] min-w-56 rounded-xl border bg-white p-3 shadow-lg space-y-2"
+                                  className="fixed z-[1400] min-w-56 space-y-2 rounded-xl border border-border bg-popover p-3 text-popover-foreground shadow-lg"
                                   style={{ top: submenuPos.top, left: submenuPos.left }}
                                   onMouseEnter={() => openHoverMenu(catId)}
                                   onMouseLeave={() => scheduleCloseHoverMenu(catId)}
@@ -327,9 +327,9 @@ export default function Search() {
                       Khoảng giá
                     </h4>
                     <div className="flex items-center gap-2">
-                      <Input placeholder="Thấp nhất" className="bg-gray-50 border-transparent text-sm" />
+                      <Input placeholder="Thấp nhất" className="border-transparent bg-muted/60 text-sm dark:bg-card" />
                       <span className="text-muted-foreground">-</span>
-                      <Input placeholder="Cao nhất" className="bg-gray-50 border-transparent text-sm" />
+                      <Input placeholder="Cao nhất" className="border-transparent bg-muted/60 text-sm dark:bg-card" />
                     </div>
                   </div>
                 </div>
@@ -339,7 +339,7 @@ export default function Search() {
 
           {/* Main Content */}
           <main className="flex-1 relative z-0">
-            <div className="bg-white p-4 rounded-2xl border shadow-sm mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="mb-6 flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center">
               <div>
                 <h1 className="text-2xl font-bold font-display hidden md:block">{selectedCategoryText}</h1>
                 <p className="text-muted-foreground text-sm">{products.length} kết quả tìm thấy</p>
@@ -348,7 +348,7 @@ export default function Search() {
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Sắp xếp:</span>
                 <Select defaultValue="newest">
-                  <SelectTrigger className="w-full sm:w-[180px] bg-gray-50 border-transparent">
+                  <SelectTrigger className="w-full border-transparent bg-muted/60 sm:w-[180px] dark:bg-card">
                     <SelectValue placeholder="Sắp xếp theo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -379,7 +379,7 @@ export default function Search() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20 bg-white rounded-2xl border">
+              <div className="rounded-2xl border border-border bg-card py-20 text-center">
                 <img
                   src={`${import.meta.env.BASE_URL}images/empty-cart.png`}
                   alt="Không tìm thấy"
@@ -407,7 +407,7 @@ export default function Search() {
                   <Button
                     variant="outline"
                     disabled
-                    className="w-10 h-10 p-0 rounded-full border-transparent bg-white"
+                    className="h-10 w-10 rounded-full border-transparent bg-card p-0"
                   >
                     1
                   </Button>
