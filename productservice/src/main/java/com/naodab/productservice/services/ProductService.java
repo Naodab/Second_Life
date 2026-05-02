@@ -5,6 +5,7 @@ import java.util.List;
 import com.naodab.productservice.dto.request.ProductCreateRequest;
 import com.naodab.productservice.dto.request.ProductUpdateRequest;
 import com.naodab.productservice.dto.response.ProductResponse;
+import com.naodab.productservice.dto.response.ProductVariantSummaryResponse;
 
 public interface ProductService {
 
@@ -14,6 +15,8 @@ public interface ProductService {
 
   ProductResponse getProductById(String id);
 
+  ProductResponse getOwnedProductWithVariants(String profileId, String productId);
+
   void uploadProductImages(
       String profileId,
       String id,
@@ -21,6 +24,7 @@ public interface ProductService {
       List<String> productImageUrls,
       String videoUrl);
 
+  List<ProductVariantSummaryResponse> getProductVariants(String profileId, String productId);
+
   void deleteProduct(String id);
 }
-

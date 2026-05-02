@@ -12,6 +12,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.util.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
@@ -19,6 +20,7 @@ import com.naodab.productservice.dto.request.ProductCreateRequest;
 import com.naodab.productservice.dto.request.ProductUpdateRequest;
 import com.naodab.productservice.dto.request.ProductVariantCreateRequest;
 import com.naodab.productservice.dto.response.ProductResponse;
+import com.naodab.productservice.dto.response.ProductVariantSummaryResponse;
 import com.naodab.productservice.mapper.ProductMapper;
 import com.naodab.productservice.mapper.ProductVariantMapper;
 import com.naodab.productservice.models.Attribute;
@@ -38,7 +40,6 @@ import com.naodab.productservice.repositories.SubCategoryRepository;
 import com.naodab.productservice.services.ProductSearchService;
 import com.naodab.productservice.services.ProductService;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
@@ -279,6 +280,7 @@ public class ProductServiceImpl implements ProductService {
   }
 
   @Override
+  @Transactional(readOnly = true)
   public ProductResponse getProductById(String id) {
     if (id == null || id.isBlank()) {
       throw new AppException(ErrorCode.INVALID_INPUT);
@@ -287,6 +289,20 @@ public class ProductServiceImpl implements ProductService {
     Product product = productRepository.findByIdAndDeletedAtIsNull(id)
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
 
+    return productMapper.toProductResponse(product, List.of());
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public ProductResponse getOwnedProductWithVariants(String profileId, String productId) {
+    if (productId == null || productId.isBlank() || profileId == null || profileId.isBlank()) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    Product product = productRepository.findByIdWithVariantsGraph(productId.trim())
+        .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+    if (product.getFacility() == null || !profileId.trim().equals(product.getFacility().getOwnerId())) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
     return productMapper.toProductResponse(product, List.of());
   }
 
@@ -364,5 +380,21 @@ public class ProductServiceImpl implements ProductService {
     product.setDeletedAt(LocalDateTime.now());
     productRepository.save(product);
     productSearchService.delete(id);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<ProductVariantSummaryResponse> getProductVariants(String profileId, String productId) {
+    if (productId == null || productId.isBlank() || profileId == null || profileId.isBlank()) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    Product product = productRepository.findByIdWithVariantsGraph(productId.trim())
+        .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+
+    if (product.getFacility() == null || !profileId.trim().equals(product.getFacility().getOwnerId())) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    return productMapper.toProductVariantSummaryResponses(product.getVariants());
   }
 }
