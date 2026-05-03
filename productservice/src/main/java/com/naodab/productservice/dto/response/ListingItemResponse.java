@@ -28,4 +28,12 @@ public class ListingItemResponse {
   String productId;
   String productName;
   String thumbnailImage;
+
+  String facilityId;
+  String facilityName;
+  String facilityImageUrl;
+  String facilityAddress;
+  Double averageRating;
+
+  String primarySubCategoryName;
 }

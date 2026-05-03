@@ -4,6 +4,7 @@ import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
@@ -15,6 +16,8 @@ public interface ListingService {
   ListingResponse createListing(String profileId, ListingCreateRequest request);
 
   ListingResponse updateListing(String profileId, String listingId, ListingUpdateRequest request);
+
+  ListingPublicDetailResponse getPublicListingById(String listingId);
 
   List<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request);
 

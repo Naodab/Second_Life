@@ -10,9 +10,11 @@ import com.naodab.productservice.documents.ProductDocument;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.ListingVariantResponse;
+import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Listing;
 import com.naodab.productservice.models.ListingVariant;
 import com.naodab.productservice.models.Product;
+import com.naodab.productservice.models.SubCategory;
 import com.naodab.productservice.models.ProductVariant;
 
 import lombok.RequiredArgsConstructor;
@@ -59,6 +61,11 @@ public class ListingMapper {
         .variantSkus(productDocument.getVariantSkus())
         .variants(toDocumentVariantSnapshots(productDocument.getVariants()))
         .status(productDocument.getStatus())
+        .facilityName(facilitySnapshotName(product))
+        .facilityImageUrl(facilitySnapshotImageUrl(product))
+        .facilityAddress(facilitySnapshotAddress(product))
+        .averageRating(facilitySnapshotAverageRating(product))
+        .primarySubCategoryName(primarySubCategorySnapshotName(product))
         .productId(product.getId())
         .createdAt(productDocument.getCreatedAt())
         .updatedAt(productDocument.getUpdatedAt())
@@ -78,6 +85,7 @@ public class ListingMapper {
     String productName = product == null ? null : product.getName();
     String thumb = product == null ? null : productMapper.thumbnailImageUrl(product);
 
+    Facility facility = product == null ? null : product.getFacility();
     return ListingItemResponse.builder()
         .id(listing.getId())
         .title(listing.getTitle())
@@ -89,6 +97,14 @@ public class ListingMapper {
         .productId(productId)
         .productName(productName)
         .thumbnailImage(thumb)
+        .facilityId(facility == null ? null : facility.getId())
+        .facilityName(facility == null ? null : facility.getName())
+        .facilityImageUrl(facility == null ? null : facility.getImageUrl())
+        .facilityAddress(facility == null ? null : facility.getAddress())
+        .averageRating(facility == null || facility.getAverageRating() == null
+            ? null
+            : facility.getAverageRating().doubleValue())
+        .primarySubCategoryName(primarySubCategorySnapshotName(product))
         .build();
   }
 
@@ -107,7 +123,49 @@ public class ListingMapper {
         .productId(doc.getProductId())
         .productName(doc.getName())
         .thumbnailImage(doc.getThumbnailUrl())
+        .facilityId(doc.getFacilityId())
+        .facilityName(doc.getFacilityName())
+        .facilityImageUrl(doc.getFacilityImageUrl())
+        .facilityAddress(doc.getFacilityAddress())
+        .averageRating(doc.getAverageRating())
+        .primarySubCategoryName(doc.getPrimarySubCategoryName())
         .build();
+  }
+
+  private static String facilitySnapshotName(Product product) {
+    if (product == null || product.getFacility() == null) {
+      return null;
+    }
+    return product.getFacility().getName();
+  }
+
+  private static String facilitySnapshotAddress(Product product) {
+    if (product == null || product.getFacility() == null) {
+      return null;
+    }
+    return product.getFacility().getAddress();
+  }
+
+  private static String primarySubCategorySnapshotName(Product product) {
+    if (product == null || product.getPrimarySubCategory() == null) {
+      return null;
+    }
+    SubCategory sub = product.getPrimarySubCategory();
+    return sub.getName();
+  }
+
+  private static String facilitySnapshotImageUrl(Product product) {
+    if (product == null || product.getFacility() == null) {
+      return null;
+    }
+    return product.getFacility().getImageUrl();
+  }
+
+  private static Double facilitySnapshotAverageRating(Product product) {
+    if (product == null || product.getFacility() == null || product.getFacility().getAverageRating() == null) {
+      return null;
+    }
+    return product.getFacility().getAverageRating().doubleValue();
   }
 
   public ListingResponse toListingResponse(Listing listing, List<ListingVariant> variants) {

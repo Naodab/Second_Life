@@ -23,6 +23,8 @@ import lombok.experimental.FieldDefaults;
 public class ListingSearchRequest {
   String keyword;
   String facilityId;
+  /** When set (e.g. seller filters by product), matches listing document {@code productId} */
+  String productId;
   String provinceCode;
   String wardCode;
   Float latitude;

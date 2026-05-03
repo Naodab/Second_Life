@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -12,6 +13,7 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.naodab.productservice.documents.ListingDocument;
@@ -54,6 +56,33 @@ public class ListingSearchServiceImpl implements ListingSearchService {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public int reindexAllListingsFromDatabase() {
+    int batchSize = 50;
+    int total = 0;
+    Pageable pageable = PageRequest.of(0, batchSize);
+    Page<String> idPage;
+    do {
+      idPage = listingRepository.findIdsForElasticsearchReindex(pageable);
+      List<String> ids = idPage.getContent();
+      if (ids.isEmpty()) {
+        break;
+      }
+      for (String id : ids) {
+        try {
+          listingElasticsearchIndexWriter.writeListingDocumentById(id);
+          total++;
+        } catch (Exception e) {
+          log.error("Elasticsearch listing reindex failed for id={}", id, e);
+        }
+      }
+      pageable = idPage.nextPageable();
+    } while (idPage.hasNext());
+    log.info("Elasticsearch listings reindex finished: {} documents written", total);
+    return total;
+  }
+
+  @Override
   public void reindexAllListingsForProduct(String productId) {
     if (!StringUtils.hasText(productId)) {
       return;
@@ -91,7 +120,7 @@ public class ListingSearchServiceImpl implements ListingSearchService {
   }
 
   @Override
-  public List<ListingDocument> searchListings(ListingSearchRequest request) {
+  public ListingDocumentPage searchListingsPaged(ListingSearchRequest request) {
     ListingSearchRequest safeRequest = request == null ? ListingSearchRequest.builder().build() : request;
     int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(safeRequest.getPage());
     int normalizedPageSize = ElasticsearchNativeQueryHelper.normalizePageSize(safeRequest.getPageSize(),
@@ -107,7 +136,12 @@ public class ListingSearchServiceImpl implements ListingSearchService {
     for (SearchHit<ListingDocument> hit : hits) {
       results.add(hit.getContent());
     }
-    return results;
+    return new ListingDocumentPage(results, hits.getTotalHits());
+  }
+
+  @Override
+  public List<ListingDocument> searchListings(ListingSearchRequest request) {
+    return searchListingsPaged(request).items();
   }
 
   private NativeQuery buildNativeQuery(
@@ -131,6 +165,7 @@ public class ListingSearchServiceImpl implements ListingSearchService {
         filter -> {
           ElasticsearchNativeQueryHelper.addStandardLocationFilters(
               filter, request.getFacilityId(), request.getProvinceCode(), request.getWardCode());
+          ElasticsearchNativeQueryHelper.addTermIfTextPresent(filter, "productId", request.getProductId());
           ElasticsearchNativeQueryHelper.addCategoryIdsMatchAllFilterIfPresent(filter, request.getCategoryIds());
           ElasticsearchNativeQueryHelper.addSubCategoryIdsMatchAllFilterIfPresent(
               filter, request.getSubCategoryIds());

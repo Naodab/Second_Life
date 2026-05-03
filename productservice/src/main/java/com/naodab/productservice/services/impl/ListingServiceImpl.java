@@ -8,9 +8,6 @@ import java.util.Locale;
 import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -22,9 +19,11 @@ import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
+import com.naodab.productservice.mapper.ProductMapper;
 import com.naodab.productservice.mapper.ListingMapper;
 import com.naodab.productservice.models.Listing;
 import com.naodab.productservice.models.ListingVariant;
@@ -62,6 +61,35 @@ public class ListingServiceImpl implements ListingService {
   FacilityRepository facilityRepository;
   ListingSearchService listingSearchService;
   ListingMapper listingMapper;
+  ProductMapper productMapper;
+
+  @Override
+  @Transactional(readOnly = true)
+  public ListingPublicDetailResponse getPublicListingById(String listingId) {
+    if (!StringUtils.hasText(listingId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    Listing listing =
+        listingRepository.findWithProductGraphById(listingId.trim()).orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+    Product product = listing.getProduct();
+    if (product == null || product.getDeletedAt() != null) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    if (product.getStatus() != Product.ProductStatus.PUBLISHED) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    if (listing.getListingStatus() != Listing.ListingStatus.ACTIVE) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    ProductDocumentGraphInitializer.initialize(product);
+    List<ListingVariant> listingVariants =
+        listingVariantRepository.findByListing_Id(listing.getId());
+    return ListingPublicDetailResponse.builder()
+        .listing(listingMapper.toListingResponse(listing, listingVariants))
+        .product(
+            productMapper.toProductResponse(product, productMapper.collectDistinctAttributesFromProduct(product)))
+        .build();
+  }
 
   @Override
   public List<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request) {
@@ -161,18 +189,26 @@ public class ListingServiceImpl implements ListingService {
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
     int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(page);
     int normalizedSize = ElasticsearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
-    Pageable pageable = PageRequest.of(normalizedPage, normalizedSize);
     String kw = trimToNull(keyword);
     String pid = trimToNull(productId);
-    Page<Listing> result = kw == null && pid == null
-        ? listingRepository.findSellerItemsByFacilityIdPage(fid, pageable)
-        : listingRepository.findSellerItemsByFacilityIdPageFiltered(fid, kw, pid, pageable);
-    List<ListingItemResponse> items = result.getContent().stream()
+
+    ListingSearchRequest searchRequest = ListingSearchRequest.builder()
+        .facilityId(fid)
+        .keyword(kw)
+        .productId(pid)
+        .page(normalizedPage)
+        .pageSize(normalizedSize)
+        .sortBy(kw != null ? ElasticsearchSortBy.RELEVANCE : ElasticsearchSortBy.CREATED_AT_DESC)
+        .build();
+
+    ListingSearchService.ListingDocumentPage esPage = listingSearchService.searchListingsPaged(searchRequest);
+    List<ListingItemResponse> items = esPage.items().stream()
         .map(listingMapper::toListingItemResponse)
+        .filter(Objects::nonNull)
         .toList();
     return PagedItemsResponse.<ListingItemResponse>builder()
         .items(items)
-        .totalCount(result.getTotalElements())
+        .totalCount(esPage.totalCount())
         .page(normalizedPage)
         .pageSize(normalizedSize)
         .build();

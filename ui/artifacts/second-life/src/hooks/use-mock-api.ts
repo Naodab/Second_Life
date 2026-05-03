@@ -120,7 +120,9 @@ export async function checkRentAvailability(
   const end = new Date(endDate);
   if (end <= start) return { available: false, message: "Ngày kết thúc phải sau ngày bắt đầu." };
   const product = MOCK_PRODUCTS.find(p => p.id === productId);
-  if (!product) return { available: false, message: "Sản phẩm không tồn tại." };
+  if (!product) {
+    return { available: true };
+  }
   if (quantity > product.stock) return { available: false, message: `Chỉ còn ${product.stock} sản phẩm trong kho.` };
   return { available: true };
 }

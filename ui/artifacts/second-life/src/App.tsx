@@ -14,7 +14,7 @@ import { setBaseUrl } from "@workspace/api-client-react";
 
 import Home from "@/pages/Home";
 import Search from "@/pages/Search";
-import ProductDetail from "@/pages/ProductDetail";
+import ListingDetail from "@/pages/ListingDetail";
 import FacilityPage from "@/pages/Facility";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
@@ -79,7 +79,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/search" component={Search} />
-          <Route path="/product/:id" component={ProductDetail} />
+          <Route path="/listing/:id" component={ListingDetail} />
           <Route path="/facility/:id" component={FacilityPage} />
           <Route path="/shop/:id" component={FacilityPage} />
           <Route path="/cart" component={Cart} />

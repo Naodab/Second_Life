@@ -16,7 +16,12 @@ export function StarDisplay({
       {[...Array(max)].map((_, i) => (
         <Star
           key={i}
-          className={cn(sz, i < Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-gray-200 text-gray-200")}
+          className={cn(
+            sz,
+            i < Math.round(rating)
+              ? "fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500"
+              : "fill-muted text-muted",
+          )}
         />
       ))}
     </div>

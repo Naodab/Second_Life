@@ -258,22 +258,7 @@ public class ProductServiceImpl implements ProductService {
   }
 
   private List<Attribute> extractAttributesFromProductVariants(Product product) {
-    LinkedHashMap<String, Attribute> byId = new LinkedHashMap<>();
-    if (product.getVariants() == null) {
-      return List.of();
-    }
-    for (ProductVariant variant : product.getVariants()) {
-      if (variant.getVariantAttributeValues() == null) {
-        continue;
-      }
-      for (ProductVariantAttributeValue link : variant.getVariantAttributeValues()) {
-        AttributeValue av = link.getAttributeValue();
-        if (av != null && av.getAttribute() != null && StringUtils.hasText(av.getAttribute().getId())) {
-          byId.put(av.getAttribute().getId().trim(), av.getAttribute());
-        }
-      }
-    }
-    return List.copyOf(byId.values());
+    return productMapper.collectDistinctAttributesFromProduct(product);
   }
 
   private Facility getFacilityByOwnerAndId(String profileId, String facilityId) {

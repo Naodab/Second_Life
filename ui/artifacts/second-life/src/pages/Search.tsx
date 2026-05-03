@@ -4,7 +4,7 @@ import { useLocation, useSearch } from "wouter";
 import { Filter, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ListingSearchCard } from "@/components/ListingSearchCard";
+import { ListingCard } from "@/components/ListingCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -676,7 +676,7 @@ export default function Search() {
             ) : listings.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {listings.map((row) => (
-                  <ListingSearchCard key={row.id} row={row} />
+                  <ListingCard key={row.id} row={row} />
                 ))}
               </div>
             ) : (

@@ -24,6 +24,12 @@ export type ListingItemResponse = {
   productId: string;
   productName: string | null;
   thumbnailImage: string | null;
+  facilityId?: string | null;
+  facilityName?: string | null;
+  facilityImageUrl?: string | null;
+  facilityAddress?: string | null;
+  averageRating?: number | null;
+  primarySubCategoryName?: string | null;
 };
 
 export type GetFacilityListingPageParams = {
@@ -153,6 +159,97 @@ export type ListingCreateResponse = {
   description?: string | null;
   listingType: ListingType;
 };
+
+export type ListingVariantResponse = {
+  id: string;
+  productVariantId: string;
+  buyPrice?: number | null;
+  rentPrice?: number | null;
+  rentUnit?: RentUnit | null;
+  isActive?: boolean | null;
+};
+
+export type ListingResponseDetailed = {
+  id: string;
+  productId: string;
+  title: string;
+  description?: string | null;
+  listingType: ListingType;
+  listingStatus: ListingStatus;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  variants: ListingVariantResponse[];
+};
+
+export type ProductVariantSummaryDto = {
+  id: string;
+  sku?: string | null;
+  quantity?: number | null;
+  label?: string | null;
+};
+
+export type ProductMediaDto = {
+  mediaUrl: string;
+  mediaType?: string | null;
+  isThumbnail?: boolean | null;
+  sortOrder?: number | null;
+};
+
+export type CategoryRefDto = {
+  id: string;
+  name?: string | null;
+};
+
+export type FacilityOverviewDto = {
+  id: string;
+  name?: string | null;
+  imageUrl?: string | null;
+  address?: string | null;
+  provinceCode?: string | null;
+  wardCode?: string | null;
+  averageRating?: number | null;
+  orderCount?: number | null;
+};
+
+export type AttributeValueDto = {
+  id?: string | null;
+  value?: string | null;
+  code?: string | null;
+};
+
+export type AttributeDto = {
+  id?: string | null;
+  name?: string | null;
+  attributeValues?: AttributeValueDto[] | null;
+};
+
+export type ListingProductBundleDto = {
+  id: string;
+  name: string;
+  description?: string | null;
+  thumbnailUrl?: string | null;
+  facility?: FacilityOverviewDto | null;
+  primarySubCategory?: CategoryRefDto | null;
+  medias?: ProductMediaDto[] | null;
+  variants?: ProductVariantSummaryDto[] | null;
+  attributes?: AttributeDto[] | null;
+};
+
+export type ListingPublicDetailResponse = {
+  listing: ListingResponseDetailed;
+  product: ListingProductBundleDto;
+};
+
+export async function fetchListingPublicDetail(listingId: string): Promise<ListingPublicDetailResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<ListingPublicDetailResponse>>(
+    `/api/v1/listings/${encodeURIComponent(listingId.trim())}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  return unwrapApiData(raw);
+}
 
 export async function createListing(body: ListingCreateBody): Promise<ListingCreateResponse> {
   const raw = await customFetch<ApiResponseEnvelope<ListingCreateResponse>>(`/api/v1/listings`, {

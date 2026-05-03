@@ -154,12 +154,12 @@ function SearchSuggestionPanel({
   open,
   loading,
   items,
-  onPick,
+  onPickListing,
 }: {
   open: boolean;
   loading: boolean;
   items: ListingSuggestionResponse[];
-  onPick: (title: string) => void;
+  onPickListing: (item: ListingSuggestionResponse) => void;
 }) {
   if (!open) return null;
   return (
@@ -179,7 +179,7 @@ function SearchSuggestionPanel({
             type="button"
             role="option"
             className="flex w-full cursor-pointer truncate px-4 py-2.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-            onClick={() => onPick(s.title)}
+            onClick={() => onPickListing(s)}
           >
             {s.title}
           </button>
@@ -246,18 +246,10 @@ export function Header() {
     runHeaderSearch();
   };
 
-  const pickSuggestion = (title: string) => {
-    const q = title.trim();
-    setHeaderSearchDraft(title);
+  const pickSuggestionListing = (item: ListingSuggestionResponse) => {
+    setHeaderSearchDraft(item.title);
     setSuggestOpen(false);
-    queueMicrotask(() => {
-      if (isSearchPage) {
-        const qs = rawQueryFromBrowserSearch(search);
-        setLocation(buildSearchPath({ keyword: q || null, q: null }, qs));
-      } else {
-        setLocation(buildFreshSearchPath({ keyword: q || null, q: null }));
-      }
-    });
+    setLocation(`/listing/${encodeURIComponent(item.id)}`);
   };
 
   const showSuggestPanel = suggestOpen && debouncedDraft.length >= 2;
@@ -319,7 +311,7 @@ export function Header() {
                 open={showSuggestPanel}
                 loading={suggestLoading}
                 items={suggestions}
-                onPick={pickSuggestion}
+                onPickListing={pickSuggestionListing}
               />
             </form>
           </div>
@@ -445,7 +437,7 @@ export function Header() {
               open={showSuggestPanel}
               loading={suggestLoading}
               items={suggestions}
-              onPick={pickSuggestion}
+              onPickListing={pickSuggestionListing}
             />
           </form>
         </div>

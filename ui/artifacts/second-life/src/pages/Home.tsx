@@ -1,10 +1,10 @@
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, ShieldCheck, RefreshCw, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ProductCard } from "@/components/ProductCard";
-import { useProducts } from "@/hooks/use-mock-api";
+import { ListingCard } from "@/components/ListingCard";
+import { searchListings, type ListingItemResponse } from "@/api/listing";
 import { useCategories } from "@/hooks/use-categories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CornerAngleQuickFilter } from "@/components/CornerAngleQuickFilter";
@@ -15,7 +15,26 @@ import { HomeCategoryTile } from "@/components/home/HomeCategoryTile";
 const HeroEcoCanvas = lazy(() => import("@/components/home/HeroEcoCanvas"));
 
 export default function Home() {
-  const { data: products, isLoading } = useProducts();
+  const [listings, setListings] = useState<ListingItemResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsLoading(true);
+      try {
+        const rows = await searchListings({ sortBy: "UPDATED_AT_DESC", page: 0, pageSize: 8 });
+        if (!cancelled) setListings(Array.isArray(rows) ? rows : []);
+      } catch {
+        if (!cancelled) setListings([]);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const {
     data: categories,
     isLoading: categoriesLoading,
@@ -186,14 +205,14 @@ export default function Home() {
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                {products.slice(0, 8).map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                {listings.map((row) => (
+                  <ListingCard key={row.id} row={row} />
                 ))}
               </div>
               <div className="mt-12 text-center">
                 <Link href="/search">
                   <Button variant="outline" size="lg" className="rounded-full px-8 bg-card border-primary/25 shadow-sm hover:bg-accent">
-                    Xem thêm sản phẩm
+                    Xem thêm tin đăng
                   </Button>
                 </Link>
               </div>

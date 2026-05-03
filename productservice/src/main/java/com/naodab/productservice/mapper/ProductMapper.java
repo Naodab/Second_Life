@@ -1,6 +1,7 @@
 package com.naodab.productservice.mapper;
 
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -13,6 +14,7 @@ import org.springframework.util.StringUtils;
 
 import com.naodab.productservice.documents.ProductDocument;
 import com.naodab.productservice.dto.response.AttributeResponse;
+import com.naodab.productservice.dto.response.AttributeValueResponse;
 import com.naodab.productservice.dto.response.CategoryResponse;
 import com.naodab.productservice.dto.response.FacilityResponse;
 import com.naodab.productservice.dto.response.ProductItemResponse;
@@ -31,6 +33,70 @@ import com.naodab.productservice.models.SubCategory;
 
 @Component
 public class ProductMapper {
+
+  /** Stable unique attributes referenced by variant attribute values on this product graph. */
+  public List<Attribute> collectDistinctAttributesFromProduct(Product product) {
+    if (product == null || product.getVariants() == null) {
+      return List.of();
+    }
+    LinkedHashMap<String, Attribute> byId = new LinkedHashMap<>();
+    for (ProductVariant variant : product.getVariants()) {
+      if (variant.getVariantAttributeValues() == null) {
+        continue;
+      }
+      for (ProductVariantAttributeValue link : variant.getVariantAttributeValues()) {
+        AttributeValue av = link.getAttributeValue();
+        if (av != null && av.getAttribute() != null && StringUtils.hasText(av.getAttribute().getId())) {
+          byId.put(av.getAttribute().getId().trim(), av.getAttribute());
+        }
+      }
+    }
+    return List.copyOf(byId.values());
+  }
+
+  private List<AttributeResponse> buildAttributesWithDistinctVariantValues(Product product, List<Attribute> attrs) {
+    if (attrs == null || attrs.isEmpty()) {
+      return List.of();
+    }
+    return attrs.stream()
+        .map(attribute -> AttributeResponse.builder()
+            .id(attribute.getId())
+            .name(attribute.getName())
+            .attributeValues(distinctVariantAttributeValues(product, attribute.getId()))
+            .build())
+        .toList();
+  }
+
+  private List<AttributeValueResponse> distinctVariantAttributeValues(Product product, String attributeId) {
+    if (product == null || product.getVariants() == null || !StringUtils.hasText(attributeId)) {
+      return List.of();
+    }
+    String aid = attributeId.trim();
+    LinkedHashMap<String, AttributeValueResponse> map = new LinkedHashMap<>();
+    for (ProductVariant variant : product.getVariants()) {
+      if (variant.getVariantAttributeValues() == null) {
+        continue;
+      }
+      for (ProductVariantAttributeValue link : variant.getVariantAttributeValues()) {
+        AttributeValue av = link.getAttributeValue();
+        if (av == null || av.getAttribute() == null || !aid.equals(av.getAttribute().getId())) {
+          continue;
+        }
+        String vid = av.getId();
+        if (!StringUtils.hasText(vid) || map.containsKey(vid.trim())) {
+          continue;
+        }
+        String key = vid.trim();
+        map.put(key, AttributeValueResponse.builder()
+            .id(key)
+            .value(av.getValue())
+            .code(av.getCode())
+            .build());
+      }
+    }
+    return List.copyOf(map.values());
+  }
+
   public ProductDocument toProductDocument(Product product) {
     if (product == null) {
       return null;
@@ -275,13 +341,7 @@ public class ProductMapper {
                     .code(subCategory.getCode())
                     .build())
                 .toList())
-        .attributes(safeAttributes.stream()
-            .map(attribute -> AttributeResponse.builder()
-                .id(attribute.getId())
-                .name(attribute.getName())
-                .attributeValues(List.of())
-                .build())
-            .toList())
+        .attributes(buildAttributesWithDistinctVariantValues(product, safeAttributes))
         .medias(product.getMedias())
         .variants(resolveVariantSummaries(product))
         .status(product.getStatus())

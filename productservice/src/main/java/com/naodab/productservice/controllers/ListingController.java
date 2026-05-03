@@ -22,15 +22,19 @@ import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
+import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/listings")
 @RequiredArgsConstructor
@@ -38,6 +42,18 @@ import lombok.experimental.FieldDefaults;
 public class ListingController {
 
   ListingService listingService;
+  ListingSearchService listingSearchService;
+
+  @PostMapping("/admin/search/reindex")
+  public ResponseEntity<ApiResponse<Integer>> reindexListingsForSearch(
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {
+    if (!AppConstants.ROLE_ADMIN.equals(role)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
+    int count = listingSearchService.reindexAllListingsFromDatabase();
+    log.info("Listing search index reindexed: {} documents", count);
+    return ResponseEntity.ok(ApiResponse.<Integer>builder().data(count).build());
+  }
 
   @GetMapping("/search")
   public ResponseEntity<ApiResponse<List<ListingItemResponse>>> searchListingItems(
@@ -67,6 +83,13 @@ public class ListingController {
     String profileId = validateProfileId(profileIdHeader);
     return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ListingItemResponse>>builder()
         .data(listingService.listListingItemsForFacility(profileId, facilityId, page, pageSize, keyword, productId))
+        .build());
+  }
+
+  @GetMapping("/{id}")
+  public ResponseEntity<ApiResponse<ListingPublicDetailResponse>> getPublicListingById(@PathVariable String id) {
+    return ResponseEntity.ok(ApiResponse.<ListingPublicDetailResponse>builder()
+        .data(listingService.getPublicListingById(id))
         .build());
   }
 
