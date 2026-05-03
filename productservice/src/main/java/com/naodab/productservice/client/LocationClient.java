@@ -40,7 +40,7 @@ public class LocationClient {
       return Optional.empty();
     }
     try {
-      String base = locationServiceUrl == null ? "" : locationServiceUrl.replaceAll("/+$", "");
+      String base = stripTrailingSlashes(locationServiceUrl);
       String uri = UriComponentsBuilder.fromUriString(base + "/wards/lon-lat")
           .queryParam("lon", lon)
           .queryParam("lat", lat)
@@ -76,6 +76,17 @@ public class LocationClient {
       log.warn("Failed to resolve province/ward from lon={}, lat={}: {}", lon, lat, e.getMessage());
       return Optional.empty();
     }
+  }
+
+  private static String stripTrailingSlashes(String url) {
+    if (url == null) {
+      return "";
+    }
+    int end = url.length();
+    while (end > 0 && url.charAt(end - 1) == '/') {
+      end--;
+    }
+    return end == url.length() ? url : url.substring(0, end);
   }
 
   public record ResolvedAdministrativeCodes(String provinceCode, String wardCode) {
