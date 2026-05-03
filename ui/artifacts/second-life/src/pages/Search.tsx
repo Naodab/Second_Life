@@ -26,10 +26,10 @@ import type { CategoryResponse } from "@/api/categories";
 import { buildFreshSearchPath, searchPathsQueryEqual } from "@/lib/search-url";
 import { pathStubForSearchQueryCompare, rawQueryFromBrowserSearch } from "@/lib/wouter-location";
 import { ListingPaginationBar } from "@/components/ListingPaginationBar";
+import { useAuth } from "@/context/AuthContext";
 
 const DEFAULT_SORT: ListingSearchSort = "UPDATED_AT_DESC";
 
-/** Cùng cỡ trang với tab quản lý tin trong FacilityView (`LISTING_PAGE_SIZE`). */
 const SEARCH_LISTING_PAGE_SIZE = 12;
 
 const SORT_VALUES_IN_SELECT = new Set<ListingSearchSort>([
@@ -125,6 +125,8 @@ function wardMatchesList(raw: string, wards: WardResponse[]): boolean {
 export default function Search() {
   const [, setLocation] = useLocation();
   const search = useSearch();
+  const { user } = useAuth();
+  const searchProfileId = user?.id?.trim() ? user.id : undefined;
   const [provinces, setProvinces] = useState<ProvinceResponse[]>([]);
   const [wards, setWards] = useState<WardResponse[]>([]);
   const [hoverCategoryId, setHoverCategoryId] = useState<string | null>(null);
@@ -409,19 +411,22 @@ export default function Search() {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const data = await searchListings({
-          keyword: debouncedKeyword.trim() || undefined,
-          listingType: typeFilter === "all" ? null : typeFilter === "buy" ? "BUY" : "RENT",
-          categoryIds: categoryIds.length > 0 ? categoryIds : null,
-          subCategoryIds: subCategoryIds.length > 0 ? subCategoryIds : null,
-          provinceCode: provinceCode ?? null,
-          wardCode: wardCode ?? null,
-          priceMin: priceMinNum ?? null,
-          priceMax: priceMaxNum ?? null,
-          sortBy,
-          page: searchPage,
-          pageSize: SEARCH_LISTING_PAGE_SIZE,
-        });
+        const data = await searchListings(
+          {
+            keyword: debouncedKeyword.trim() || undefined,
+            listingType: typeFilter === "all" ? null : typeFilter === "buy" ? "BUY" : "RENT",
+            categoryIds: categoryIds.length > 0 ? categoryIds : null,
+            subCategoryIds: subCategoryIds.length > 0 ? subCategoryIds : null,
+            provinceCode: provinceCode ?? null,
+            wardCode: wardCode ?? null,
+            priceMin: priceMinNum ?? null,
+            priceMax: priceMaxNum ?? null,
+            sortBy,
+            page: searchPage,
+            pageSize: SEARCH_LISTING_PAGE_SIZE,
+          },
+          { profileId: searchProfileId },
+        );
         if (!cancelled) {
           setListings(Array.isArray(data.items) ? data.items : []);
           const total = typeof data.totalCount === "number" ? data.totalCount : Number(data.totalCount) || 0;
@@ -451,6 +456,7 @@ export default function Search() {
     priceMaxNum,
     sortBy,
     searchPage,
+    searchProfileId,
   ]);
 
   const searchListingPageCount = Math.max(1, Math.ceil(searchTotalCount / SEARCH_LISTING_PAGE_SIZE));

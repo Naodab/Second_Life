@@ -30,6 +30,10 @@ export type WardResponse = {
   codeName: string;
 };
 
+export type WardLonLatResponse = WardResponse & {
+  province?: { code?: string; id?: number | string; name?: string } | null;
+};
+
 export async function getProvinces(request: ProvinceSearchRequest): Promise<ProvinceResponse[]> {
   const raw = await customFetch<ApiResponseEnvelope<ProvinceResponse[]>>(`/api/v1/provinces`, {
     method: "GET",
@@ -53,4 +57,13 @@ export async function getWards(request: WardSearchRequest): Promise<WardResponse
     },
   });
   return unwrapApiData<WardResponse[]>(raw);
+}
+
+export async function getWardsByLonLat(lon: number, lat: number): Promise<WardLonLatResponse[]> {
+  const raw = await customFetch<ApiResponseEnvelope<WardLonLatResponse[]>>(`/api/v1/wards/lon-lat`, {
+    method: "GET",
+    query: { lon, lat },
+  });
+  const data = unwrapApiData<WardLonLatResponse[]>(raw);
+  return Array.isArray(data) ? data : [];
 }

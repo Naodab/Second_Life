@@ -68,8 +68,20 @@ export type SearchListingsParams = {
   pageSize?: number | null;
 };
 
+export type SearchListingsOptions = {
+  profileId?: string | null;
+};
+
+export function listingOptionalProfileHeaders(profileId?: string | null): HeadersInit {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const id = profileId?.trim();
+  if (id) headers["X-Profile-Id"] = id;
+  return headers;
+}
+
 export async function searchListings(
   params: SearchListingsParams = {},
+  options: SearchListingsOptions = {},
 ): Promise<SearchListingsPagedResult> {
   const q = new URLSearchParams();
   if (params.keyword != null && params.keyword.trim()) q.set("keyword", params.keyword.trim());
@@ -94,9 +106,38 @@ export async function searchListings(
   const qs = q.toString();
   const raw = await customFetch<ApiResponseEnvelope<SearchListingsPagedResult>>(`/api/v1/listings/search${qs ? `?${qs}` : ""}`, {
     method: "GET",
-    headers: { "Content-Type": "application/json" },
+    headers: listingOptionalProfileHeaders(options.profileId),
   });
   return unwrapApiData(raw);
+}
+
+export type ListingRecommendationBody = {
+  latitude?: number | null;
+  longitude?: number | null;
+  provinceCode?: string | null;
+  wardCode?: string | null;
+  radiusMeters?: number | null;
+  limit?: number | null;
+};
+
+export async function fetchListingRecommendations(
+  body: ListingRecommendationBody,
+  profileId?: string | null,
+): Promise<ListingItemResponse[]> {
+  const raw = await customFetch<ApiResponseEnvelope<ListingItemResponse[]>>(`/api/v1/listings/recommendations`, {
+    method: "POST",
+    headers: listingOptionalProfileHeaders(profileId),
+    body: JSON.stringify({
+      latitude: body.latitude ?? undefined,
+      longitude: body.longitude ?? undefined,
+      provinceCode: body.provinceCode?.trim() || undefined,
+      wardCode: body.wardCode?.trim() || undefined,
+      radiusMeters: body.radiusMeters ?? undefined,
+      limit: body.limit ?? undefined,
+    }),
+  });
+  const data = unwrapApiData<ListingItemResponse[]>(raw);
+  return Array.isArray(data) ? data : [];
 }
 
 export async function fetchListingSuggestions(

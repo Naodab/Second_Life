@@ -8,7 +8,6 @@ function mergeListingVariantPairs(detail: ListingPublicDetailResponse) {
     .map((lv) => ({ lv, pv: variantById.get(lv.productVariantId) }));
 }
 
-/** Single reference prices for cart / checkout dialogs (tin đăng chỉ BUY hoặc RENT). */
 export function deriveListingCartPrices(detail: ListingPublicDetailResponse): {
   buyPrice: number;
   rentPrice: number;
@@ -31,9 +30,6 @@ export function deriveListingCartPrices(detail: ListingPublicDetailResponse): {
   return { buyPrice: 0, rentPrice };
 }
 
-/**
- * Bridges listing API detail into the mock `Product` shape used by `useCart` (cart stores `listing.id` in `productId`).
- */
 export function listingDetailToCartProduct(
   detail: ListingPublicDetailResponse,
   ctx: { images: string[]; buyPrice: number; rentPrice: number; stock: number; location: string },

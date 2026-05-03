@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { VisitorLocationProvider } from "@/context/VisitorLocationContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -111,9 +112,11 @@ function App() {
           {/* Wouter must wrap AuthProvider so route hooks and auth share one stable tree (avoids useAuth/useLocation ordering issues during HMR or nested roots). */}
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <AuthProvider>
-              <ProfileSetupRedirect />
-              <Router />
-              <Toaster />
+              <VisitorLocationProvider>
+                <ProfileSetupRedirect />
+                <Router />
+                <Toaster />
+              </VisitorLocationProvider>
             </AuthProvider>
           </WouterRouter>
         </TooltipProvider>

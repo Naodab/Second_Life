@@ -19,6 +19,7 @@ import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
+import com.naodab.productservice.dto.request.ListingRecommendationRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
@@ -26,8 +27,10 @@ import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
+import com.naodab.productservice.services.ListingRecommendationService;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
+import com.naodab.productservice.services.SearchHistoryAsyncRecorder;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +46,8 @@ public class ListingController {
 
   ListingService listingService;
   ListingSearchService listingSearchService;
+  SearchHistoryAsyncRecorder searchHistoryAsyncRecorder;
+  ListingRecommendationService listingRecommendationService;
 
   @PostMapping("/admin/search/reindex")
   public ResponseEntity<ApiResponse<Integer>> reindexListingsForSearch(
@@ -57,9 +62,14 @@ public class ListingController {
 
   @GetMapping("/search")
   public ResponseEntity<ApiResponse<PagedItemsResponse<ListingItemResponse>>> searchListingItems(
-      @ModelAttribute ListingSearchRequest request) {
+      @ModelAttribute ListingSearchRequest request,
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
+    var data = listingService.searchPublicListingItems(request);
+    if (profileIdHeader != null && !profileIdHeader.isBlank()) {
+      searchHistoryAsyncRecorder.recordListingSearchAsync(profileIdHeader.trim(), request);
+    }
     return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ListingItemResponse>>builder()
-        .data(listingService.searchPublicListingItems(request))
+        .data(data)
         .build());
   }
 
@@ -70,6 +80,18 @@ public class ListingController {
     return ResponseEntity.ok(ApiResponse.<List<ListingSuggestionResponse>>builder()
         .data(listingService.suggestSearch(keyword, limit))
         .build());
+  }
+
+  @PostMapping("/recommendations")
+  public ResponseEntity<ApiResponse<List<ListingItemResponse>>> recommendListings(
+      @RequestBody(required = false) @Valid ListingRecommendationRequest body,
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
+    String profileId =
+        profileIdHeader == null || profileIdHeader.isBlank() ? null : profileIdHeader.trim();
+    return ResponseEntity.ok(
+        ApiResponse.<List<ListingItemResponse>>builder()
+            .data(listingRecommendationService.recommend(profileId, body))
+            .build());
   }
 
   @GetMapping("/by-facility/{facilityId}")

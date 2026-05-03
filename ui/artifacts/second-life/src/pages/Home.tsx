@@ -4,7 +4,9 @@ import { motion } from "framer-motion";
 import { ArrowRight, ShieldCheck, RefreshCw, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ListingCard } from "@/components/ListingCard";
-import { searchListings, type ListingItemResponse } from "@/api/listing";
+import { fetchListingRecommendations, searchListings, type ListingItemResponse } from "@/api/listing";
+import { useAuth } from "@/context/AuthContext";
+import { useVisitorLocation } from "@/context/VisitorLocationContext";
 import { useCategories } from "@/hooks/use-categories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CornerAngleQuickFilter } from "@/components/CornerAngleQuickFilter";
@@ -17,14 +19,37 @@ const HeroEcoCanvas = lazy(() => import("@/components/home/HeroEcoCanvas"));
 export default function Home() {
   const [listings, setListings] = useState<ListingItemResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { location } = useVisitorLocation();
+  const { user } = useAuth();
+  const profileId = user?.id?.trim() ? user.id : undefined;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setIsLoading(true);
       try {
-        const page = await searchListings({ sortBy: "UPDATED_AT_DESC", page: 0, pageSize: 8 });
-        if (!cancelled) setListings(Array.isArray(page.items) ? page.items : []);
+        let next: ListingItemResponse[] = [];
+        if (location) {
+          try {
+            next = await fetchListingRecommendations(
+              {
+                latitude: location.latitude,
+                longitude: location.longitude,
+                provinceCode: location.provinceCode,
+                wardCode: location.wardCode,
+                limit: 8,
+              },
+              profileId,
+            );
+          } catch {
+            next = [];
+          }
+        }
+        if (!cancelled && next.length === 0) {
+          const page = await searchListings({ sortBy: "UPDATED_AT_DESC", page: 0, pageSize: 8 }, { profileId });
+          next = Array.isArray(page.items) ? page.items : [];
+        }
+        if (!cancelled) setListings(next);
       } catch {
         if (!cancelled) setListings([]);
       } finally {
@@ -34,7 +59,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [location, profileId]);
   const {
     data: categories,
     isLoading: categoriesLoading,

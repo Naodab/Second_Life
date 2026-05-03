@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { buildPaginationPageSlots } from "@/lib/listing-pagination";
 
-/** Bar phân trang kiểu tab «Bài đăng» trong hub cơ sở + trang khám phá Search. */
 export function ListingPaginationBar({
   currentPage,
   totalPages,
@@ -78,5 +77,4 @@ export function ListingPaginationBar({
   );
 }
 
-/** Alias: tab «Sản phẩm» — cùng giao diện quản trị cũ, tách tên để khỏi lẫn với luồng listing/search. */
 export const ManageProductPaginationBar = ListingPaginationBar;

@@ -43,6 +43,7 @@ import { buildFreshSearchPath } from "@/lib/search-url";
 import { facilityAvatarUrl } from "@/api/facility";
 import { useCategories } from "@/hooks/use-categories";
 import { ListingCard } from "@/components/ListingCard";
+import { useAuth } from "@/context/AuthContext";
 import { ImageSlider } from "./ImageSlider";
 import { StarDisplay } from "./StarDisplay";
 import { ReviewMediaLightbox } from "./ReviewMediaLightbox";
@@ -95,6 +96,9 @@ export default function ListingDetail() {
   const [, params] = useRoute("/listing/:id");
   const listingId = params?.id ?? "";
 
+  const { user } = useAuth();
+  const similarProfileId = user?.id?.trim() ? user.id : undefined;
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["listingPublicDetail", listingId],
     queryFn: () => fetchListingPublicDetail(listingId),
@@ -128,6 +132,7 @@ export default function ListingDetail() {
     queryKey: [
       "listingSimilarInfinite",
       listingId,
+      similarProfileId ?? "",
       similarSearchKey?.keyword ?? "",
       similarSearchKey?.provinceCode ?? "",
       similarSearchKey?.wardCode ?? "",
@@ -139,17 +144,20 @@ export default function ListingDetail() {
     enabled: Boolean(listingId && data && similarSearchKey),
     queryFn: async ({ pageParam }) => {
       const base = similarSearchKey!;
-      const res = await searchListings({
-        keyword: base.keyword,
-        provinceCode: base.provinceCode,
-        wardCode: base.wardCode,
-        listingType: base.listingType,
-        categoryIds: base.categoryIds,
-        subCategoryIds: base.subCategoryIds,
-        sortBy: base.keyword ? "RELEVANCE" : "UPDATED_AT_DESC",
-        page: pageParam,
-        pageSize: SIMILAR_PAGE_SIZE,
-      });
+      const res = await searchListings(
+        {
+          keyword: base.keyword,
+          provinceCode: base.provinceCode,
+          wardCode: base.wardCode,
+          listingType: base.listingType,
+          categoryIds: base.categoryIds,
+          subCategoryIds: base.subCategoryIds,
+          sortBy: base.keyword ? "RELEVANCE" : "UPDATED_AT_DESC",
+          page: pageParam,
+          pageSize: SIMILAR_PAGE_SIZE,
+        },
+        { profileId: similarProfileId },
+      );
       const rawItems = Array.isArray(res.items) ? res.items : [];
       const totalCount = typeof res.totalCount === "number" ? res.totalCount : Number(res.totalCount) || 0;
       const items = rawItems.filter((r) => r.id !== listingId);
