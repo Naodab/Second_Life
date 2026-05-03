@@ -9,6 +9,7 @@ import {
 import {
   getFacilityProductPage,
   getProductVariants,
+  type ProductStatus,
   type ProductVariantSummaryResponse,
 } from "@/api/product";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { ApiError } from "@workspace/api-client-react";
+
+function readErrorCode(err: unknown): number | undefined {
+  if (!(err instanceof ApiError) || err.data == null || typeof err.data !== "object") {
+    return undefined;
+  }
+  const code = (err.data as { code?: unknown }).code;
+  return typeof code === "number" ? code : undefined;
+}
 
 const DEFAULT_PRODUCT_THUMB =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop";
@@ -56,7 +66,6 @@ export function CreateListingPage({
   onCreated,
 }: {
   facilityId: string;
-  /** From URL `?product=` when opening from facility product card. */
   initialProductId?: string;
   onBack: () => void;
   onCreated?: () => void;
@@ -66,7 +75,9 @@ export function CreateListingPage({
 
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
-  const [productOptions, setProductOptions] = useState<{ id: string; name: string; thumb: string }[]>([]);
+  const [productOptions, setProductOptions] = useState<
+    { id: string; name: string; thumb: string; status?: ProductStatus }[]
+  >([]);
 
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [variantsLoading, setVariantsLoading] = useState(false);
@@ -93,10 +104,17 @@ export function CreateListingPage({
         });
         if (cancelled) return;
         const items = Array.isArray(page.items) ? page.items : [];
+        const rows = [...items].sort((a, b) => {
+          const ap = a.status === "PUBLISHED" ? 0 : 1;
+          const bp = b.status === "PUBLISHED" ? 0 : 1;
+          if (ap !== bp) return ap - bp;
+          return String(a.name).localeCompare(String(b.name), "vi");
+        });
         setProductOptions(
-          items.map((p) => ({
+          rows.map((p) => ({
             id: p.id,
             name: p.name,
+            status: p.status,
             thumb: (p.thumbnailImage && p.thumbnailImage.trim()) || DEFAULT_PRODUCT_THUMB,
           })),
         );
@@ -121,7 +139,8 @@ export function CreateListingPage({
   useEffect(() => {
     if (!initialProductId?.trim()) return;
     if (initialProductAppliedRef.current) return;
-    if (!productOptions.some((p) => p.id === initialProductId)) return;
+    const matchInit = productOptions.find((p) => p.id === initialProductId);
+    if (!matchInit || matchInit.status !== "PUBLISHED") return;
     initialProductAppliedRef.current = true;
     setSelectedProductId(initialProductId);
   }, [initialProductId, productOptions]);
@@ -223,6 +242,15 @@ export function CreateListingPage({
       toast({ title: "Chọn sản phẩm", variant: "destructive" });
       return;
     }
+    const picked = productOptions.find((p) => p.id === selectedProductId);
+    if (picked && picked.status !== "PUBLISHED") {
+      toast({
+        title: "Sản phẩm chưa đăng",
+        description: "Chỉ sản phẩm đã xuất bản mới tạo được bài đăng.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!t) {
       toast({ title: "Nhập tiêu đề bài đăng", variant: "destructive" });
       return;
@@ -289,11 +317,20 @@ export function CreateListingPage({
       onCreated?.();
       onBack();
     } catch (err) {
-      toast({
-        title: "Tạo bài đăng thất bại",
-        description: err instanceof Error ? err.message : "Thử lại sau.",
-        variant: "destructive",
-      });
+      const code = readErrorCode(err);
+      if (code === 1051) {
+        toast({
+          title: "Sản phẩm chưa đăng",
+          description: "Chỉ sản phẩm đã xuất bản mới được tạo bài đăng. Mở chi tiết sản phẩm và bấm «Xuất bản».",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Tạo bài đăng thất bại",
+          description: err instanceof Error ? err.message : "Thử lại sau.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -339,6 +376,10 @@ export function CreateListingPage({
             <label className="text-sm font-semibold block">
               Sản phẩm <span className="text-destructive">*</span>
             </label>
+            <p className="text-xs text-muted-foreground leading-snug -mt-1">
+              Tất cả sản phẩm của cơ sở được liệt kê; chỉ mục «đã xuất bản» mới chọn được. Bản nháp: vào chi tiết sản
+              phẩm → Xuất bản.
+            </p>
             {productsLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                 <Loader2 className="w-4 h-4 animate-spin text-emerald-600" aria-hidden /> Đang tải sản phẩm của cơ sở…
@@ -348,7 +389,7 @@ export function CreateListingPage({
             ) : productOptions.length === 0 ? (
               <div className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-sm text-emerald-900/80 dark:border-emerald-900/45 dark:bg-emerald-950/35 dark:text-emerald-200">
                 <Package className="w-5 h-5 shrink-0 opacity-70" aria-hidden />
-                <span>Chưa có sản phẩm trong cơ sở — hãy tạo sản phẩm trước.</span>
+                <span>Chưa có sản phẩm trong cơ sở — hãy thêm mặt hàng trước.</span>
               </div>
             ) : (
               <Select value={selectedProductId} onValueChange={setSelectedProductId}>
@@ -372,25 +413,38 @@ export function CreateListingPage({
                   position="popper"
                   className="max-h-[min(70vh,24rem)] w-[min(100vw-2rem,var(--radix-select-trigger-width))] rounded-xl border-emerald-100 dark:border-emerald-900/50"
                 >
-                  {productOptions.map((p) => (
-                    <SelectItem
-                      key={p.id}
-                      value={p.id}
-                      className={cn(
-                        "py-2.5 rounded-lg items-start min-h-[3.5rem] pr-8",
-                        "[&>span:first-child]:top-auto [&>span:first-child]:bottom-2.5 [&>span:first-child]:translate-y-0",
-                      )}
-                    >
-                      <span className="flex w-full min-w-0 items-start gap-3">
-                        <img
-                          src={p.thumb}
-                          alt=""
-                          className="w-11 h-11 rounded-xl object-cover border border-emerald-100 bg-muted shrink-0 mt-0.5"
-                        />
-                        <span className="line-clamp-3 text-sm leading-snug text-left min-w-0">{p.name}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
+                  {productOptions.map((p) => {
+                    const canList = p.status === "PUBLISHED";
+                    return (
+                      <SelectItem
+                        key={p.id}
+                        value={p.id}
+                        disabled={!canList}
+                        title={
+                          canList ? undefined : "Sản phẩm đang nháp — xuất bản trong trang chi tiết trước khi đăng bài."
+                        }
+                        className={cn(
+                          "py-2.5 rounded-lg items-start min-h-[3.5rem] pr-8",
+                          "[&>span:first-child]:top-auto [&>span:first-child]:bottom-2.5 [&>span:first-child]:translate-y-0",
+                          !canList && "opacity-60",
+                        )}
+                      >
+                        <span className="flex w-full min-w-0 items-start gap-3">
+                          <img
+                            src={p.thumb}
+                            alt=""
+                            className="w-11 h-11 rounded-xl object-cover border border-emerald-100 bg-muted shrink-0 mt-0.5"
+                          />
+                          <span className="line-clamp-3 text-sm leading-snug text-left min-w-0 flex-1">{p.name}</span>
+                          {p.status && p.status !== "PUBLISHED" && (
+                            <span className="shrink-0 text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                              {p.status === "DRAFT" ? "Nháp" : "Ẩn"}
+                            </span>
+                          )}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             )}

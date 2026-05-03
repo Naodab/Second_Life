@@ -217,7 +217,7 @@ public final class ElasticsearchNativeQueryHelper {
         .withPageable(pageable);
     appendSort.accept(builder);
     var query = builder.build();
-    log.info("Native query: {}", query.toString());
+    log.info("Native query: {}", query.getQuery());
     return query;
   }
 

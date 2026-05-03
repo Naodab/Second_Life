@@ -62,6 +62,11 @@ public enum ErrorCode {
   ATTRIBUTE_VALUE_ALREADY_EXISTS(1048, "Attribute value already exists", HttpStatus.BAD_REQUEST),
   ATTRIBUTE_VALUE_NOT_FOUND(1049, "Attribute value not found", HttpStatus.NOT_FOUND),
   FORBIDDEN(1050, "Forbidden", HttpStatus.FORBIDDEN),
+  PRODUCT_NOT_PUBLISHED(1051, "Only published products can have listings.", HttpStatus.BAD_REQUEST),
+  PRODUCT_VARIANT_IN_USE(
+      1052,
+      "Cannot remove variants that appear on marketplace listings.",
+      HttpStatus.BAD_REQUEST),
   ;
 
   private int code;

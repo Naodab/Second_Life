@@ -257,7 +257,7 @@ export function CartItemCard({
       <div className="flex items-center gap-4 p-4 border-b bg-gray-50/40">
         <img src={item.images[0]} alt={item.name} className="w-14 h-14 rounded-xl object-cover border flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <Link href={`/product/${item.productId}`}>
+          <Link href={`/listing/${encodeURIComponent(item.productId)}`}>
             <h3 className="font-bold text-sm line-clamp-1 hover:text-primary transition-colors">{item.name}</h3>
           </Link>
           <p className="text-xs text-muted-foreground mt-0.5">{facility?.name ?? item.facilityId}</p>

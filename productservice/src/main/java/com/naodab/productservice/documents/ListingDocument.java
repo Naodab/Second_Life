@@ -80,6 +80,21 @@ public class ListingDocument {
   @Field(type = FieldType.Keyword)
   String facilityId;
 
+  @Field(type = FieldType.Text, analyzer = "standard")
+  String facilityName;
+
+  @Field(type = FieldType.Keyword)
+  String facilityImageUrl;
+
+  @Field(type = FieldType.Text, analyzer = "standard")
+  String facilityAddress;
+
+  @Field(type = FieldType.Double)
+  Double averageRating;
+
+  @Field(type = FieldType.Text, analyzer = "standard")
+  String primarySubCategoryName;
+
   @Field(type = FieldType.Keyword)
   String primaryCategoryId;
 

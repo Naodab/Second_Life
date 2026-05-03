@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { AddProductSubmitPayload } from "./types";
 
-/** 1 thumbnail + tối đa 11 ảnh phụ = 12 ảnh */
 const MAX_GALLERY_IMAGES = 11;
 
 function revokeIfBlob(url: string) {

@@ -1,11 +1,23 @@
 type SearchParamValue = string | string[] | undefined | null;
 
-/**
- * Build `/search` path with merged query params (current window search + updates).
- * Array values use repeated keys (e.g. `categoryIds=a&categoryIds=b`, `subCategoryIds=…`) for Spring `List<String>` binding.
- */
-export function buildSearchPath(updates: Record<string, SearchParamValue>): string {
-  const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+function paramsFromSearchString(search: string): URLSearchParams {
+  const s = search.trim();
+  const raw = s.startsWith("?") ? s.slice(1) : s;
+  return new URLSearchParams(raw || "");
+}
+
+export function buildSearchPath(
+  updates: Record<string, SearchParamValue>,
+  currentSearch?: string | null,
+): string {
+  let p: URLSearchParams;
+  if (currentSearch !== undefined && currentSearch !== null) {
+    p = paramsFromSearchString(currentSearch);
+  } else if (typeof window !== "undefined") {
+    p = paramsFromSearchString(window.location.search);
+  } else {
+    p = new URLSearchParams();
+  }
   for (const [key, value] of Object.entries(updates)) {
     const baseKey = key.endsWith("[]") ? key.slice(0, -2) : key;
     const arrayKey = `${baseKey}[]`;
@@ -30,9 +42,6 @@ export function buildSearchPath(updates: Record<string, SearchParamValue>): stri
   return q ? `/search?${q}` : "/search";
 }
 
-/**
- * Build `/search` from scratch (does not merge current page query). Use from non-search routes.
- */
 export function buildFreshSearchPath(updates: Record<string, SearchParamValue>): string {
   const p = new URLSearchParams();
   for (const [key, value] of Object.entries(updates)) {
@@ -50,4 +59,22 @@ export function buildFreshSearchPath(updates: Record<string, SearchParamValue>):
   }
   const q = p.toString();
   return q ? `/search?${q}` : "/search";
+}
+
+export function searchPathsQueryEqual(a: string, b: string): boolean {
+  const qa = a.includes("?") ? (a.split("?")[1] ?? "") : "";
+  const qb = b.includes("?") ? (b.split("?")[1] ?? "") : "";
+  return canonicalQueryString(qa) === canonicalQueryString(qb);
+}
+
+function canonicalQueryString(q: string): string {
+  const p = new URLSearchParams(q);
+  const keys = [...new Set([...p.keys()])].sort();
+  const out = new URLSearchParams();
+  for (const k of keys) {
+    for (const v of [...p.getAll(k)].sort()) {
+      out.append(k, v);
+    }
+  }
+  return out.toString();
 }

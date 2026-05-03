@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { VisitorLocationProvider } from "@/context/VisitorLocationContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -14,7 +15,7 @@ import { setBaseUrl } from "@workspace/api-client-react";
 
 import Home from "@/pages/Home";
 import Search from "@/pages/Search";
-import ProductDetail from "@/pages/ProductDetail";
+import ListingDetail from "@/pages/ListingDetail";
 import FacilityPage from "@/pages/Facility";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
@@ -79,7 +80,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/search" component={Search} />
-          <Route path="/product/:id" component={ProductDetail} />
+          <Route path="/listing/:id" component={ListingDetail} />
           <Route path="/facility/:id" component={FacilityPage} />
           <Route path="/shop/:id" component={FacilityPage} />
           <Route path="/cart" component={Cart} />
@@ -111,9 +112,11 @@ function App() {
           {/* Wouter must wrap AuthProvider so route hooks and auth share one stable tree (avoids useAuth/useLocation ordering issues during HMR or nested roots). */}
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <AuthProvider>
-              <ProfileSetupRedirect />
-              <Router />
-              <Toaster />
+              <VisitorLocationProvider>
+                <ProfileSetupRedirect />
+                <Router />
+                <Toaster />
+              </VisitorLocationProvider>
             </AuthProvider>
           </WouterRouter>
         </TooltipProvider>

@@ -22,6 +22,8 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ProductVariantCreateRequest {
+  String id;
+
   @NotNull(message = "REQUIRED_FIELD")
   @PositiveOrZero(message = "INVALID_INPUT")
   Long quantity;

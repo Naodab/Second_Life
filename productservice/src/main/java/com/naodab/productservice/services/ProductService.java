@@ -13,6 +13,8 @@ public interface ProductService {
 
   ProductResponse updateProduct(String profileId, String id, ProductUpdateRequest request);
 
+  ProductResponse publishDraftProduct(String profileId, String productId);
+
   ProductResponse getProductById(String id);
 
   ProductResponse getOwnedProductWithVariants(String profileId, String productId);

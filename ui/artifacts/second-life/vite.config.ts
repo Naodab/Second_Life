@@ -4,8 +4,22 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-export default defineConfig(async ({ mode }) => {
-  const envDir = import.meta.dirname;
+const envDir = import.meta.dirname;
+
+const replitPlugins =
+  process.env.NODE_ENV !== "production" &&
+  process.env.REPL_ID !== undefined
+    ? await Promise.all([
+        import("@replit/vite-plugin-cartographer").then((m) =>
+          m.cartographer({
+            root: path.resolve(import.meta.dirname, ".."),
+          }),
+        ),
+        import("@replit/vite-plugin-dev-banner").then((m) => m.devBanner()),
+      ])
+    : [];
+
+export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, envDir, "");
 
   const rawPort = env.PORT ?? process.env.PORT;
@@ -34,19 +48,7 @@ export default defineConfig(async ({ mode }) => {
       react(),
       tailwindcss(),
       runtimeErrorOverlay(),
-      ...(process.env.NODE_ENV !== "production" &&
-      process.env.REPL_ID !== undefined
-        ? [
-            await import("@replit/vite-plugin-cartographer").then((m) =>
-              m.cartographer({
-                root: path.resolve(import.meta.dirname, ".."),
-              }),
-            ),
-            await import("@replit/vite-plugin-dev-banner").then((m) =>
-              m.devBanner(),
-            ),
-          ]
-        : []),
+      ...replitPlugins,
     ],
     resolve: {
       alias: {
@@ -69,7 +71,6 @@ export default defineConfig(async ({ mode }) => {
       port,
       host: "0.0.0.0",
       allowedHosts: true,
-      /** Nếu HMR không cập nhật khi sửa file: `VITE_WATCH_POLLING=1 pnpm run dev` */
       watch:
         process.env.VITE_WATCH_POLLING === "1"
           ? { usePolling: true, interval: 300 }

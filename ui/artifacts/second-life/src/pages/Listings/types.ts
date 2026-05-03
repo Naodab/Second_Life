@@ -23,10 +23,7 @@ export interface AddProductSubmitPayload {
     quantity: number;
     attributeValueIds: string[];
   }[];
-  /** Ảnh đại diện (bắt buộc) */
   thumbnailFile: File;
-  /** Ảnh phụ, tối đa 11 (cùng thumbnail = 12 ảnh) */
   galleryImageFiles: File[];
-  /** Tối đa 1 video; tùy chọn */
   videoFile: File | null;
 }

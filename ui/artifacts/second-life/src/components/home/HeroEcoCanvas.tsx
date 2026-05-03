@@ -13,23 +13,16 @@ export type HeroCategoryPin = {
 const SMALL_SPHERE_COLOR = "#5fae88";
 const SMALL_SPHERE_EMISSIVE = "#1e4d38";
 
-/** Tốc độ quả cầu nhỏ chạy trên vòng — đường quỹ đạo tách riêng, không xoay */
 const RING_ORBIT_SPEEDS = [0.11, 0.145, 0.088] as const;
 
 const CLUSTER_ICO_RADIUS = 1.15;
 
-/** R_orbit = 1.25 * R — cả 3 vòng cùng bán kính */
 const ORBIT_RADIUS = 1.25 * CLUSTER_ICO_RADIUS;
 
-/** Độ dày hình học của vòng quỹ đạo (torus tube); chỉ geometry */
 const ORBIT_TUBE_RADIUS = 0.005;
 
 const ORB_HIT_RADIUS = 0.14;
 
-/**
- * Ba mặt phẳng đại viên cầu qua tâm (0,0,0), chứa trụ Z; pháp tuyến trên mặt phẳng XY lệch 0° / 120° / 240°
- * → ba vòng cắt nhau tại tâm, góc giữa hai mặt kề = 120°.
- */
 function ringPlaneQuaternions(): THREE.Quaternion[] {
   const xAxis = new THREE.Vector3(1, 0, 0);
   const zAxis = new THREE.Vector3(0, 0, 1);
@@ -95,8 +88,6 @@ void main() {
   vec3 L = normalize(vec3(0.52, 0.74, 0.43));
   vec3 N = normalize(vNormal);
   float ndl = max(dot(N, L), 0.0);
-  /* uBrightTheme=1 (theme sáng): nền sáng đất + biển — tránh nửa cầu tối đen.
-     uBrightTheme=0 (theme tối): biển trầm, đất có chiều sâu. */
   float ambLand = mix(0.13, 0.52, uBrightTheme);
   float ambSea = mix(0.50, 0.88, uBrightTheme);
   float ambient = mix(ambLand, ambSea, seaMix);
@@ -110,13 +101,11 @@ void main() {
 }
 `;
 
-/** Smoothstep [edge0, edge1] — khớp GLSL để raster mask một lần trên Canvas */
 function jsSmoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
 }
 
-/** Đọc pixel ảnh Trái đất → một kênh 0..1 biển/đất, tránh lỗi lấy mẫu texture trong ShaderMaterial JSX/WebGL2. */
 function buildOceanLandMaskDataTexture(texture: THREE.Texture): THREE.DataTexture | null {
   const img = texture.image as CanvasImageSource & { width?: number; height?: number };
   const wRaw = typeof img.width === "number" ? img.width : 0;
@@ -227,7 +216,6 @@ function EcoClusterMeshes({ innerRef }: { innerRef: RefObject<THREE.Mesh | null>
       <>
         <mesh ref={innerRef}>
           <sphereGeometry args={[CLUSTER_ICO_RADIUS, 64, 64]} />
-          {/* imperative ShaderMaterial để uniform sampler + WebGL2 ổn định */}
           <primitive object={themedEarthMaterial} attach="material" />
         </mesh>
         <mesh>

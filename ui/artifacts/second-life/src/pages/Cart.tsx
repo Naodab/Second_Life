@@ -294,7 +294,7 @@ function CartItemCard({
           className="w-14 h-14 rounded-xl object-cover border flex-shrink-0"
         />
         <div className="flex-1 min-w-0">
-          <Link href={`/product/${item.productId}`}>
+          <Link href={`/listing/${encodeURIComponent(item.productId)}`}>
             <h3 className="font-bold text-sm line-clamp-1 hover:text-primary transition-colors">{item.name}</h3>
           </Link>
           <p className="text-xs text-muted-foreground mt-0.5">{facility?.name ?? item.facilityId}</p>

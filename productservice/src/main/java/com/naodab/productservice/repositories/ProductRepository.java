@@ -14,15 +14,10 @@ import org.springframework.data.repository.query.Param;
 import com.naodab.productservice.models.Product;
 
 public interface ProductRepository extends JpaRepository<Product, String> {
-    boolean existsByFacilityIdAndDeletedAtIsNull(String facilityId);
+  boolean existsByFacilityIdAndDeletedAtIsNull(String facilityId);
 
   Optional<Product> findByIdAndDeletedAtIsNull(String id);
 
-  /**
-   * Fetch product + variants only. Nested {@code variantAttributeValues} must not be join-fetched in the
-   * same query as {@code variants} (both are Hibernate “bags”) → {@link org.hibernate.loader.MultipleBagFetchException}.
-   * Mapping loads attribute values inside the same transaction; {@code @BatchSize} on variants limits N+1.
-   */
   @Query("""
       SELECT DISTINCT p FROM Product p
       LEFT JOIN FETCH p.variants v
@@ -30,16 +25,16 @@ public interface ProductRepository extends JpaRepository<Product, String> {
   Optional<Product> findByIdWithVariantsGraph(@Param("id") String id);
 
   @Query(value = "SELECT p.id FROM Product p WHERE p.deletedAt IS NULL ORDER BY p.id", countQuery = "SELECT count(p) FROM Product p WHERE p.deletedAt IS NULL")
-    Page<String> findIdsForElasticsearchReindex(Pageable pageable);
+  Page<String> findIdsForElasticsearchReindex(Pageable pageable);
 
-    @EntityGraph(attributePaths = {
-            "facility",
-            "primarySubCategory",
-            "primarySubCategory.category",
-            "productSubCategories",
-            "productSubCategories.subCategory",
-            "productSubCategories.subCategory.category",
-    })
-    @Query("SELECT p FROM Product p WHERE p.id IN :ids")
-    List<Product> findAllByIdInWithElasticsearchGraph(@Param("ids") Collection<String> ids);
+  @EntityGraph(attributePaths = {
+      "facility",
+      "primarySubCategory",
+      "primarySubCategory.category",
+      "productSubCategories",
+      "productSubCategories.subCategory",
+      "productSubCategories.subCategory.category",
+  })
+  @Query("SELECT p FROM Product p WHERE p.id IN :ids")
+  List<Product> findAllByIdInWithElasticsearchGraph(@Param("ids") Collection<String> ids);
 }

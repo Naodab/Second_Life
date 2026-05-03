@@ -18,7 +18,7 @@ export function ImageSlider({ images, productName }: { images: string[]; product
 
   return (
     <div className="space-y-4">
-      <div className="aspect-square rounded-3xl overflow-hidden bg-white border shadow-sm relative group">
+      <div className="aspect-square rounded-3xl overflow-hidden bg-card border border-border shadow-sm relative group">
         <img
           src={images[active]}
           alt={productName}
@@ -29,14 +29,14 @@ export function ImageSlider({ images, productName }: { images: string[]; product
             <button
               type="button"
               onClick={prev}
-              className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-md hover:bg-white text-foreground shadow-md rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-3 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-md hover:bg-accent text-foreground shadow-md rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               type="button"
               onClick={next}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-md hover:bg-white text-foreground shadow-md rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-md hover:bg-accent text-foreground shadow-md rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -53,17 +53,17 @@ export function ImageSlider({ images, productName }: { images: string[]; product
           </>
         )}
         <div className="absolute top-4 right-4 flex gap-2">
-          <Button variant="secondary" size="icon" className="rounded-full bg-white/80 backdrop-blur-md hover:bg-white text-foreground shadow-sm">
+          <Button variant="secondary" size="icon" className="rounded-full bg-background/90 backdrop-blur-md hover:bg-accent text-foreground shadow-sm">
             <Heart className="w-5 h-5" />
           </Button>
-          <Button variant="secondary" size="icon" className="rounded-full bg-white/80 backdrop-blur-md hover:bg-white text-foreground shadow-sm">
+          <Button variant="secondary" size="icon" className="rounded-full bg-background/90 backdrop-blur-md hover:bg-accent text-foreground shadow-sm">
             <Share2 className="w-5 h-5" />
           </Button>
         </div>
         <button
           type="button"
           onClick={() => setLightbox(active)}
-          className="absolute bottom-4 right-4 bg-white/80 backdrop-blur-md hover:bg-white text-foreground shadow-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute bottom-4 right-4 bg-background/90 backdrop-blur-md hover:bg-accent text-foreground shadow-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <ZoomIn className="w-4 h-4" />
         </button>

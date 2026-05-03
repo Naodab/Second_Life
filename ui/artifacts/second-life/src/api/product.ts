@@ -25,9 +25,7 @@ export type FacilityProductSort = "UPDATED_AT_DESC" | "CREATED_AT_DESC" | "RELEV
 export type GetFacilityProductPageParams = {
   page?: number;
   pageSize?: number;
-  /** Document `categoryIds` must contain every listed id (AND). */
   categoryIds?: string[] | null;
-  /** Document `subCategoryIds` must contain every listed id (AND). */
   subCategoryIds?: string[] | null;
   keyword?: string | null;
   sortBy?: FacilityProductSort | null;
@@ -89,12 +87,26 @@ export type ProductCreateResponse = {
   status?: ProductStatus;
 };
 
-/** Returned by GET `/products/{id}` for sellers (includes variant ids). */
 export type ProductVariantSummaryResponse = {
   id: string;
   sku?: string | null;
   quantity?: number | null;
   label?: string | null;
+  attributeValueIds?: string[] | null;
+};
+
+export type ProductMediaResponse = {
+  id?: string;
+  mediaUrl: string;
+  mediaType: "IMAGE" | "VIDEO";
+  isThumbnail?: boolean | null;
+  sortOrder?: number | null;
+};
+
+export type SellerCategoryRef = {
+  id: string;
+  name?: string | null;
+  code?: string | null;
 };
 
 export type OwnedProductDetailResponse = {
@@ -103,14 +115,34 @@ export type OwnedProductDetailResponse = {
   description?: string | null;
   thumbnailUrl?: string | null;
   status?: ProductStatus;
+  facility?: { id: string; name?: string | null } | null;
+  primarySubCategory?: SellerCategoryRef | null;
+  subCategories?: SellerCategoryRef[] | null;
+  attributes?: { id: string; name?: string | null }[] | null;
+  medias?: ProductMediaResponse[] | null;
   variants?: ProductVariantSummaryResponse[] | null;
 };
 
 export type UploadProductImagesBody = {
   thumbnailUrl: string;
   productImageUrls: string[];
-  /** Cloudinary secure_url; optional */
   videoUrl?: string | null;
+};
+
+export type ProductVariantUpdatePayload = {
+  id?: string | null;
+  quantity: number;
+  attributeValueIds: string[];
+};
+
+export type ProductUpdateBody = {
+  name: string;
+  description?: string | null;
+  facilityId: string;
+  subCategoryIds: string[];
+  primarySubCategoryId: string;
+  attributeIds: string[];
+  variants: ProductVariantUpdatePayload[];
 };
 
 export async function createProduct(body: ProductCreateBody): Promise<ProductCreateResponse> {
@@ -132,7 +164,6 @@ export async function getOwnedProductWithVariants(
   return unwrapApiData(raw);
 }
 
-/** Seller-only: variant ids + labels for listings (GET `/products/{id}/variants`). */
 export async function getProductVariants(productId: string): Promise<ProductVariantSummaryResponse[]> {
   const raw = await customFetch<ApiResponseEnvelope<ProductVariantSummaryResponse[]>>(
     `/api/v1/products/${encodeURIComponent(productId)}/variants`,
@@ -149,12 +180,33 @@ export async function uploadProductImages(
     thumbnailUrl: body.thumbnailUrl.trim(),
     productImageUrls: body.productImageUrls.map((u) => u.trim()).filter(Boolean),
   };
-  if (body.videoUrl?.trim()) {
-    payload.videoUrl = body.videoUrl.trim();
+  const v = body.videoUrl?.trim();
+  if (v) {
+    payload.videoUrl = v;
   }
   await customFetch<ApiResponseEnvelope<unknown>>(`/api/v1/products/${encodeURIComponent(productId)}/images`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+}
+
+export async function updateProduct(productId: string, body: ProductUpdateBody): Promise<OwnedProductDetailResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<OwnedProductDetailResponse>>(
+    `/api/v1/products/${encodeURIComponent(productId)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  return unwrapApiData(raw);
+}
+
+export async function publishDraftProduct(productId: string): Promise<OwnedProductDetailResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<OwnedProductDetailResponse>>(
+    `/api/v1/products/${encodeURIComponent(productId)}/publish`,
+    { method: "POST", headers: { "Content-Type": "application/json" } },
+  );
+  return unwrapApiData(raw);
 }

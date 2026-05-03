@@ -7,9 +7,20 @@ import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.models.Listing;
 
 public interface ListingSearchService {
+  record ListingDocumentPage(List<ListingDocument> items, long totalCount) {
+  }
+
   void sync(Listing listing);
 
+  int reindexAllListingsFromDatabase();
+
+  void reindexAllListingsForProduct(String productId);
+
+  void deleteListingsIndexByProductId(String productId);
+
   void delete(String listingId);
+
+  ListingDocumentPage searchListingsPaged(ListingSearchRequest request);
 
   List<ListingDocument> searchListings(ListingSearchRequest request);
 }

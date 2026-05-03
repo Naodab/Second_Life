@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 
 export function ProductCard({ product }: { product: Product }) {
   return (
-    <Link href={`/product/${product.id}`}>
+    <Link href="/search">
       <div className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm ring-1 ring-transparent transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-xl hover:ring-primary/20">
         {/* Image Container */}
         <div className="relative aspect-square overflow-hidden bg-muted">

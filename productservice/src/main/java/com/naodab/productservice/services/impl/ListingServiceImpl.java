@@ -1,28 +1,34 @@
 package com.naodab.productservice.services.impl;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
+import com.naodab.productservice.dto.request.ListingUpdateRequest;
+import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
+import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
-import com.naodab.productservice.dto.response.ListingVariantResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
-import com.naodab.productservice.mapper.ListingItemMapper;
+import com.naodab.productservice.mapper.ProductMapper;
+import com.naodab.productservice.mapper.ListingMapper;
 import com.naodab.productservice.models.Listing;
 import com.naodab.productservice.models.ListingVariant;
+import com.naodab.productservice.elasticsearch.ElasticsearchSortBy;
 import com.naodab.productservice.models.Product;
+import com.naodab.productservice.models.Product.ProductStatus;
 import com.naodab.productservice.models.ProductVariant;
 import com.naodab.productservice.repositories.ListingRepository;
 import com.naodab.productservice.repositories.FacilityRepository;
@@ -33,7 +39,7 @@ import com.naodab.productservice.elasticsearch.ElasticsearchNativeQueryHelper;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
@@ -53,30 +59,164 @@ public class ListingServiceImpl implements ListingService {
   ProductVariantRepository productVariantRepository;
   FacilityRepository facilityRepository;
   ListingSearchService listingSearchService;
-  ListingItemMapper listingItemMapper;
+  ListingMapper listingMapper;
+  ProductMapper productMapper;
+
+  @Override
+  @Transactional(readOnly = true)
+  public ListingPublicDetailResponse getPublicListingById(String listingId) {
+    if (!StringUtils.hasText(listingId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    Listing listing =
+        listingRepository.findWithProductGraphById(listingId.trim()).orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+    Product product = listing.getProduct();
+    if (product == null || product.getDeletedAt() != null) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    if (product.getStatus() != Product.ProductStatus.PUBLISHED) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    if (listing.getListingStatus() != Listing.ListingStatus.ACTIVE) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    ProductDocumentGraphInitializer.initialize(product);
+    List<ListingVariant> listingVariants =
+        listingVariantRepository.findByListing_Id(listing.getId());
+    return ListingPublicDetailResponse.builder()
+        .listing(listingMapper.toListingResponse(listing, listingVariants))
+        .product(
+            productMapper.toProductResponse(product, productMapper.collectDistinctAttributesFromProduct(product)))
+        .build();
+  }
+
+  @Override
+  public PagedItemsResponse<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request) {
+    ListingSearchRequest r = request == null ? ListingSearchRequest.builder().build() : request;
+    if (!StringUtils.hasText(r.getKeyword())) {
+      r.setKeyword(null);
+    } else {
+      r.setKeyword(r.getKeyword().trim());
+    }
+    r.setCategoryIds(normalizeIdListPreserveOrder(r.getCategoryIds()));
+    r.setSubCategoryIds(normalizeIdListPreserveOrder(r.getSubCategoryIds()));
+    r.setProvinceCode(trimToNull(r.getProvinceCode()));
+    r.setWardCode(trimToNull(r.getWardCode()));
+    if (r.getListingStatus() == null) {
+      r.setListingStatus(Listing.ListingStatus.ACTIVE);
+    }
+    if (r.getProductStatus() == null) {
+      r.setProductStatus(ProductStatus.PUBLISHED);
+    }
+    ElasticsearchSortBy sort = r.getSortBy() == null ? ElasticsearchSortBy.UPDATED_AT_DESC : r.getSortBy();
+    if (sort == ElasticsearchSortBy.RELEVANCE && !StringUtils.hasText(r.getKeyword())) {
+      sort = ElasticsearchSortBy.UPDATED_AT_DESC;
+    }
+    r.setSortBy(sort);
+
+    int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(r.getPage());
+    int normalizedSize = ElasticsearchNativeQueryHelper.normalizePageSize(r.getPageSize(), defaultListingPageSize);
+    r.setPage(normalizedPage);
+    r.setPageSize(normalizedSize);
+
+    ListingSearchService.ListingDocumentPage esPage = listingSearchService.searchListingsPaged(r);
+    List<ListingItemResponse> items = esPage.items().stream()
+        .map(listingMapper::toListingItemResponse)
+        .filter(Objects::nonNull)
+        .toList();
+    return PagedItemsResponse.<ListingItemResponse>builder()
+        .items(items)
+        .totalCount(esPage.totalCount())
+        .page(normalizedPage)
+        .pageSize(normalizedSize)
+        .build();
+  }
+
+  @Override
+  public List<ListingSuggestionResponse> suggestSearch(String keyword, Integer limit) {
+    if (!StringUtils.hasText(keyword)) {
+      return Collections.emptyList();
+    }
+    int cap = limit == null || limit < 1 ? 8 : Math.min(limit, 20);
+    ListingSearchRequest r = ListingSearchRequest.builder()
+        .keyword(keyword.trim())
+        .page(0)
+        .pageSize(Math.min(cap * 4, 40))
+        .sortBy(ElasticsearchSortBy.RELEVANCE)
+        .build();
+    List<ListingItemResponse> items = searchPublicListingItems(r).getItems();
+    List<ListingSuggestionResponse> out = new ArrayList<>(cap);
+    LinkedHashSet<String> seenTitles = new LinkedHashSet<>();
+    for (ListingItemResponse it : items) {
+      if (it != null && StringUtils.hasText(it.getTitle())) {
+        String key = it.getTitle().trim().toLowerCase(Locale.ROOT);
+        if (seenTitles.add(key)) {
+          out.add(ListingSuggestionResponse.builder()
+              .id(it.getId())
+              .title(it.getTitle().trim())
+              .productId(it.getProductId())
+              .build());
+          if (out.size() >= cap) {
+            break;
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  private static List<String> normalizeIdListPreserveOrder(List<String> raw) {
+    if (raw == null || raw.isEmpty()) {
+      return null;
+    }
+    LinkedHashSet<String> seen = new LinkedHashSet<>();
+    List<String> out = new ArrayList<>();
+    for (String s : raw) {
+      if (!StringUtils.hasText(s)) {
+        continue;
+      }
+      String t = s.trim();
+      if (seen.add(t)) {
+        out.add(t);
+      }
+    }
+    return out.isEmpty() ? null : out;
+  }
 
   @Override
   public PagedItemsResponse<ListingItemResponse> listListingItemsForFacility(
       String profileId,
       String facilityId,
       Integer page,
-      Integer pageSize) {
-    String fid =
-        facilityId == null || facilityId.isBlank() ? "" : facilityId.trim();
+      Integer pageSize,
+      String keyword,
+      String productId) {
+    String fid = facilityId == null || facilityId.isBlank() ? "" : facilityId.trim();
     facilityRepository
         .findByOwnerIdAndIdAndDeletedAtIsNull(profileId, fid)
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
     int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(page);
-    int normalizedSize =
-        ElasticsearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
-    Pageable pageable = PageRequest.of(normalizedPage, normalizedSize);
-    Page<Listing> result = listingRepository.findSellerItemsByFacilityIdPage(fid, pageable);
-    List<ListingItemResponse> items = result.getContent().stream()
-        .map(listingItemMapper::toListingItemResponse)
+    int normalizedSize = ElasticsearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
+    String kw = trimToNull(keyword);
+    String pid = trimToNull(productId);
+
+    ListingSearchRequest searchRequest = ListingSearchRequest.builder()
+        .facilityId(fid)
+        .keyword(kw)
+        .productId(pid)
+        .page(normalizedPage)
+        .pageSize(normalizedSize)
+        .sortBy(kw != null ? ElasticsearchSortBy.RELEVANCE : ElasticsearchSortBy.CREATED_AT_DESC)
+        .build();
+
+    ListingSearchService.ListingDocumentPage esPage = listingSearchService.searchListingsPaged(searchRequest);
+    List<ListingItemResponse> items = esPage.items().stream()
+        .map(listingMapper::toListingItemResponse)
+        .filter(Objects::nonNull)
         .toList();
     return PagedItemsResponse.<ListingItemResponse>builder()
         .items(items)
-        .totalCount(result.getTotalElements())
+        .totalCount(esPage.totalCount())
         .page(normalizedPage)
         .pageSize(normalizedSize)
         .build();
@@ -90,6 +230,10 @@ public class ListingServiceImpl implements ListingService {
 
     if (product.getFacility() == null || !profileId.equals(product.getFacility().getOwnerId())) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+
+    if (product.getStatus() != Product.ProductStatus.PUBLISHED) {
+      throw new AppException(ErrorCode.PRODUCT_NOT_PUBLISHED);
     }
 
     Listing.ListingType listingType = request.getListingType() != null ? request.getListingType()
@@ -131,7 +275,62 @@ public class ListingServiceImpl implements ListingService {
     listingSearchService.sync(indexed);
 
     List<ListingVariant> variantEntities = listingVariantRepository.findByListing_Id(saved.getId());
-    return toListingResponse(indexed, variantEntities);
+    return listingMapper.toListingResponse(indexed, variantEntities);
+  }
+
+  @Override
+  @Transactional
+  public ListingResponse updateListing(String profileId, String listingId, ListingUpdateRequest request) {
+    if (request == null || !StringUtils.hasText(listingId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+
+    boolean any = false;
+    if (request.getTitle() != null) {
+      any = true;
+    }
+    if (request.getDescription() != null) {
+      any = true;
+    }
+    if (request.getListingStatus() != null) {
+      any = true;
+    }
+    if (!any) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+
+    Listing listing = listingRepository.findWithProductGraphById(listingId.trim())
+        .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+
+    Product product = listing.getProduct();
+    if (product == null || product.getFacility() == null || !profileId.equals(product.getFacility().getOwnerId())) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+    if (product.getDeletedAt() != null) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+
+    if (request.getTitle() != null) {
+      String t = request.getTitle().trim();
+      if (!StringUtils.hasText(t)) {
+        throw new AppException(ErrorCode.INVALID_INPUT);
+      }
+      listing.setTitle(t);
+    }
+    if (request.getDescription() != null) {
+      listing.setDescription(trimToNull(request.getDescription()));
+    }
+    if (request.getListingStatus() != null) {
+      listing.setListingStatus(request.getListingStatus());
+    }
+
+    Listing saved = listingRepository.save(listing);
+    listingRepository.flush();
+    Listing indexed = listingRepository.findWithProductGraphById(saved.getId()).orElse(saved);
+    listingSearchService.sync(indexed);
+
+    List<ListingVariant> variantEntities = listingVariantRepository.findByListing_Id(saved.getId());
+    return listingMapper.toListingResponse(indexed, variantEntities);
   }
 
   private record ListingPriceAggregate(Double minPrice, Double maxPrice) {
@@ -169,31 +368,5 @@ public class ListingServiceImpl implements ListingService {
     }
     String trimmed = value.trim();
     return trimmed.isEmpty() ? null : trimmed;
-  }
-
-  private static ListingResponse toListingResponse(Listing listing, List<ListingVariant> variants) {
-    Product product = listing.getProduct();
-    List<ListingVariantResponse> variantResponses = variants.stream()
-        .map(v -> ListingVariantResponse.builder()
-            .id(v.getId())
-            .productVariantId(v.getProductVariant() == null ? null : v.getProductVariant().getId())
-            .buyPrice(v.getBuyPrice())
-            .rentPrice(v.getRentPrice())
-            .rentUnit(v.getRentUnit())
-            .isActive(v.getIsActive())
-            .build())
-        .toList();
-
-    return ListingResponse.builder()
-        .id(listing.getId())
-        .productId(product == null ? null : product.getId())
-        .title(listing.getTitle())
-        .description(listing.getDescription())
-        .listingType(listing.getListingType())
-        .listingStatus(listing.getListingStatus())
-        .minPrice(listing.getMinPrice())
-        .maxPrice(listing.getMaxPrice())
-        .variants(variantResponses.isEmpty() ? Collections.emptyList() : variantResponses)
-        .build();
   }
 }

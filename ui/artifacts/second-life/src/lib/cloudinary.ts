@@ -11,7 +11,6 @@ type CloudinaryUploadSuccessResponse = {
 const cloudName = (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined)?.trim();
 const uploadPreset = (import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined)?.trim();
 
-/** Khớp với “Max file size” của upload preset trên Cloudinary (bytes). Không set = không kiểm tra sớm trên client. */
 function parseMaxVideoBytes(): number | undefined {
   const raw = (import.meta.env.VITE_CLOUDINARY_MAX_VIDEO_BYTES as string | undefined)?.trim();
   if (!raw) return undefined;
@@ -37,7 +36,7 @@ function cloudinaryUploadErrorMessage(cloudinaryMessage: string | undefined, htt
   if (cloudinaryMessage) {
     const sizeHint =
       /file size too large|maximum is/i.test(cloudinaryMessage)
-        ? " Tăng “Max file size” của upload preset trên Cloudinary (Console → Settings → Upload → Upload presets), hoặc dùng preset riêng cho video. Gói dịch vụ cũng có thể có trần riêng."
+        ? " Tăng “Max file size” của upload preset trên Cloudinary (Console → Settings → Upload → Upload presets), hoặc dùng preset riêng cho video."
         : "";
     return `Cloudinary upload lỗi: ${cloudinaryMessage}.${sizeHint}`;
   }

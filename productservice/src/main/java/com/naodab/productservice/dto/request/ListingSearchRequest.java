@@ -23,6 +23,7 @@ import lombok.experimental.FieldDefaults;
 public class ListingSearchRequest {
   String keyword;
   String facilityId;
+  String productId;
   String provinceCode;
   String wardCode;
   Float latitude;

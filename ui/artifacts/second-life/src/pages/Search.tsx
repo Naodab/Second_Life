@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLocation } from "wouter";
-import { Filter, ChevronDown, ChevronRight } from "lucide-react";
+import { useLocation, useSearch } from "wouter";
+import { Filter, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ProductCard } from "@/components/ProductCard";
-import { useProducts } from "@/hooks/use-mock-api";
+import { ListingCard } from "@/components/ListingCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -16,23 +15,134 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getProvinces, ProvinceResponse, getWards, WardResponse } from "@/api/location";
+import {
+  searchListings,
+  type ListingItemResponse,
+  type ListingSearchSort,
+} from "@/api/listing";
 import { LocationPickerCombobox } from "@/components/LocationPickerCombobox";
 import { useCategories } from "@/hooks/use-categories";
-import { buildFreshSearchPath } from "@/lib/search-url";
+import type { CategoryResponse } from "@/api/categories";
+import { buildFreshSearchPath, searchPathsQueryEqual } from "@/lib/search-url";
+import { pathStubForSearchQueryCompare, rawQueryFromBrowserSearch } from "@/lib/wouter-location";
+import { ListingPaginationBar } from "@/components/ListingPaginationBar";
+import { useAuth } from "@/context/AuthContext";
+
+const DEFAULT_SORT: ListingSearchSort = "UPDATED_AT_DESC";
+
+const SEARCH_LISTING_PAGE_SIZE = 12;
+
+const SORT_VALUES_IN_SELECT = new Set<ListingSearchSort>([
+  "UPDATED_AT_DESC",
+  "CREATED_AT_DESC",
+  "NAME_ASC",
+  "RELEVANCE",
+  "DISTANCE",
+]);
+
+const EMPTY_WARD_LIST: WardResponse[] = [];
 
 function readArrayParam(searchParams: URLSearchParams, key: string): string[] {
   const values = [...searchParams.getAll(`${key}[]`), ...searchParams.getAll(key)].filter(Boolean);
   return Array.from(new Set(values.map(String)));
 }
 
+function mergeSingularParam(ids: string[], singular: string | null): string[] {
+  const v = singular?.trim();
+  if (!v) return ids;
+  return Array.from(new Set([...ids, v]));
+}
+
+function shallowStringArrayEq(a: string[], b: string[]): boolean {
+  return (
+    a === b || (a.length === b.length && a.every((v, i) => v === b[i]))
+  );
+}
+
+function trimParam(raw: string | null | undefined): string | undefined {
+  const t = raw?.trim();
+  return t ? t : undefined;
+}
+
+function listingTypeFromSearchParams(searchParams: URLSearchParams): "all" | "buy" | "rent" {
+  const raw = searchParams.get("listingType") ?? searchParams.get("type");
+  if (!raw) return "all";
+  const t = raw.trim().toLowerCase();
+  if (t === "buy" || t === "rent") return t;
+  const u = raw.trim().toUpperCase();
+  if (u === "BUY") return "buy";
+  if (u === "RENT") return "rent";
+  return "all";
+}
+
+function parseSortParam(raw: string | null): ListingSearchSort {
+  const allowed = new Set<ListingSearchSort>([
+    "UPDATED_AT_DESC",
+    "CREATED_AT_DESC",
+    "RELEVANCE",
+    "NAME_ASC",
+    "DISTANCE",
+  ]);
+  if (raw && allowed.has(raw as ListingSearchSort)) return raw as ListingSearchSort;
+  return DEFAULT_SORT;
+}
+
+function parseCommaNumber(raw: string): number | undefined {
+  const t = raw.trim().replace(/\s/g, "").replace(",", ".");
+  if (!t) return undefined;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function filterCategoryIdsToKnown(ids: string[], categories: CategoryResponse[]): string[] {
+  const knownCat = new Set(categories.map((c) => String(c.id)));
+  return ids.filter((id) => knownCat.has(String(id)));
+}
+
+function filterSubCategoryIdsToKnown(ids: string[], categories: CategoryResponse[]): string[] {
+  const knownSub = new Set(
+    categories.flatMap((c) => (c.items ?? []).map((s) => String(s.id))),
+  );
+  return ids.filter((id) => knownSub.has(String(id)));
+}
+
+function provinceKnown(code: string | undefined, provinces: ProvinceResponse[]): boolean {
+  if (!code?.trim()) return false;
+  const n = code.trim();
+  return provinces.some((x) => String(x.code ?? "").trim() === n);
+}
+
+function wardMatchesList(raw: string, wards: WardResponse[]): boolean {
+  const n = raw.trim();
+  if (!n) return false;
+  return wards.some((w) => {
+    const c = String(w.code ?? "").trim();
+    const id = String(w.id ?? "").trim();
+    return (c.length > 0 && c === n) || (id.length > 0 && id === n);
+  });
+}
+
 export default function Search() {
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
+  const search = useSearch();
+  const { user } = useAuth();
+  const searchProfileId = user?.id?.trim() ? user.id : undefined;
   const [provinces, setProvinces] = useState<ProvinceResponse[]>([]);
   const [wards, setWards] = useState<WardResponse[]>([]);
   const [hoverCategoryId, setHoverCategoryId] = useState<string | null>(null);
   const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number } | null>(null);
   const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { data: categories = [] } = useCategories();
+  const { data: categories, isFetched: categoriesFetched } = useCategories();
+
+  const [listings, setListings] = useState<ListingItemResponse[]>([]);
+  const [searchTotalCount, setSearchTotalCount] = useState(0);
+  const [searchPage, setSearchPage] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [provinceListReady, setProvinceListReady] = useState(false);
+  const [wardsLoading, setWardsLoading] = useState(false);
+
+  const refsReady = provinceListReady && categoriesFetched;
 
   const clearHoverCloseTimer = () => {
     if (hoverCloseTimerRef.current) {
@@ -67,56 +177,227 @@ export default function Search() {
   };
 
   const parsedFilters = useMemo(() => {
-    const query = location.includes("?") ? location.split("?")[1] ?? "" : "";
-    const searchParams = new URLSearchParams(query);
+    const searchParams = new URLSearchParams(rawQueryFromBrowserSearch(search) || "");
     return {
-      listingType: searchParams.get("listingType") || "all",
-      categoryIds: readArrayParam(searchParams, "categoryIds"),
-      subCategoryIds: readArrayParam(searchParams, "subCategoryIds"),
-      provinceCode: searchParams.get("provinceCode") || undefined,
-      wardCode: searchParams.get("WardCode") || searchParams.get("wardCode") || undefined,
+      listingType: listingTypeFromSearchParams(searchParams),
+      categoryIds: mergeSingularParam(
+        readArrayParam(searchParams, "categoryIds"),
+        searchParams.get("categoryId"),
+      ),
+      subCategoryIds: mergeSingularParam(
+        readArrayParam(searchParams, "subCategoryIds"),
+        searchParams.get("subCategoryId"),
+      ),
+      provinceCode:
+        trimParam(searchParams.get("provinceCode")) ??
+        trimParam(searchParams.get("province")),
+      wardCode:
+        trimParam(searchParams.get("WardCode")) ??
+        trimParam(searchParams.get("wardCode")) ??
+        trimParam(searchParams.get("ward")),
+      keyword: (searchParams.get("keyword") || searchParams.get("q") || "").trim(),
+      sortBy: parseSortParam(searchParams.get("sortBy")),
+      priceMin: parseCommaNumber(searchParams.get("priceMin") ?? "") ?? undefined,
+      priceMax: parseCommaNumber(searchParams.get("priceMax") ?? "") ?? undefined,
     };
-  }, [location]);
+  }, [search]);
 
-  const [typeFilter, setTypeFilter] = useState(parsedFilters.listingType);
+  const [typeFilter, setTypeFilter] = useState<"all" | "buy" | "rent">(parsedFilters.listingType);
   const [categoryIds, setCategoryIds] = useState<string[]>(parsedFilters.categoryIds);
   const [subCategoryIds, setSubCategoryIds] = useState<string[]>(parsedFilters.subCategoryIds);
   const [provinceCode, setProvinceCode] = useState<string | undefined>(parsedFilters.provinceCode);
   const [wardCode, setWardCode] = useState<string | undefined>(parsedFilters.wardCode);
+  const [keyword, setKeyword] = useState(parsedFilters.keyword);
+  const [sortBy, setSortBy] = useState<ListingSearchSort>(parsedFilters.sortBy);
+  const [priceMinInput, setPriceMinInput] = useState(
+    parsedFilters.priceMin != null ? String(parsedFilters.priceMin) : "",
+  );
+  const [priceMaxInput, setPriceMaxInput] = useState(
+    parsedFilters.priceMax != null ? String(parsedFilters.priceMax) : "",
+  );
 
-  useEffect(() => {
-    setTypeFilter(parsedFilters.listingType);
-    setCategoryIds(parsedFilters.categoryIds);
-    setSubCategoryIds(parsedFilters.subCategoryIds);
-    setProvinceCode(parsedFilters.provinceCode);
-    setWardCode(parsedFilters.wardCode);
+  useLayoutEffect(() => {
+    const p = parsedFilters;
+    setTypeFilter((prev) => (prev === p.listingType ? prev : p.listingType));
+    setCategoryIds((prev) =>
+      shallowStringArrayEq(prev, p.categoryIds) ? prev : p.categoryIds,
+    );
+    setSubCategoryIds((prev) =>
+      shallowStringArrayEq(prev, p.subCategoryIds) ? prev : p.subCategoryIds,
+    );
+    setProvinceCode((prev) => (prev === p.provinceCode ? prev : p.provinceCode));
+    setWardCode((prev) => (prev === p.wardCode ? prev : p.wardCode));
+    setKeyword((prev) => (prev === p.keyword ? prev : p.keyword));
+    setSortBy((prev) => (prev === p.sortBy ? prev : p.sortBy));
+    const nextMin = p.priceMin != null ? String(p.priceMin) : "";
+    const nextMax = p.priceMax != null ? String(p.priceMax) : "";
+    setPriceMinInput((prev) => (prev === nextMin ? prev : nextMin));
+    setPriceMaxInput((prev) => (prev === nextMax ? prev : nextMax));
   }, [parsedFilters]);
 
   useEffect(() => {
-    getProvinces({}).then(setProvinces);
+    let cancelled = false;
+    getProvinces({})
+      .then((rows) => {
+        if (!cancelled) setProvinces(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setProvinces([]);
+      })
+      .finally(() => {
+        if (!cancelled) setProvinceListReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (provinceCode) {
-      getWards({ provinceCode }).then(setWards);
-    } else {
-      setWards([]);
+    if (!provinceCode) {
+      setWards((prev) => (prev.length === 0 ? prev : EMPTY_WARD_LIST));
+      setWardsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setWardsLoading(true);
+    setWards(EMPTY_WARD_LIST);
+    getWards({ provinceCode })
+      .then((list) => {
+        if (!cancelled) setWards(list);
+      })
+      .catch(() => {
+        if (!cancelled) setWards([]);
+      })
+      .finally(() => {
+        if (!cancelled) setWardsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [provinceCode]);
+
+  useEffect(() => {
+    if (!refsReady) return;
+    if (provinces.length > 0) {
+      setProvinceCode((prev) => (provinceKnown(prev, provinces) ? prev : undefined));
+    }
+    if (categories.length > 0) {
+      setCategoryIds((prev) => {
+        const next = filterCategoryIdsToKnown(prev, categories);
+        return shallowStringArrayEq(prev, next) ? prev : next;
+      });
+      setSubCategoryIds((prev) => {
+        const next = filterSubCategoryIdsToKnown(prev, categories);
+        return shallowStringArrayEq(prev, next) ? prev : next;
+      });
+    }
+  }, [refsReady, provinces, categories]);
+
+  /* Không có tỉnh → xóa xã một lần; tách khỏi deps wards (tránh chạy lại khi list phường đổi). */
+  useEffect(() => {
+    if (!provinceCode) {
+      setWardCode((prev) => (prev === undefined ? prev : undefined));
     }
   }, [provinceCode]);
 
   useEffect(() => {
-    const nextPath = buildFreshSearchPath({
+    if (!provinceCode) return;
+    if (wardsLoading) return;
+    /*
+     * Không prune khi chưa có danh sách phường (list rỗng): trước/sau fetch lỗi hoặc API trả [],
+     * wards.some(...) sẽ xóa wardCode đúng từ URL — cùng nguyên tắc với provinces/categories.
+     */
+    if (wards.length === 0) return;
+    setWardCode((prev) => {
+      if (!prev?.trim()) return prev;
+      return wardMatchesList(prev, wards) ? prev : undefined;
+    });
+  }, [provinceCode, wards, wardsLoading]);
+
+  const priceMinNum = useMemo(() => parseCommaNumber(priceMinInput), [priceMinInput]);
+  const priceMaxNum = useMemo(() => parseCommaNumber(priceMaxInput), [priceMaxInput]);
+
+  const desiredSearchPath = useMemo(() => {
+    if (!refsReady) return null;
+    // Header navigates → URL updates before `keyword` state hydrates; trust parsed URL when mismatched briefly.
+    const fromState = keyword.trim();
+    const fromUrl = parsedFilters.keyword.trim();
+    const keywordForPath = fromState === fromUrl ? fromState : fromUrl;
+
+    return buildFreshSearchPath({
+      keyword: keywordForPath ? keywordForPath : null,
+      q: null,
+      sortBy: sortBy !== DEFAULT_SORT ? sortBy : null,
       listingType: typeFilter === "all" ? null : typeFilter,
+      type: null,
       "categoryIds[]": categoryIds.length > 0 ? categoryIds : null,
       "subCategoryIds[]": subCategoryIds.length > 0 ? subCategoryIds : null,
       provinceCode: provinceCode ?? null,
       WardCode: wardCode ?? null,
+      priceMin: priceMinNum != null ? String(priceMinNum) : null,
+      priceMax: priceMaxNum != null ? String(priceMaxNum) : null,
     });
+  }, [
+    refsReady,
+    keyword,
+    parsedFilters.keyword,
+    sortBy,
+    typeFilter,
+    categoryIds,
+    subCategoryIds,
+    provinceCode,
+    wardCode,
+    priceMinNum,
+    priceMaxNum,
+  ]);
 
-    if (nextPath !== location) {
-      setLocation(nextPath);
+  useEffect(() => {
+    if (!desiredSearchPath) return;
+    if (!searchPathsQueryEqual(desiredSearchPath, pathStubForSearchQueryCompare(search))) {
+      setLocation(desiredSearchPath);
     }
-  }, [typeFilter, categoryIds, subCategoryIds, provinceCode, wardCode, location, setLocation]);
+  }, [desiredSearchPath, search, setLocation]);
+
+  const [debouncedKeyword, setDebouncedKeyword] = useState(keyword);
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedKeyword(keyword), 350);
+    return () => clearTimeout(t);
+  }, [keyword]);
+
+  const searchFilterDepsKey = useMemo(
+    () =>
+      [
+        debouncedKeyword,
+        typeFilter,
+        categoryIds.join("\0"),
+        subCategoryIds.join("\0"),
+        provinceCode ?? "",
+        wardCode ?? "",
+        String(priceMinNum ?? ""),
+        String(priceMaxNum ?? ""),
+        sortBy,
+      ].join("|"),
+    [
+      debouncedKeyword,
+      typeFilter,
+      categoryIds,
+      subCategoryIds,
+      provinceCode,
+      wardCode,
+      priceMinNum,
+      priceMaxNum,
+      sortBy,
+    ],
+  );
+
+  const searchFiltersMountedRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!searchFiltersMountedRef.current) {
+      searchFiltersMountedRef.current = true;
+      return;
+    }
+    setSearchPage(0);
+  }, [searchFilterDepsKey]);
 
   useEffect(() => {
     return () => {
@@ -124,25 +405,61 @@ export default function Search() {
     };
   }, []);
 
-  const selectedProvinceName = useMemo(() => {
-    if (!provinceCode) return null;
-    const province = provinces.find((item) => item.code === provinceCode);
-    return province?.fullName || province?.name || null;
-  }, [provinceCode, provinces]);
-
-  const selectedWardName = useMemo(() => {
-    if (!wardCode) return null;
-    const ward = wards.find((item) => item.code === wardCode);
-    return ward?.fullName || ward?.name || null;
-  }, [wardCode, wards]);
-
-  const { data: products, isLoading } = useProducts(
-    subCategoryIds.length > 0 ? subCategoryIds : null,
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        const data = await searchListings(
+          {
+            keyword: debouncedKeyword.trim() || undefined,
+            listingType: typeFilter === "all" ? null : typeFilter === "buy" ? "BUY" : "RENT",
+            categoryIds: categoryIds.length > 0 ? categoryIds : null,
+            subCategoryIds: subCategoryIds.length > 0 ? subCategoryIds : null,
+            provinceCode: provinceCode ?? null,
+            wardCode: wardCode ?? null,
+            priceMin: priceMinNum ?? null,
+            priceMax: priceMaxNum ?? null,
+            sortBy,
+            page: searchPage,
+            pageSize: SEARCH_LISTING_PAGE_SIZE,
+          },
+          { profileId: searchProfileId },
+        );
+        if (!cancelled) {
+          setListings(Array.isArray(data.items) ? data.items : []);
+          const total = typeof data.totalCount === "number" ? data.totalCount : Number(data.totalCount) || 0;
+          setSearchTotalCount(total);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setListings([]);
+          setSearchTotalCount(0);
+          setFetchError(e instanceof Error ? e.message : "Không tải được tin đăng.");
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    debouncedKeyword,
     typeFilter,
-    categoryIds.length > 0 ? categoryIds : null,
-    selectedProvinceName,
-    selectedWardName,
-  );
+    categoryIds.join("\0"),
+    subCategoryIds.join("\0"),
+    provinceCode,
+    wardCode,
+    priceMinNum,
+    priceMaxNum,
+    sortBy,
+    searchPage,
+    searchProfileId,
+  ]);
+
+  const searchListingPageCount = Math.max(1, Math.ceil(searchTotalCount / SEARCH_LISTING_PAGE_SIZE));
 
   const categoryNameMap = useMemo(
     () => new Map(categories.map((cat) => [String(cat.id), cat.name])),
@@ -169,6 +486,17 @@ export default function Search() {
     });
   };
 
+  const resetFiltersPreserveKeyword = () => {
+    setCategoryIds([]);
+    setSubCategoryIds([]);
+    setTypeFilter("all");
+    setProvinceCode(undefined);
+    setWardCode(undefined);
+    setSortBy(DEFAULT_SORT);
+    setPriceMinInput("");
+    setPriceMaxInput("");
+  };
+
   return (
     <div className="min-h-screen bg-muted/40 pt-8 pb-20 dark:bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -193,7 +521,10 @@ export default function Search() {
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
                       Loại tin
                     </h4>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <Select
+                      value={typeFilter === "all" ? "all" : typeFilter}
+                      onValueChange={(v) => setTypeFilter(v === "all" ? "all" : (v as "buy" | "rent"))}
+                    >
                       <SelectTrigger className="border-transparent bg-muted/60 dark:bg-card">
                         <SelectValue placeholder="Chọn loại tin" />
                       </SelectTrigger>
@@ -321,15 +652,24 @@ export default function Search() {
                     </div>
                   </div>
 
-                  {/* Price Range */}
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
                       Khoảng giá
                     </h4>
                     <div className="flex items-center gap-2">
-                      <Input placeholder="Thấp nhất" className="border-transparent bg-muted/60 text-sm dark:bg-card" />
+                      <Input
+                        placeholder="Thấp nhất"
+                        className="border-transparent bg-muted/60 text-sm dark:bg-card"
+                        value={priceMinInput}
+                        onChange={(e) => setPriceMinInput(e.target.value)}
+                      />
                       <span className="text-muted-foreground">-</span>
-                      <Input placeholder="Cao nhất" className="border-transparent bg-muted/60 text-sm dark:bg-card" />
+                      <Input
+                        placeholder="Cao nhất"
+                        className="border-transparent bg-muted/60 text-sm dark:bg-card"
+                        value={priceMaxInput}
+                        onChange={(e) => setPriceMaxInput(e.target.value)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -342,24 +682,40 @@ export default function Search() {
             <div className="mb-6 flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center">
               <div>
                 <h1 className="text-2xl font-bold font-display hidden md:block">{selectedCategoryText}</h1>
-                <p className="text-muted-foreground text-sm">{products.length} kết quả tìm thấy</p>
+                {fetchError ? (
+                  <p className="mt-1 text-sm text-destructive">{fetchError}</p>
+                ) : (
+                  <p className="text-muted-foreground text-sm">{searchTotalCount} kết quả tìm thấy</p>
+                )}
               </div>
 
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Sắp xếp:</span>
-                <Select defaultValue="newest">
-                  <SelectTrigger className="w-full border-transparent bg-muted/60 sm:w-[180px] dark:bg-card">
+                <Select
+                  value={
+                    SORT_VALUES_IN_SELECT.has(sortBy) ? sortBy : DEFAULT_SORT
+                  }
+                  onValueChange={(v) => setSortBy(v as ListingSearchSort)}
+                >
+                  <SelectTrigger className="w-full border-transparent bg-muted/60 sm:w-[220px] dark:bg-card">
                     <SelectValue placeholder="Sắp xếp theo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="newest">Mới nhất</SelectItem>
-                    <SelectItem value="price-asc">Giá: Thấp đến cao</SelectItem>
-                    <SelectItem value="price-desc">Giá: Cao đến thấp</SelectItem>
-                    <SelectItem value="distance">Gần nhất</SelectItem>
+                    <SelectItem value="UPDATED_AT_DESC">Cập nhật mới nhất</SelectItem>
+                    <SelectItem value="CREATED_AT_DESC">Đăng mới nhất</SelectItem>
+                    <SelectItem value="NAME_ASC">Tên A → Z</SelectItem>
+                    <SelectItem value="RELEVANCE">Liên quan từ khóa</SelectItem>
+                    <SelectItem value="DISTANCE">Gần nhất (khoảng cách)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {sortBy === "RELEVANCE" && !keyword.trim() && (
+              <p className="mb-4 text-xs text-muted-foreground leading-snug">
+                Không có từ khóa trong URL thì máy chủ xếp theo «Cập nhật mới nhất».
+              </p>
+            )}
 
             {isLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -372,10 +728,10 @@ export default function Search() {
                   </div>
                 ))}
               </div>
-            ) : products.length > 0 ? (
+            ) : listings.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                {listings.map((row) => (
+                  <ListingCard key={row.id} row={row} />
                 ))}
               </div>
             ) : (
@@ -385,43 +741,23 @@ export default function Search() {
                   alt="Không tìm thấy"
                   className="w-48 h-48 mx-auto opacity-50 mb-4"
                 />
-                <h3 className="text-xl font-bold text-foreground mb-2">Không tìm thấy sản phẩm</h3>
+                <h3 className="text-xl font-bold text-foreground mb-2">Không tìm thấy tin đăng</h3>
                 <p className="text-muted-foreground mb-6">Hãy thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm.</p>
-                <Button
-                  onClick={() => {
-                    setCategoryIds([]);
-                    setSubCategoryIds([]);
-                    setTypeFilter("all");
-                    setProvinceCode(undefined);
-                    setWardCode(undefined);
-                  }}
-                >
+                <Button type="button" onClick={resetFiltersPreserveKeyword}>
                   Xóa bộ lọc
                 </Button>
               </div>
             )}
 
-            {products.length > 0 && !isLoading && (
-              <div className="mt-12 flex justify-center">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    disabled
-                    className="h-10 w-10 rounded-full border-transparent bg-card p-0"
-                  >
-                    1
-                  </Button>
-                  <Button variant="ghost" className="w-10 h-10 p-0 rounded-full">
-                    2
-                  </Button>
-                  <Button variant="ghost" className="w-10 h-10 p-0 rounded-full">
-                    3
-                  </Button>
-                  <Button variant="ghost" className="w-10 h-10 p-0 rounded-full">
-                    <ChevronDown className="w-4 h-4 -rotate-90" />
-                  </Button>
-                </div>
-              </div>
+            {!isLoading && !fetchError && searchTotalCount > 0 && (
+              <ListingPaginationBar
+                currentPage={searchPage}
+                totalPages={searchListingPageCount}
+                pageSize={SEARCH_LISTING_PAGE_SIZE}
+                totalItems={searchTotalCount}
+                itemLabel="tin đăng"
+                onPageChange={setSearchPage}
+              />
             )}
           </main>
         </div>
