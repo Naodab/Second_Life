@@ -66,7 +66,6 @@ export function CreateListingPage({
   onCreated,
 }: {
   facilityId: string;
-  /** From URL `?product=` when opening from facility product card. */
   initialProductId?: string;
   onBack: () => void;
   onCreated?: () => void;

@@ -7,10 +7,6 @@ import com.naodab.productservice.models.ProductSubCategory;
 import com.naodab.productservice.models.ProductVariant;
 import com.naodab.productservice.models.ProductVariantAttributeValue;
 
-/**
- * Loads lazy Hibernate associations needed by {@link com.naodab.productservice.mapper.ProductMapper#toProductDocument}
- * without relying on detached entities or {@code @Async}.
- */
 final class ProductDocumentGraphInitializer {
 
   private ProductDocumentGraphInitializer() {

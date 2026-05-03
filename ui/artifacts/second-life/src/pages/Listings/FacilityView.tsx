@@ -46,7 +46,6 @@ const DEFAULT_PRODUCT_THUMB =
 const PRODUCT_PAGE_SIZE = 12;
 const LISTING_PAGE_SIZE = 12;
 const LISTING_PRODUCT_PICKER_PAGE_SIZE = 12;
-/** Select value sentinel: filter by product “all”. */
 const LISTING_PRODUCT_FILTER_ALL = "__listing_product_all__";
 
 const DEFAULT_PRODUCT_SORT: FacilityProductSort = "UPDATED_AT_DESC";
@@ -223,7 +222,6 @@ function listingStatusLabel(row: ListingItemResponse): string {
   }
 }
 
-/** ISO string from API or legacy Jackson numeric array `[y, mo, d, h, min, sec, nano?]`. */
 function formatProductCreatedAt(raw: unknown): string | null {
   let d: Date | null = null;
   if (typeof raw === "string" && raw.trim()) {
@@ -281,7 +279,6 @@ export function FacilityView({
   onViewProduct: (id: string) => void;
   onAddProduct: () => void;
   onCreateListing: () => void;
-  /** Open create listing with product pre-selected via query. */
   onCreateListingForProduct: (productId: string) => void;
   onViewUnpublished: () => void;
   onUpdateAvatar: (file: File) => Promise<void>;
@@ -298,9 +295,7 @@ export function FacilityView({
   const [productPage, setProductPage] = useState(0);
   const [listingPage, setListingPage] = useState(0);
   const [productTotal, setProductTotal] = useState(0);
-  /** Tổng bài đăng của cơ sở (badge tab — không đổi khi đang lọc). */
   const [facilityListingsBadgeTotal, setFacilityListingsBadgeTotal] = useState(0);
-  /** Tổng theo truy vấn lọc hiện tại (tiêu đề danh sách + phân trang). */
   const [listingQueryTotal, setListingQueryTotal] = useState(0);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 

@@ -1,9 +1,5 @@
 type SearchParamValue = string | string[] | undefined | null;
 
-/**
- * Build `/search` path with merged query params (current window search + updates).
- * Array values use repeated keys (e.g. `categoryIds=a&categoryIds=b`, `subCategoryIds=…`) for Spring `List<String>` binding.
- */
 export function buildSearchPath(updates: Record<string, SearchParamValue>): string {
   const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   for (const [key, value] of Object.entries(updates)) {
@@ -30,9 +26,6 @@ export function buildSearchPath(updates: Record<string, SearchParamValue>): stri
   return q ? `/search?${q}` : "/search";
 }
 
-/**
- * Build `/search` from scratch (does not merge current page query). Use from non-search routes.
- */
 export function buildFreshSearchPath(updates: Record<string, SearchParamValue>): string {
   const p = new URLSearchParams();
   for (const [key, value] of Object.entries(updates)) {
@@ -52,7 +45,6 @@ export function buildFreshSearchPath(updates: Record<string, SearchParamValue>):
   return q ? `/search?${q}` : "/search";
 }
 
-/** Compare two `/search?…` paths ignoring query parameter order (avoids replace loops). */
 export function searchPathsQueryEqual(a: string, b: string): boolean {
   const qa = a.includes("?") ? (a.split("?")[1] ?? "") : "";
   const qb = b.includes("?") ? (b.split("?")[1] ?? "") : "";

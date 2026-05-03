@@ -25,6 +25,5 @@ public class ProductVariantSummaryResponse {
 
   String label;
 
-  /** Must match PUT body when merging existing variants without changing SKU. */
   List<String> attributeValueIds;
 }

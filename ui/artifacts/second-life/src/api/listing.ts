@@ -29,12 +29,10 @@ export type ListingItemResponse = {
 export type GetFacilityListingPageParams = {
   page?: number;
   pageSize?: number;
-  /** Title, listing description, or variant SKU (partial match). */
   keyword?: string | null;
   productId?: string | null;
 };
 
-/** Mirrors `FacilityProductSort` / `GET /products/by-facility` sort query (ElasticsearchSortBy). */
 export type ListingSearchSort =
   | "UPDATED_AT_DESC"
   | "CREATED_AT_DESC"
@@ -42,7 +40,6 @@ export type ListingSearchSort =
   | "NAME_ASC"
   | "DISTANCE";
 
-/** Query params aligned with backend `ListingSearchRequest` / manage product listing filters (`categoryIds`, `subCategoryIds`, `keyword`, `sortBy`, …). */
 export type SearchListingsParams = {
   keyword?: string | null;
   listingType?: "BUY" | "RENT" | null;

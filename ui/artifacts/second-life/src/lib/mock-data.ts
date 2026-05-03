@@ -1,6 +1,4 @@
 export type ProductType = 'buy' | 'rent' | 'both';
-
-/** Mock cơ sở bán hàng — cùng vai trò với facility trên backend (id mock tạm: s1, s2). */
 export interface MockFacility {
   id: string;
   name: string;
@@ -36,11 +34,8 @@ export interface Product {
   rentPrice?: number;
   aiSuggestedBuyPrice?: number;
   aiSuggestedRentPrice?: number;
-  /** Parent category id (productservice seed / API) */
   categoryId: string;
-  /** Leaf subcategory id */
   subCategoryId: string;
-  /** Short label for badges (Vietnamese, matches seed subcategory names) */
   subCategoryName: string;
   condition: string;
   location: string;

@@ -38,7 +38,6 @@ public class ListingController {
 
   ListingService listingService;
 
-  /** Public marketplace listing search (query params mirror {@code ProductSearchRequest} / manage facility product filters). */
   @GetMapping("/search")
   public ResponseEntity<ApiResponse<List<ListingItemResponse>>> searchListingItems(
       @ModelAttribute ListingSearchRequest request) {

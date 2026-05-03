@@ -147,10 +147,6 @@ public class ProductMapper {
         .build();
   }
 
-  /**
-   * Elasticsearch {@code geo_point} requires latitude ∈ [-90, 90] and longitude ∈ [-180, 180].
-   * Facilities sometimes store lon/lat swapped (e.g. Vietnam ~105°E stored as "latitude"); we correct the common case.
-   */
   static GeoPoint toElasticsearchGeoPoint(Float lat, Float lon) {
     if (lat == null || lon == null) {
       return null;
@@ -307,8 +303,8 @@ public class ProductMapper {
   }
 
   public ProductVariantSummaryResponse toVariantSummary(ProductVariant v) {
-    List<String> attributeValueIds =
-        v.getVariantAttributeValues() == null ? List.of() : v.getVariantAttributeValues().stream()
+    List<String> attributeValueIds = v.getVariantAttributeValues() == null ? List.of()
+        : v.getVariantAttributeValues().stream()
             .map(ProductVariantAttributeValue::getAttributeValue)
             .filter(Objects::nonNull)
             .map(AttributeValue::getId)

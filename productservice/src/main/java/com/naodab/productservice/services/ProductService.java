@@ -13,7 +13,6 @@ public interface ProductService {
 
   ProductResponse updateProduct(String profileId, String id, ProductUpdateRequest request);
 
-  /** Sellers: DRAFT → PUBLISHED; requires thumbnail. */
   ProductResponse publishDraftProduct(String profileId, String productId);
 
   ProductResponse getProductById(String id);

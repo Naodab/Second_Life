@@ -41,10 +41,6 @@ public class ListingSearchServiceImpl implements ListingSearchService {
   @Value("${default.page-size:20}")
   int defaultPageSize;
 
-  /**
-   * Synchronous listing index write (same pattern as {@link ProductSearchServiceImpl#sync}) so search results
-   * match the DB immediately after create/update.
-   */
   @Override
   public void sync(Listing listing) {
     if (listing == null || !StringUtils.hasText(listing.getId())) {
@@ -98,11 +94,11 @@ public class ListingSearchServiceImpl implements ListingSearchService {
   public List<ListingDocument> searchListings(ListingSearchRequest request) {
     ListingSearchRequest safeRequest = request == null ? ListingSearchRequest.builder().build() : request;
     int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(safeRequest.getPage());
-    int normalizedPageSize =
-        ElasticsearchNativeQueryHelper.normalizePageSize(safeRequest.getPageSize(), defaultPageSize);
-    boolean geoRadiusFilterEnabled =
-        ElasticsearchNativeQueryHelper.hasGeoRadiusFilter(safeRequest.getLatitude(), safeRequest.getLongitude(),
-            safeRequest.getRadiusMeters());
+    int normalizedPageSize = ElasticsearchNativeQueryHelper.normalizePageSize(safeRequest.getPageSize(),
+        defaultPageSize);
+    boolean geoRadiusFilterEnabled = ElasticsearchNativeQueryHelper.hasGeoRadiusFilter(safeRequest.getLatitude(),
+        safeRequest.getLongitude(),
+        safeRequest.getRadiusMeters());
     Pageable pageable = PageRequest.of(normalizedPage, normalizedPageSize);
     NativeQuery query = buildNativeQuery(safeRequest, pageable, geoRadiusFilterEnabled);
 

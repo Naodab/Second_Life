@@ -9,10 +9,8 @@ import com.naodab.productservice.models.Listing;
 public interface ListingSearchService {
   void sync(Listing listing);
 
-  /** Reindexes every listing tied to {@code productId} (after product embedded fields change in ES snapshots). */
   void reindexAllListingsForProduct(String productId);
 
-  /** Removes all listing documents for the product (e.g. after product soft-delete). */
   void deleteListingsIndexByProductId(String productId);
 
   void delete(String listingId);

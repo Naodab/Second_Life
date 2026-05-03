@@ -16,10 +16,6 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-/**
- * Loads a listing (+ product graph) and initializes Hibernate associations needed for
- * {@link ListingMapper#toListingDocument}, then saves to Elasticsearch in the caller's transaction boundary.
- */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)

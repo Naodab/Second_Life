@@ -14,10 +14,6 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
-/**
- * Loads a product and fully initializes lazy associations inside a transaction, then maps to a search document.
- * Loads the entity in a dedicated read-only transaction so lazy collections are initialized before mapping.
- */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)

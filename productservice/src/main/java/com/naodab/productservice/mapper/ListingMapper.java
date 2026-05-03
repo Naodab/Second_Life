@@ -92,7 +92,6 @@ public class ListingMapper {
         .build();
   }
 
-  /** Map Elasticsearch listing document to the same DTO shape as facility listing rows. */
   public ListingItemResponse toListingItemResponse(ListingDocument doc) {
     if (doc == null) {
       return null;
@@ -117,9 +116,8 @@ public class ListingMapper {
     }
 
     Product product = listing.getProduct();
-    List<ListingVariantResponse> variantResponses =
-        variants == null || variants.isEmpty() ? Collections.emptyList()
-            : variants.stream().map(this::toListingVariantResponse).toList();
+    List<ListingVariantResponse> variantResponses = variants == null || variants.isEmpty() ? Collections.emptyList()
+        : variants.stream().map(this::toListingVariantResponse).toList();
 
     return ListingResponse.builder()
         .id(listing.getId())

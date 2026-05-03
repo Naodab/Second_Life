@@ -67,10 +67,6 @@ public class ProductSearchServiceImpl implements ProductSearchService {
   @Value("${default.page-size:20}")
   int defaultPageSize;
 
-  /**
-   * Synchronous index refresh so seller facility lists (loaded from Elasticsearch) reflect
-   * create/update/publish immediately instead of lagging behind async completion.
-   */
   @Override
   public void sync(String productId) {
     try {

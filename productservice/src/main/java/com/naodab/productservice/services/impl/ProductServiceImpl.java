@@ -175,7 +175,6 @@ public class ProductServiceImpl implements ProductService {
     return productMapper.toProductResponse(saved, attrs);
   }
 
-  /** Sort & trim IDs for deterministic comparison vs update requests. */
   private static List<String> sortedDistinctIds(List<String> raw) {
     if (raw == null || raw.isEmpty()) {
       return List.of();

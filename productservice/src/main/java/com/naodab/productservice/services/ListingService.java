@@ -15,7 +15,6 @@ public interface ListingService {
 
   ListingResponse updateListing(String profileId, String listingId, ListingUpdateRequest request);
 
-  /** Marketplace search (Elasticsearch); defaults to active + published only. */
   List<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request);
 
   PagedItemsResponse<ListingItemResponse> listListingItemsForFacility(
