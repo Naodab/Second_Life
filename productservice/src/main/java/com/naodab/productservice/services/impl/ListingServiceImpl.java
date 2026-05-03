@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,7 @@ import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
 import com.naodab.productservice.mapper.ListingMapper;
@@ -90,6 +92,41 @@ public class ListingServiceImpl implements ListingService {
         .map(doc -> listingMapper.toListingItemResponse(doc))
         .filter(Objects::nonNull)
         .toList();
+  }
+
+  @Override
+  public List<ListingSuggestionResponse> suggestSearch(String keyword, Integer limit) {
+    if (!StringUtils.hasText(keyword)) {
+      return Collections.emptyList();
+    }
+    int cap = limit == null || limit < 1 ? 8 : Math.min(limit, 20);
+    ListingSearchRequest r = ListingSearchRequest.builder()
+        .keyword(keyword.trim())
+        .page(0)
+        .pageSize(Math.min(cap * 4, 40))
+        .sortBy(ElasticsearchSortBy.RELEVANCE)
+        .build();
+    List<ListingItemResponse> items = searchPublicListingItems(r);
+    List<ListingSuggestionResponse> out = new ArrayList<>(cap);
+    LinkedHashSet<String> seenTitles = new LinkedHashSet<>();
+    for (ListingItemResponse it : items) {
+      if (it == null || !StringUtils.hasText(it.getTitle())) {
+        continue;
+      }
+      String key = it.getTitle().trim().toLowerCase(Locale.ROOT);
+      if (!seenTitles.add(key)) {
+        continue;
+      }
+      out.add(ListingSuggestionResponse.builder()
+          .id(it.getId())
+          .title(it.getTitle().trim())
+          .productId(it.getProductId())
+          .build());
+      if (out.size() >= cap) {
+        break;
+      }
+    }
+    return out;
   }
 
   private static List<String> normalizeIdListPreserveOrder(List<String> raw) {

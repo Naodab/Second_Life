@@ -22,6 +22,7 @@ import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
 import com.naodab.productservice.services.ListingService;
@@ -43,6 +44,15 @@ public class ListingController {
       @ModelAttribute ListingSearchRequest request) {
     return ResponseEntity.ok(ApiResponse.<List<ListingItemResponse>>builder()
         .data(listingService.searchPublicListingItems(request))
+        .build());
+  }
+
+  @GetMapping("/suggestions")
+  public ResponseEntity<ApiResponse<List<ListingSuggestionResponse>>> searchSuggestions(
+      @RequestParam(required = false) String keyword,
+      @RequestParam(required = false) Integer limit) {
+    return ResponseEntity.ok(ApiResponse.<List<ListingSuggestionResponse>>builder()
+        .data(listingService.suggestSearch(keyword, limit))
         .build());
   }
 

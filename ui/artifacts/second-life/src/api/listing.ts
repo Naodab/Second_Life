@@ -40,6 +40,12 @@ export type ListingSearchSort =
   | "NAME_ASC"
   | "DISTANCE";
 
+export type ListingSuggestionResponse = {
+  id: string;
+  title: string;
+  productId: string;
+};
+
 export type SearchListingsParams = {
   keyword?: string | null;
   listingType?: "BUY" | "RENT" | null;
@@ -83,6 +89,27 @@ export async function searchListings(
     headers: { "Content-Type": "application/json" },
   });
   return unwrapApiData(raw);
+}
+
+export async function fetchListingSuggestions(
+  keyword: string,
+  limit = 8,
+): Promise<ListingSuggestionResponse[]> {
+  const trimmed = keyword.trim();
+  if (trimmed.length < 2) return [];
+  const q = new URLSearchParams({
+    keyword: trimmed,
+    limit: String(limit),
+  });
+  const raw = await customFetch<ApiResponseEnvelope<ListingSuggestionResponse[]>>(
+    `/api/v1/listings/suggestions?${q.toString()}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  const data = unwrapApiData<ListingSuggestionResponse[]>(raw);
+  return Array.isArray(data) ? data : [];
 }
 
 export async function getFacilityListingPage(

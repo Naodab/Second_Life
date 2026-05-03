@@ -4,7 +4,7 @@ import * as React from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
@@ -49,17 +49,23 @@ export function LocationPickerCombobox({
   className,
 }: LocationPickerComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [resetKey, setResetKey] = React.useState(0)
-  const triggerRef = React.useRef<HTMLButtonElement>(null)
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null)
   const [contentWidth, setContentWidth] = React.useState<number>()
 
-  const selected = value ? items.find((i) => i.code === value) : undefined
+  const valueKey = value?.trim() ?? ""
+  const selected =
+    valueKey.length > 0
+      ? items.find(
+          (i) =>
+            String(i.code ?? "").trim() === valueKey ||
+            String(i.id ?? "").trim() === valueKey,
+        )
+      : undefined
 
   const handleOpenChange = (next: boolean) => {
     if (disabled) return
     setOpen(next)
     if (next) {
-      setResetKey((k) => k + 1)
       requestAnimationFrame(() => {
         const w = triggerRef.current?.offsetWidth
         if (w) setContentWidth(w)
@@ -68,43 +74,45 @@ export function LocationPickerCombobox({
   }
 
   return (
-    <Popover open={disabled ? false : open} onOpenChange={handleOpenChange} modal={true}>
-      <PopoverTrigger asChild>
-        <Button
-          ref={triggerRef}
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
+    <Popover open={disabled ? false : open} onOpenChange={handleOpenChange} modal={false}>
+      {/*
+       * Use PopoverTrigger as the actual <button>: avoid Trigger asChild + <Button/>
+       * (Slot + composeRefs stacking with React 19 has been crashing with Maximum update depth).
+       */}
+      <PopoverTrigger
+        ref={triggerRef}
+        type="button"
+        disabled={disabled}
+        role="combobox"
+        aria-expanded={open}
+        className={cn(
+          buttonVariants({ variant: "outline", size: "default" }),
+          "w-full justify-between gap-2 border-transparent bg-muted/60 font-normal text-foreground hover:bg-muted/80 dark:bg-card dark:hover:bg-muted/50",
+          className,
+        )}
+      >
+        <span
           className={cn(
-            "w-full justify-between font-normal bg-gray-50 border-transparent",
-            className
+            "min-w-0 flex-1 truncate text-left",
+            !value && "text-muted-foreground",
           )}
         >
-          <span
-            className={cn(
-              "truncate text-left",
-              !value && "text-muted-foreground"
-            )}
-          >
-            {value ? (selected?.fullName ?? value) : allLabel}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+          {value ? (selected?.fullName ?? value) : allLabel}
+        </span>
+        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>
       <PopoverContent
-        className="p-0"
+        className="p-0 border-border bg-popover text-popover-foreground"
         align="start"
         sideOffset={4}
         style={
-          contentWidth
+          contentWidth != null && contentWidth > 0
             ? { width: contentWidth }
             : { minWidth: "min(18rem, calc(100vw - 2rem))" }
         }
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <Command key={resetKey} shouldFilter={true}>
+        <Command shouldFilter={true}>
           <CommandInput placeholder={searchPlaceholder} className="h-9" />
           <CommandList>
             <CommandEmpty>{emptySearchText}</CommandEmpty>
@@ -119,29 +127,35 @@ export function LocationPickerCombobox({
                 <Check
                   className={cn(
                     "mr-2 h-4 w-4",
-                    value ? "opacity-0" : "opacity-100"
+                    value ? "opacity-0" : "opacity-100",
                   )}
                 />
                 {allLabel}
               </CommandItem>
-              {items.map((item) => (
-                <CommandItem
-                  key={item.id}
-                  value={`${item.code} ${item.fullName} ${item.name ?? ""} ${item.codeName ?? ""}`}
-                  onSelect={() => {
-                    onValueChange(item.code)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === item.code ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {item.fullName}
-                </CommandItem>
-              ))}
+              {items.map((item) => {
+                const selectedRow =
+                  valueKey.length > 0 &&
+                  (String(item.code ?? "").trim() === valueKey ||
+                    String(item.id ?? "").trim() === valueKey)
+                return (
+                  <CommandItem
+                    key={item.id}
+                    value={`${item.code} ${item.id} ${item.fullName} ${item.name ?? ""} ${item.codeName ?? ""}`}
+                    onSelect={() => {
+                      onValueChange(item.code)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedRow ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    {item.fullName}
+                  </CommandItem>
+                )
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

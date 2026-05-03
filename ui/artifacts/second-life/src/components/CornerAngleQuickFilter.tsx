@@ -43,7 +43,7 @@ export function CornerAngleQuickFilter({ variant }: Props) {
     return legacy ? [String(legacy)] : [];
   }, [location]);
 
-  const { data: categories = [], isLoading } = useCategories();
+  const { data: categories, isLoading } = useCategories();
   const [draft, setDraft] = useState<string[]>([]);
 
   useEffect(() => {

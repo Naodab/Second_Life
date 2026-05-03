@@ -17,7 +17,7 @@ const HeroEcoCanvas = lazy(() => import("@/components/home/HeroEcoCanvas"));
 export default function Home() {
   const { data: products, isLoading } = useProducts();
   const {
-    data: categories = [],
+    data: categories,
     isLoading: categoriesLoading,
     isError: categoriesError,
     refetch: refetchCategories,

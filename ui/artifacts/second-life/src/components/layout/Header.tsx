@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect, useMemo, FormEvent } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useRef, useEffect, useMemo, FormEvent, useCallback } from "react";
+import { Link, useLocation, useSearch } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   Search, ShoppingCart, Bell, MessageSquare, User, ChevronDown, LogOut,
-  Package, Store, ShoppingBag, Truck, CheckCircle2, Tag, X, Info
+  Package, Store, ShoppingBag, Truck, CheckCircle2, X, Info
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,6 +19,8 @@ import {
 import { useCart } from "@/hooks/use-mock-api";
 import { cn } from "@/lib/utils";
 import { buildFreshSearchPath, buildSearchPath } from "@/lib/search-url";
+import { pathnameEndsWithSegment, rawQueryFromBrowserSearch } from "@/lib/wouter-location";
+import { fetchListingSuggestions, type ListingSuggestionResponse } from "@/api/listing";
 import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { formatDistanceToNow } from "date-fns";
@@ -32,6 +35,8 @@ interface Notification {
   read: boolean;
   link?: string;
 }
+
+const EMPTY_SUGGESTION_ITEMS: ListingSuggestionResponse[] = [];
 
 const MOCK_NOTIFICATIONS: Notification[] = [
   {
@@ -145,39 +150,117 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
+function SearchSuggestionPanel({
+  open,
+  loading,
+  items,
+  onPick,
+}: {
+  open: boolean;
+  loading: boolean;
+  items: ListingSuggestionResponse[];
+  onPick: (title: string) => void;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      role="listbox"
+      className="absolute left-0 right-0 top-[calc(100%+6px)] z-[60] max-h-72 overflow-y-auto rounded-2xl border border-border bg-popover py-2 text-popover-foreground shadow-lg"
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      {loading ? (
+        <p className="px-4 py-2 text-xs text-muted-foreground">Đang tải gợi ý...</p>
+      ) : items.length === 0 ? (
+        <p className="px-4 py-2 text-xs text-muted-foreground">Không có tin phù hợp</p>
+      ) : (
+        items.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            role="option"
+            className="flex w-full cursor-pointer truncate px-4 py-2.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+            onClick={() => onPick(s.title)}
+          >
+            {s.title}
+          </button>
+        ))
+      )}
+    </div>
+  );
+}
+
 export function Header() {
-  const [location, setLocation] = useLocation();
+  const [pathname, setLocation] = useLocation();
+  const search = useSearch();
   const { user, isLoggedIn, logout } = useAuth();
   const { cartItems } = useCart();
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
-  const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
+  const unreadCount = MOCK_NOTIFICATIONS.filter((n) => !n.read).length;
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [debouncedDraft, setDebouncedDraft] = useState("");
 
-  const isSearchPage = location.startsWith("/search");
+  const isSearchPage = pathnameEndsWithSegment(pathname, "search");
+
   const urlSearchKeyword = useMemo(() => {
-    const i = location.indexOf("?");
-    if (i < 0) return "";
-    const sp = new URLSearchParams(location.slice(i + 1));
+    const sp = new URLSearchParams(rawQueryFromBrowserSearch(search) || "");
     return (sp.get("keyword") || sp.get("q") || "").trim();
-  }, [location]);
+  }, [search]);
 
-  const [headerSearchDraft, setHeaderSearchDraft] = useState(urlSearchKeyword);
+  const [headerSearchDraft, setHeaderSearchDraft] = useState("");
 
   useEffect(() => {
-    if (isSearchPage) {
-      setHeaderSearchDraft(urlSearchKeyword);
-    }
+    if (!isSearchPage) return;
+    setHeaderSearchDraft((prev) =>
+      prev === urlSearchKeyword ? prev : urlSearchKeyword,
+    );
   }, [isSearchPage, urlSearchKeyword]);
 
-  const submitHeaderSearch = (e: FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedDraft(headerSearchDraft.trim()), 400);
+    return () => window.clearTimeout(t);
+  }, [headerSearchDraft]);
+
+  const { data: suggestionsData, isFetching: suggestLoading } = useQuery({
+    queryKey: ["listingSuggestions", debouncedDraft],
+    queryFn: () => fetchListingSuggestions(debouncedDraft, 8),
+    enabled: debouncedDraft.length >= 2,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+  });
+  const suggestions = suggestionsData ?? EMPTY_SUGGESTION_ITEMS;
+
+  const runHeaderSearch = useCallback(() => {
     const q = headerSearchDraft.trim();
+    setSuggestOpen(false);
     if (isSearchPage) {
-      setLocation(buildSearchPath({ keyword: q || null, q: null }));
+      const qs = rawQueryFromBrowserSearch(search);
+      setLocation(buildSearchPath({ keyword: q || null, q: null }, qs));
     } else {
       setLocation(buildFreshSearchPath({ keyword: q || null, q: null }));
     }
+  }, [headerSearchDraft, isSearchPage, search, setLocation]);
+
+  const submitHeaderSearch = (e: FormEvent) => {
+    e.preventDefault();
+    runHeaderSearch();
   };
+
+  const pickSuggestion = (title: string) => {
+    const q = title.trim();
+    setHeaderSearchDraft(title);
+    setSuggestOpen(false);
+    queueMicrotask(() => {
+      if (isSearchPage) {
+        const qs = rawQueryFromBrowserSearch(search);
+        setLocation(buildSearchPath({ keyword: q || null, q: null }, qs));
+      } else {
+        setLocation(buildFreshSearchPath({ keyword: q || null, q: null }));
+      }
+    });
+  };
+
+  const showSuggestPanel = suggestOpen && debouncedDraft.length >= 2;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -189,13 +272,12 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [notifOpen]);
 
-  if (location.startsWith("/manage") || location.startsWith("/listings")) return null;
+  if (pathname.startsWith("/manage") || pathname.startsWith("/listings")) return null;
 
   return (
     <header className="sticky top-0 z-50 w-full glass border-b transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between gap-4">
-
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-0">
+        <div className="flex h-auto md:h-20 items-center justify-between gap-4">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0">
             <Link href="/" className="flex items-center gap-2 group">
@@ -212,28 +294,38 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Search Bar */}
-          <div className="flex-1 max-w-2xl hidden md:flex">
+          {/* Search Bar — desktop/tablet */}
+          <div className="flex-1 max-w-2xl min-w-0 hidden md:flex">
             <form className="relative w-full group" onSubmit={submitHeaderSearch}>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none" aria-hidden />
               <Input
+                name="q"
                 placeholder="Tìm kiếm điện tử, quần áo, nội thất..."
-                className="w-full pl-10 pr-4 py-6 rounded-full border-border bg-background focus-visible:ring-primary/20 shadow-inner"
+                className="w-full pl-10 pr-[5.25rem] py-6 rounded-full border-border bg-background focus-visible:ring-primary/20 shadow-inner"
                 value={headerSearchDraft}
+                autoComplete="off"
                 onChange={(ev) => setHeaderSearchDraft(ev.target.value)}
+                onFocus={() => setSuggestOpen(true)}
+                onBlur={() => setTimeout(() => setSuggestOpen(false), 200)}
               />
-              <Button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full px-6" size="sm">
+              <Button
+                type="submit"
+                className="absolute right-1 top-1/2 z-10 -translate-y-1/2 rounded-full px-6"
+                size="sm"
+              >
                 Tìm
               </Button>
+              <SearchSuggestionPanel
+                open={showSuggestPanel}
+                loading={suggestLoading}
+                items={suggestions}
+                onPick={pickSuggestion}
+              />
             </form>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <Button variant="ghost" size="icon" className="md:hidden">
-              <Search className="h-5 w-5" />
-            </Button>
-
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 md:gap-3">
             {isLoggedIn ? (
               <>
                 <Link href="/messages">
@@ -275,15 +367,19 @@ export function Header() {
                 </div>
 
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="pl-2 pr-1 py-1 h-10 rounded-full hover:bg-primary/10 border border-transparent hover:border-primary/20 flex items-center gap-2">
-                      <Avatar className="h-8 w-8 border border-white shadow-sm">
-                        <AvatarImage src={user?.avatar || ""} />
-                        <AvatarFallback className="bg-primary/20 text-primary"><User className="h-4 w-4" /></AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-semibold hidden lg:block">{user?.name}</span>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground hidden lg:block" />
-                    </Button>
+                  <DropdownMenuTrigger
+                    type="button"
+                    className={cn(
+                      buttonVariants({ variant: "ghost" }),
+                      "h-10 gap-2 rounded-full border border-transparent py-1 pl-2 pr-1 hover:border-primary/20 hover:bg-primary/10",
+                    )}
+                  >
+                    <Avatar className="h-8 w-8 border border-white shadow-sm">
+                      <AvatarImage src={user?.avatar || ""} />
+                      <AvatarFallback className="bg-primary/20 text-primary"><User className="h-4 w-4" /></AvatarFallback>
+                    </Avatar>
+                    <span className="hidden text-sm font-semibold lg:block">{user?.name}</span>
+                    <ChevronDown className="hidden h-4 w-4 text-muted-foreground lg:block" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl">
                     <div className="flex items-center gap-3 p-2 mb-2">
@@ -326,6 +422,32 @@ export function Header() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Search — mobile (trước đây bị ẩn hoặc nút kính không gắn hành vi) */}
+        <div className="mt-3 md:hidden">
+          <form className="relative w-full group" onSubmit={submitHeaderSearch}>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none z-10" aria-hidden />
+            <Input
+              name="q"
+              placeholder="Tìm đồ tái đời, nội thất..."
+              className="w-full pl-10 pr-[5.25rem] py-5 rounded-full border-border bg-background focus-visible:ring-primary/20 shadow-inner"
+              value={headerSearchDraft}
+              autoComplete="off"
+              onChange={(ev) => setHeaderSearchDraft(ev.target.value)}
+              onFocus={() => setSuggestOpen(true)}
+              onBlur={() => setTimeout(() => setSuggestOpen(false), 200)}
+            />
+            <Button type="submit" className="absolute right-1 top-1/2 z-10 -translate-y-1/2 rounded-full px-5" size="sm">
+              Tìm
+            </Button>
+            <SearchSuggestionPanel
+              open={showSuggestPanel}
+              loading={suggestLoading}
+              items={suggestions}
+              onPick={pickSuggestion}
+            />
+          </form>
         </div>
       </div>
 

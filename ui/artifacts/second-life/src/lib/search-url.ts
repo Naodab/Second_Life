@@ -1,7 +1,23 @@
 type SearchParamValue = string | string[] | undefined | null;
 
-export function buildSearchPath(updates: Record<string, SearchParamValue>): string {
-  const p = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+function paramsFromSearchString(search: string): URLSearchParams {
+  const s = search.trim();
+  const raw = s.startsWith("?") ? s.slice(1) : s;
+  return new URLSearchParams(raw || "");
+}
+
+export function buildSearchPath(
+  updates: Record<string, SearchParamValue>,
+  currentSearch?: string | null,
+): string {
+  let p: URLSearchParams;
+  if (currentSearch !== undefined && currentSearch !== null) {
+    p = paramsFromSearchString(currentSearch);
+  } else if (typeof window !== "undefined") {
+    p = paramsFromSearchString(window.location.search);
+  } else {
+    p = new URLSearchParams();
+  }
   for (const [key, value] of Object.entries(updates)) {
     const baseKey = key.endsWith("[]") ? key.slice(0, -2) : key;
     const arrayKey = `${baseKey}[]`;
