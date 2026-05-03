@@ -58,7 +58,7 @@ public class ListingRecommendationServiceImpl implements ListingRecommendationSe
     LinkedHashSet<String> seenIds = new LinkedHashSet<>();
     List<ListingItemResponse> out = new ArrayList<>();
 
-    int slice = Math.min(Math.max(limit, 8), defaultListingPageSize);
+    int slice = Math.clamp(limit, 8, defaultListingPageSize);
     for (IndexedSnapshot is : ordered) {
       appendUnique(out, seenIds, runSearch(buildRequestFromSnapshot(is.snapshot(), loc, slice)));
       if (out.size() >= limit) {
@@ -183,8 +183,14 @@ public class ListingRecommendationServiceImpl implements ListingRecommendationSe
 
     boolean hasKeyword = StringUtils.hasText(snap.getKeyword());
     boolean geoOk = ElasticsearchNativeQueryHelper.hasGeoRadiusFilter(ctx.latitude, ctx.longitude, ctx.radiusMeters);
-    ElasticsearchSortBy sort =
-        hasKeyword ? ElasticsearchSortBy.RELEVANCE : geoOk ? ElasticsearchSortBy.DISTANCE : ElasticsearchSortBy.UPDATED_AT_DESC;
+    ElasticsearchSortBy sort;
+    if (hasKeyword) {
+      sort = ElasticsearchSortBy.RELEVANCE;
+    } else if (geoOk) {
+      sort = ElasticsearchSortBy.DISTANCE;
+    } else {
+      sort = ElasticsearchSortBy.UPDATED_AT_DESC;
+    }
 
     String pc =
         trim(ctx.provinceCode()) != null

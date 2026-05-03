@@ -73,29 +73,39 @@ public class ProductMapper {
     String aid = attributeId.trim();
     LinkedHashMap<String, AttributeValueResponse> map = new LinkedHashMap<>();
     for (ProductVariant variant : product.getVariants()) {
-      List<ProductVariantAttributeValue> links = variant.getVariantAttributeValues();
-      if (links != null) {
-        for (ProductVariantAttributeValue link : links) {
-          AttributeValue av = link.getAttributeValue();
-          String vid = av == null ? null : av.getId();
-          boolean matchAttribute =
-              av != null
-                  && av.getAttribute() != null
-                  && aid.equals(av.getAttribute().getId())
-                  && StringUtils.hasText(vid)
-                  && !map.containsKey(vid.trim());
-          if (matchAttribute) {
-            String key = vid.trim();
-            map.put(key, AttributeValueResponse.builder()
-                .id(key)
-                .value(av.getValue())
-                .code(av.getCode())
-                .build());
-          }
-        }
-      }
+      collectDistinctValuesForVariant(variant, aid, map);
     }
     return List.copyOf(map.values());
+  }
+
+  private static void collectDistinctValuesForVariant(
+      ProductVariant variant, String attributeId, LinkedHashMap<String, AttributeValueResponse> map) {
+    List<ProductVariantAttributeValue> links = variant.getVariantAttributeValues();
+    if (links == null) {
+      return;
+    }
+    for (ProductVariantAttributeValue link : links) {
+      putIfMatchingAttributeVariantValue(map, attributeId, link);
+    }
+  }
+
+  private static void putIfMatchingAttributeVariantValue(
+      LinkedHashMap<String, AttributeValueResponse> map, String attributeId, ProductVariantAttributeValue link) {
+    AttributeValue av = link.getAttributeValue();
+    if (av == null || av.getAttribute() == null) {
+      return;
+    }
+    String vid = av.getId();
+    if (!attributeId.equals(av.getAttribute().getId()) || !StringUtils.hasText(vid)) {
+      return;
+    }
+    String key = vid.trim();
+    if (map.containsKey(key)) {
+      return;
+    }
+    map.put(
+        key,
+        AttributeValueResponse.builder().id(key).value(av.getValue()).code(av.getCode()).build());
   }
 
   public ProductDocument toProductDocument(Product product) {
