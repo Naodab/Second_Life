@@ -34,7 +34,6 @@ import com.naodab.productservice.models.SubCategory;
 @Component
 public class ProductMapper {
 
-  /** Stable unique attributes referenced by variant attribute values on this product graph. */
   public List<Attribute> collectDistinctAttributesFromProduct(Product product) {
     if (product == null || product.getVariants() == null) {
       return List.of();
@@ -74,24 +73,26 @@ public class ProductMapper {
     String aid = attributeId.trim();
     LinkedHashMap<String, AttributeValueResponse> map = new LinkedHashMap<>();
     for (ProductVariant variant : product.getVariants()) {
-      if (variant.getVariantAttributeValues() == null) {
-        continue;
-      }
-      for (ProductVariantAttributeValue link : variant.getVariantAttributeValues()) {
-        AttributeValue av = link.getAttributeValue();
-        if (av == null || av.getAttribute() == null || !aid.equals(av.getAttribute().getId())) {
-          continue;
+      List<ProductVariantAttributeValue> links = variant.getVariantAttributeValues();
+      if (links != null) {
+        for (ProductVariantAttributeValue link : links) {
+          AttributeValue av = link.getAttributeValue();
+          String vid = av == null ? null : av.getId();
+          boolean matchAttribute =
+              av != null
+                  && av.getAttribute() != null
+                  && aid.equals(av.getAttribute().getId())
+                  && StringUtils.hasText(vid)
+                  && !map.containsKey(vid.trim());
+          if (matchAttribute) {
+            String key = vid.trim();
+            map.put(key, AttributeValueResponse.builder()
+                .id(key)
+                .value(av.getValue())
+                .code(av.getCode())
+                .build());
+          }
         }
-        String vid = av.getId();
-        if (!StringUtils.hasText(vid) || map.containsKey(vid.trim())) {
-          continue;
-        }
-        String key = vid.trim();
-        map.put(key, AttributeValueResponse.builder()
-            .id(key)
-            .value(av.getValue())
-            .code(av.getCode())
-            .build());
       }
     }
     return List.copyOf(map.values());

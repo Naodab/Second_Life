@@ -13,7 +13,6 @@ import org.springframework.util.StringUtils;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
-import com.naodab.productservice.documents.ListingDocument;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
@@ -92,7 +91,7 @@ public class ListingServiceImpl implements ListingService {
   }
 
   @Override
-  public List<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request) {
+  public PagedItemsResponse<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request) {
     ListingSearchRequest r = request == null ? ListingSearchRequest.builder().build() : request;
     if (!StringUtils.hasText(r.getKeyword())) {
       r.setKeyword(null);
@@ -115,11 +114,22 @@ public class ListingServiceImpl implements ListingService {
     }
     r.setSortBy(sort);
 
-    List<ListingDocument> hits = listingSearchService.searchListings(r);
-    return hits.stream()
-        .map(doc -> listingMapper.toListingItemResponse(doc))
+    int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(r.getPage());
+    int normalizedSize = ElasticsearchNativeQueryHelper.normalizePageSize(r.getPageSize(), defaultListingPageSize);
+    r.setPage(normalizedPage);
+    r.setPageSize(normalizedSize);
+
+    ListingSearchService.ListingDocumentPage esPage = listingSearchService.searchListingsPaged(r);
+    List<ListingItemResponse> items = esPage.items().stream()
+        .map(listingMapper::toListingItemResponse)
         .filter(Objects::nonNull)
         .toList();
+    return PagedItemsResponse.<ListingItemResponse>builder()
+        .items(items)
+        .totalCount(esPage.totalCount())
+        .page(normalizedPage)
+        .pageSize(normalizedSize)
+        .build();
   }
 
   @Override
@@ -134,24 +144,22 @@ public class ListingServiceImpl implements ListingService {
         .pageSize(Math.min(cap * 4, 40))
         .sortBy(ElasticsearchSortBy.RELEVANCE)
         .build();
-    List<ListingItemResponse> items = searchPublicListingItems(r);
+    List<ListingItemResponse> items = searchPublicListingItems(r).getItems();
     List<ListingSuggestionResponse> out = new ArrayList<>(cap);
     LinkedHashSet<String> seenTitles = new LinkedHashSet<>();
     for (ListingItemResponse it : items) {
-      if (it == null || !StringUtils.hasText(it.getTitle())) {
-        continue;
-      }
-      String key = it.getTitle().trim().toLowerCase(Locale.ROOT);
-      if (!seenTitles.add(key)) {
-        continue;
-      }
-      out.add(ListingSuggestionResponse.builder()
-          .id(it.getId())
-          .title(it.getTitle().trim())
-          .productId(it.getProductId())
-          .build());
-      if (out.size() >= cap) {
-        break;
+      if (it != null && StringUtils.hasText(it.getTitle())) {
+        String key = it.getTitle().trim().toLowerCase(Locale.ROOT);
+        if (seenTitles.add(key)) {
+          out.add(ListingSuggestionResponse.builder()
+              .id(it.getId())
+              .title(it.getTitle().trim())
+              .productId(it.getProductId())
+              .build());
+          if (out.size() >= cap) {
+            break;
+          }
+        }
       }
     }
     return out;

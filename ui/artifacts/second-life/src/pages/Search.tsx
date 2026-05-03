@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useSearch } from "wouter";
-import { Filter, ChevronDown, ChevronRight } from "lucide-react";
+import { Filter, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ListingCard } from "@/components/ListingCard";
@@ -25,8 +25,12 @@ import { useCategories } from "@/hooks/use-categories";
 import type { CategoryResponse } from "@/api/categories";
 import { buildFreshSearchPath, searchPathsQueryEqual } from "@/lib/search-url";
 import { pathStubForSearchQueryCompare, rawQueryFromBrowserSearch } from "@/lib/wouter-location";
+import { ListingPaginationBar } from "@/components/ListingPaginationBar";
 
 const DEFAULT_SORT: ListingSearchSort = "UPDATED_AT_DESC";
+
+/** Cùng cỡ trang với tab quản lý tin trong FacilityView (`LISTING_PAGE_SIZE`). */
+const SEARCH_LISTING_PAGE_SIZE = 12;
 
 const SORT_VALUES_IN_SELECT = new Set<ListingSearchSort>([
   "UPDATED_AT_DESC",
@@ -129,6 +133,8 @@ export default function Search() {
   const { data: categories, isFetched: categoriesFetched } = useCategories();
 
   const [listings, setListings] = useState<ListingItemResponse[]>([]);
+  const [searchTotalCount, setSearchTotalCount] = useState(0);
+  const [searchPage, setSearchPage] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [provinceListReady, setProvinceListReady] = useState(false);
@@ -356,6 +362,41 @@ export default function Search() {
     return () => clearTimeout(t);
   }, [keyword]);
 
+  const searchFilterDepsKey = useMemo(
+    () =>
+      [
+        debouncedKeyword,
+        typeFilter,
+        categoryIds.join("\0"),
+        subCategoryIds.join("\0"),
+        provinceCode ?? "",
+        wardCode ?? "",
+        String(priceMinNum ?? ""),
+        String(priceMaxNum ?? ""),
+        sortBy,
+      ].join("|"),
+    [
+      debouncedKeyword,
+      typeFilter,
+      categoryIds,
+      subCategoryIds,
+      provinceCode,
+      wardCode,
+      priceMinNum,
+      priceMaxNum,
+      sortBy,
+    ],
+  );
+
+  const searchFiltersMountedRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!searchFiltersMountedRef.current) {
+      searchFiltersMountedRef.current = true;
+      return;
+    }
+    setSearchPage(0);
+  }, [searchFilterDepsKey]);
+
   useEffect(() => {
     return () => {
       clearHoverCloseTimer();
@@ -368,7 +409,7 @@ export default function Search() {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const rows = await searchListings({
+        const data = await searchListings({
           keyword: debouncedKeyword.trim() || undefined,
           listingType: typeFilter === "all" ? null : typeFilter === "buy" ? "BUY" : "RENT",
           categoryIds: categoryIds.length > 0 ? categoryIds : null,
@@ -378,13 +419,18 @@ export default function Search() {
           priceMin: priceMinNum ?? null,
           priceMax: priceMaxNum ?? null,
           sortBy,
-          page: 0,
-          pageSize: 60,
+          page: searchPage,
+          pageSize: SEARCH_LISTING_PAGE_SIZE,
         });
-        if (!cancelled) setListings(Array.isArray(rows) ? rows : []);
+        if (!cancelled) {
+          setListings(Array.isArray(data.items) ? data.items : []);
+          const total = typeof data.totalCount === "number" ? data.totalCount : Number(data.totalCount) || 0;
+          setSearchTotalCount(total);
+        }
       } catch (e) {
         if (!cancelled) {
           setListings([]);
+          setSearchTotalCount(0);
           setFetchError(e instanceof Error ? e.message : "Không tải được tin đăng.");
         }
       } finally {
@@ -404,7 +450,10 @@ export default function Search() {
     priceMinNum,
     priceMaxNum,
     sortBy,
+    searchPage,
   ]);
+
+  const searchListingPageCount = Math.max(1, Math.ceil(searchTotalCount / SEARCH_LISTING_PAGE_SIZE));
 
   const categoryNameMap = useMemo(
     () => new Map(categories.map((cat) => [String(cat.id), cat.name])),
@@ -630,7 +679,7 @@ export default function Search() {
                 {fetchError ? (
                   <p className="mt-1 text-sm text-destructive">{fetchError}</p>
                 ) : (
-                  <p className="text-muted-foreground text-sm">{listings.length} kết quả tìm thấy</p>
+                  <p className="text-muted-foreground text-sm">{searchTotalCount} kết quả tìm thấy</p>
                 )}
               </div>
 
@@ -694,27 +743,15 @@ export default function Search() {
               </div>
             )}
 
-            {listings.length > 0 && !isLoading && (
-              <div className="mt-12 flex justify-center">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    disabled
-                    className="h-10 w-10 rounded-full border-transparent bg-card p-0"
-                  >
-                    1
-                  </Button>
-                  <Button variant="ghost" className="w-10 h-10 p-0 rounded-full">
-                    2
-                  </Button>
-                  <Button variant="ghost" className="w-10 h-10 p-0 rounded-full">
-                    3
-                  </Button>
-                  <Button variant="ghost" className="w-10 h-10 p-0 rounded-full">
-                    <ChevronDown className="w-4 h-4 -rotate-90" />
-                  </Button>
-                </div>
-              </div>
+            {!isLoading && !fetchError && searchTotalCount > 0 && (
+              <ListingPaginationBar
+                currentPage={searchPage}
+                totalPages={searchListingPageCount}
+                pageSize={SEARCH_LISTING_PAGE_SIZE}
+                totalItems={searchTotalCount}
+                itemLabel="tin đăng"
+                onPageChange={setSearchPage}
+              />
             )}
           </main>
         </div>

@@ -39,6 +39,7 @@ import {
   type ProductStatus,
 } from "@/api/product";
 import { formatCurrency, cn } from "@/lib/utils";
+import { ListingPaginationBar, ManageProductPaginationBar } from "@/components/ListingPaginationBar";
 
 const DEFAULT_PRODUCT_THUMB =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop";
@@ -73,116 +74,6 @@ const PRODUCT_SORT_OPTIONS: { value: FacilityProductSort; label: string }[] = [
   { value: "NAME_ASC", label: "Tên A → Z" },
   { value: "RELEVANCE", label: "Liên quan từ khóa" },
 ];
-
-type PageSlot = { type: "page"; index: number } | { type: "ellipsis"; key: string };
-
-function buildPageSlots(currentPage: number, totalPages: number): PageSlot[] {
-  const cap = Math.max(1, totalPages);
-  const cur = Math.min(Math.max(0, currentPage), cap - 1);
-  if (cap <= 1) {
-    return [{ type: "page", index: 0 }];
-  }
-
-  let raw: number[];
-  if (cap <= 9) {
-    raw = Array.from({ length: cap }, (_, i) => i);
-  } else {
-    const pages = new Set<number>([0, cap - 1]);
-    for (let d = -2; d <= 2; d++) {
-      const p = cur + d;
-      if (p >= 0 && p < cap) {
-        pages.add(p);
-      }
-    }
-    raw = [...pages].sort((a, b) => a - b);
-  }
-
-  const slots: PageSlot[] = [];
-  let prev = -2;
-  for (const p of raw) {
-    if (p - prev > 1) {
-      slots.push({ type: "ellipsis", key: `${prev}-${p}` });
-    }
-    slots.push({ type: "page", index: p });
-    prev = p;
-  }
-  return slots;
-}
-
-function ManagePagination({
-  currentPage,
-  totalPages,
-  pageSize,
-  totalItems,
-  itemLabel,
-  onPageChange,
-}: {
-  currentPage: number;
-  totalPages: number;
-  pageSize: number;
-  totalItems: number;
-  itemLabel: string;
-  onPageChange: (zeroBasedPage: number) => void;
-}) {
-  const slots = useMemo(
-    () => buildPageSlots(currentPage, totalPages),
-    [currentPage, totalPages],
-  );
-
-  return (
-    <div className="flex flex-col gap-4 pt-6 mt-6 border-t items-end">
-      <p className="text-xs text-muted-foreground tabular-nums text-right w-full">
-        Trang {currentPage + 1}/{Math.max(1, totalPages)} · Tối đa {pageSize} {itemLabel} / trang · {totalItems} mục
-      </p>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 w-full">
-        <div className="flex flex-wrap items-center gap-1.5 justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="tabular-nums"
-            disabled={currentPage <= 0}
-            onClick={() => onPageChange(Math.max(0, currentPage - 1))}
-          >
-            Trước
-          </Button>
-          {slots.map((slot) =>
-            slot.type === "ellipsis" ? (
-              <span
-                key={slot.key}
-                className="px-1 text-muted-foreground text-sm select-none"
-                aria-hidden
-              >
-                …
-              </span>
-            ) : (
-              <Button
-                key={slot.index}
-                type="button"
-                variant={currentPage === slot.index ? "default" : "outline"}
-                size="sm"
-                className="min-w-9 px-2.5 tabular-nums"
-                onClick={() => onPageChange(slot.index)}
-              >
-                {slot.index + 1}
-              </Button>
-            ),
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="tabular-nums"
-            disabled={currentPage + 1 >= totalPages}
-            onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
-          >
-            Sau
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function productStatusLabel(status: ProductStatus): string {
   switch (status) {
@@ -1128,7 +1019,7 @@ export function FacilityView({
                   !productsError &&
                   hubTab === "products" &&
                   productTotal > 0 && (
-                    <ManagePagination
+                    <ManageProductPaginationBar
                       currentPage={productPage}
                       totalPages={productPageCount}
                       pageSize={PRODUCT_PAGE_SIZE}
@@ -1317,7 +1208,7 @@ export function FacilityView({
                   !listingsError &&
                   hubTab === "listings" &&
                   listingQueryTotal > 0 && (
-                    <ManagePagination
+                    <ListingPaginationBar
                       currentPage={listingPage}
                       totalPages={listingPageCount}
                       pageSize={LISTING_PAGE_SIZE}

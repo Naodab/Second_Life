@@ -32,6 +32,8 @@ export type ListingItemResponse = {
   primarySubCategoryName?: string | null;
 };
 
+export type SearchListingsPagedResult = PagedItemsResponse<ListingItemResponse>;
+
 export type GetFacilityListingPageParams = {
   page?: number;
   pageSize?: number;
@@ -68,7 +70,7 @@ export type SearchListingsParams = {
 
 export async function searchListings(
   params: SearchListingsParams = {},
-): Promise<ListingItemResponse[]> {
+): Promise<SearchListingsPagedResult> {
   const q = new URLSearchParams();
   if (params.keyword != null && params.keyword.trim()) q.set("keyword", params.keyword.trim());
   if (params.listingType) q.set("listingType", params.listingType);
@@ -90,7 +92,7 @@ export async function searchListings(
     }
   }
   const qs = q.toString();
-  const raw = await customFetch<ApiResponseEnvelope<ListingItemResponse[]>>(`/api/v1/listings/search${qs ? `?${qs}` : ""}`, {
+  const raw = await customFetch<ApiResponseEnvelope<SearchListingsPagedResult>>(`/api/v1/listings/search${qs ? `?${qs}` : ""}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });

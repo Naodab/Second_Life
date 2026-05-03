@@ -23,8 +23,8 @@ export default function Home() {
     (async () => {
       setIsLoading(true);
       try {
-        const rows = await searchListings({ sortBy: "UPDATED_AT_DESC", page: 0, pageSize: 8 });
-        if (!cancelled) setListings(Array.isArray(rows) ? rows : []);
+        const page = await searchListings({ sortBy: "UPDATED_AT_DESC", page: 0, pageSize: 8 });
+        if (!cancelled) setListings(Array.isArray(page.items) ? page.items : []);
       } catch {
         if (!cancelled) setListings([]);
       } finally {

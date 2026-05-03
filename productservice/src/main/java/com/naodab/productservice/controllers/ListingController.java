@@ -56,9 +56,9 @@ public class ListingController {
   }
 
   @GetMapping("/search")
-  public ResponseEntity<ApiResponse<List<ListingItemResponse>>> searchListingItems(
+  public ResponseEntity<ApiResponse<PagedItemsResponse<ListingItemResponse>>> searchListingItems(
       @ModelAttribute ListingSearchRequest request) {
-    return ResponseEntity.ok(ApiResponse.<List<ListingItemResponse>>builder()
+    return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ListingItemResponse>>builder()
         .data(listingService.searchPublicListingItems(request))
         .build());
   }

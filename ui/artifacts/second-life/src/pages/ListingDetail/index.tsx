@@ -139,7 +139,7 @@ export default function ListingDetail() {
     enabled: Boolean(listingId && data && similarSearchKey),
     queryFn: async ({ pageParam }) => {
       const base = similarSearchKey!;
-      const rows = await searchListings({
+      const res = await searchListings({
         keyword: base.keyword,
         provinceCode: base.provinceCode,
         wardCode: base.wardCode,
@@ -150,16 +150,19 @@ export default function ListingDetail() {
         page: pageParam,
         pageSize: SIMILAR_PAGE_SIZE,
       });
-      return rows.filter((r) => r.id !== listingId);
+      const rawItems = Array.isArray(res.items) ? res.items : [];
+      const totalCount = typeof res.totalCount === "number" ? res.totalCount : Number(res.totalCount) || 0;
+      const items = rawItems.filter((r) => r.id !== listingId);
+      return { items, totalCount };
     },
     getNextPageParam: (lastPage, _pages, lastParam) =>
-      lastPage.length >= SIMILAR_PAGE_SIZE ? lastParam + 1 : undefined,
+      (lastParam + 1) * SIMILAR_PAGE_SIZE < lastPage.totalCount ? lastParam + 1 : undefined,
   });
 
   const similarItems = useMemo(() => {
     const dedup = new Map<string, ListingItemResponse>();
     for (const page of similarInfinite.data?.pages ?? []) {
-      for (const row of page) dedup.set(row.id, row);
+      for (const row of page.items) dedup.set(row.id, row);
     }
     return [...dedup.values()];
   }, [similarInfinite.data?.pages]);

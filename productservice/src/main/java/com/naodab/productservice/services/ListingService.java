@@ -19,7 +19,7 @@ public interface ListingService {
 
   ListingPublicDetailResponse getPublicListingById(String listingId);
 
-  List<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request);
+  PagedItemsResponse<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request);
 
   List<ListingSuggestionResponse> suggestSearch(String keyword, Integer limit);
 
