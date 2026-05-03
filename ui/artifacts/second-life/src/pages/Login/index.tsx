@@ -99,11 +99,11 @@ export default function Login() {
     <div className="min-h-screen flex relative overflow-hidden">
       <div className="absolute inset-0 z-0">
         <img src={`${import.meta.env.BASE_URL}images/auth-bg.png`} className="w-full h-full object-cover opacity-60" alt="Nền" />
-        <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px]"></div>
+        <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] dark:bg-black/55 dark:backdrop-blur-[2px]" aria-hidden />
       </div>
 
       <div className="w-full max-w-md m-auto relative z-10 p-4">
-        <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] p-8 sm:p-10 border shadow-2xl">
+        <div className="rounded-[2rem] border border-border bg-card/85 p-8 text-card-foreground shadow-2xl backdrop-blur-xl dark:bg-card/90 sm:p-10">
 
           <div className="flex justify-center mb-8">
             <Link href="/" className="flex items-center gap-2">
@@ -120,7 +120,7 @@ export default function Login() {
             <Button
               type="button"
               variant="outline"
-              className="w-full h-12 rounded-xl border-2 hover:bg-gray-50 transition-colors"
+              className="w-full h-12 rounded-xl border-2 hover:bg-muted transition-colors"
               onClick={handleGoogleLogin}
               disabled={isGoogleLoading}
             >
@@ -138,26 +138,26 @@ export default function Login() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-muted-foreground">hoặc</span>
+                <span className="bg-card px-2 text-muted-foreground">hoặc</span>
               </div>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="text-sm font-semibold mb-1.5 block">Email</label>
+              <label className="text-sm font-semibold mb-1.5 block text-foreground">Email</label>
               <Input
                 required
                 type="email"
                 placeholder="ban@example.com"
-                className="h-12 rounded-xl bg-white/50"
+                className="h-12 rounded-xl bg-muted/50"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
               />
             </div>
             <div>
               <div className="flex justify-between items-center mb-1.5">
-                <label className="text-sm font-semibold">Mật khẩu</label>
+                <label className="text-sm font-semibold text-foreground">Mật khẩu</label>
                 <a href="#" className="text-xs text-primary font-medium hover:underline">Quên mật khẩu?</a>
               </div>
               <div className="relative">
@@ -165,7 +165,7 @@ export default function Login() {
                   required
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="h-12 rounded-xl bg-white/50 pr-10"
+                  className="h-12 rounded-xl bg-muted/50 pr-10"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                 />

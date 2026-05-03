@@ -19,7 +19,6 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -68,13 +67,16 @@ public class ProductSearchServiceImpl implements ProductSearchService {
   @Value("${default.page-size:20}")
   int defaultPageSize;
 
+  /**
+   * Synchronous index refresh so seller facility lists (loaded from Elasticsearch) reflect
+   * create/update/publish immediately instead of lagging behind async completion.
+   */
   @Override
-  @Async
   public void sync(String productId) {
     try {
       productElasticsearchIndexWriter.writeProductDocumentById(productId);
     } catch (Exception e) {
-      log.error("Async Elasticsearch sync failed for product id={}", productId, e);
+      log.error("Elasticsearch sync failed for product id={}", productId, e);
     }
   }
 

@@ -1,8 +1,12 @@
 package com.naodab.productservice.controllers;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +19,8 @@ import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
+import com.naodab.productservice.dto.request.ListingUpdateRequest;
+import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
@@ -32,15 +38,26 @@ public class ListingController {
 
   ListingService listingService;
 
+  /** Public marketplace listing search (query params mirror {@code ProductSearchRequest} / manage facility product filters). */
+  @GetMapping("/search")
+  public ResponseEntity<ApiResponse<List<ListingItemResponse>>> searchListingItems(
+      @ModelAttribute ListingSearchRequest request) {
+    return ResponseEntity.ok(ApiResponse.<List<ListingItemResponse>>builder()
+        .data(listingService.searchPublicListingItems(request))
+        .build());
+  }
+
   @GetMapping("/by-facility/{facilityId}")
   public ResponseEntity<ApiResponse<PagedItemsResponse<ListingItemResponse>>> listListingsForFacility(
       @PathVariable String facilityId,
       @RequestParam(required = false) Integer page,
       @RequestParam(required = false) Integer pageSize,
+      @RequestParam(required = false) String keyword,
+      @RequestParam(required = false) String productId,
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
     String profileId = validateProfileId(profileIdHeader);
     return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ListingItemResponse>>builder()
-        .data(listingService.listListingItemsForFacility(profileId, facilityId, page, pageSize))
+        .data(listingService.listListingItemsForFacility(profileId, facilityId, page, pageSize, keyword, productId))
         .build());
   }
 
@@ -51,6 +68,17 @@ public class ListingController {
     String profileId = validateProfileId(profileIdHeader);
     return ResponseEntity.ok(ApiResponse.<ListingResponse>builder()
         .data(listingService.createListing(profileId, request))
+        .build());
+  }
+
+  @PutMapping("/{id}")
+  public ResponseEntity<ApiResponse<ListingResponse>> updateListing(
+      @PathVariable String id,
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
+      @RequestBody @Valid ListingUpdateRequest request) {
+    String profileId = validateProfileId(profileIdHeader);
+    return ResponseEntity.ok(ApiResponse.<ListingResponse>builder()
+        .data(listingService.updateListing(profileId, id, request))
         .build());
   }
 

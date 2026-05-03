@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -44,6 +45,9 @@ const DEFAULT_PRODUCT_THUMB =
 
 const PRODUCT_PAGE_SIZE = 12;
 const LISTING_PAGE_SIZE = 12;
+const LISTING_PRODUCT_PICKER_PAGE_SIZE = 12;
+/** Select value sentinel: filter by product “all”. */
+const LISTING_PRODUCT_FILTER_ALL = "__listing_product_all__";
 
 const DEFAULT_PRODUCT_SORT: FacilityProductSort = "UPDATED_AT_DESC";
 
@@ -294,7 +298,10 @@ export function FacilityView({
   const [productPage, setProductPage] = useState(0);
   const [listingPage, setListingPage] = useState(0);
   const [productTotal, setProductTotal] = useState(0);
-  const [listingTotal, setListingTotal] = useState(0);
+  /** Tổng bài đăng của cơ sở (badge tab — không đổi khi đang lọc). */
+  const [facilityListingsBadgeTotal, setFacilityListingsBadgeTotal] = useState(0);
+  /** Tổng theo truy vấn lọc hiện tại (tiêu đề danh sách + phân trang). */
+  const [listingQueryTotal, setListingQueryTotal] = useState(0);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const [productRows, setProductRows] = useState<ProductItemResponse[]>([]);
@@ -304,6 +311,15 @@ export function FacilityView({
   const [listingRows, setListingRows] = useState<ListingItemResponse[]>([]);
   const [listingsLoading, setListingsLoading] = useState(false);
   const [listingsError, setListingsError] = useState<string | null>(null);
+
+  const [listingKeywordInput, setListingKeywordInput] = useState("");
+  const [debouncedListingKeyword, setDebouncedListingKeyword] = useState("");
+  const [listingFilterProductId, setListingFilterProductId] = useState<string>(LISTING_PRODUCT_FILTER_ALL);
+  const [listingPickerProducts, setListingPickerProducts] = useState<ProductItemResponse[]>([]);
+  const [listingPickerNextPage, setListingPickerNextPage] = useState(0);
+  const [listingPickerTotal, setListingPickerTotal] = useState(0);
+  const [listingPickerLoadingInit, setListingPickerLoadingInit] = useState(false);
+  const [listingPickerLoadingMore, setListingPickerLoadingMore] = useState(false);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -315,12 +331,23 @@ export function FacilityView({
     setProductNameInput("");
     setDebouncedProductName("");
     setProductSort(DEFAULT_PRODUCT_SORT);
+    setListingKeywordInput("");
+    setDebouncedListingKeyword("");
+    setListingFilterProductId(LISTING_PRODUCT_FILTER_ALL);
+    setListingPickerProducts([]);
+    setListingPickerNextPage(0);
+    setListingPickerTotal(0);
   }, [facility.id]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedProductName(productNameInput.trim()), 400);
     return () => clearTimeout(t);
   }, [productNameInput]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedListingKeyword(listingKeywordInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [listingKeywordInput]);
 
   useEffect(() => {
     let cancelled = false;
@@ -460,12 +487,12 @@ export function FacilityView({
         ]);
         if (!cancelled) {
           setProductTotal(typeof pMeta?.totalCount === "number" ? pMeta.totalCount : 0);
-          setListingTotal(typeof lMeta?.totalCount === "number" ? lMeta.totalCount : 0);
+          setFacilityListingsBadgeTotal(typeof lMeta?.totalCount === "number" ? lMeta.totalCount : 0);
         }
       } catch {
         if (!cancelled) {
           setProductTotal(0);
-          setListingTotal(0);
+          setFacilityListingsBadgeTotal(0);
         }
       }
     })();
@@ -519,6 +546,72 @@ export function FacilityView({
   ]);
 
   useEffect(() => {
+    setListingPage(0);
+  }, [debouncedListingKeyword, listingFilterProductId]);
+
+  async function fetchListingPickerPage(pageIdx: number, append: boolean) {
+    const isFirst = !append;
+    if (isFirst) {
+      setListingPickerLoadingInit(true);
+    } else {
+      setListingPickerLoadingMore(true);
+    }
+    try {
+      const data = await getFacilityProductPage(facility.id, {
+        page: pageIdx,
+        pageSize: LISTING_PRODUCT_PICKER_PAGE_SIZE,
+        sortBy: "UPDATED_AT_DESC",
+      });
+      const items = Array.isArray(data.items) ? data.items : [];
+      const total = typeof data.totalCount === "number" ? data.totalCount : 0;
+      setListingPickerTotal(total);
+      setListingPickerNextPage(pageIdx + 1);
+      setListingPickerProducts((prev) => {
+        if (!append) {
+          return items;
+        }
+        const seen = new Set(prev.map((p) => p.id));
+        const merged = [...prev];
+        for (const p of items) {
+          if (!seen.has(p.id)) {
+            seen.add(p.id);
+            merged.push(p);
+          }
+        }
+        return merged;
+      });
+    } finally {
+      if (isFirst) {
+        setListingPickerLoadingInit(false);
+      } else {
+        setListingPickerLoadingMore(false);
+      }
+    }
+  }
+
+  function handleListingProductSelectOpenChange(open: boolean) {
+    if (!open) {
+      return;
+    }
+    if (listingPickerProducts.length === 0) {
+      void fetchListingPickerPage(0, false);
+    }
+  }
+
+  function handleListingProductPickerScroll(el: HTMLDivElement) {
+    const threshold = 48;
+    if (listingPickerLoadingInit || listingPickerLoadingMore) {
+      return;
+    }
+    if (listingPickerProducts.length >= listingPickerTotal || listingPickerTotal === 0) {
+      return;
+    }
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < threshold) {
+      void fetchListingPickerPage(listingPickerNextPage, true);
+    }
+  }
+
+  useEffect(() => {
     if (hubTab !== "listings") {
       return;
     }
@@ -530,10 +623,20 @@ export function FacilityView({
         const data = await getFacilityListingPage(facility.id, {
           page: listingPage,
           pageSize: LISTING_PAGE_SIZE,
+          keyword: debouncedListingKeyword || undefined,
+          productId:
+            listingFilterProductId !== LISTING_PRODUCT_FILTER_ALL ? listingFilterProductId : undefined,
         });
         if (!cancelled) {
           setListingRows(Array.isArray(data.items) ? data.items : []);
-          setListingTotal(typeof data.totalCount === "number" ? data.totalCount : 0);
+          const total = typeof data.totalCount === "number" ? data.totalCount : 0;
+          setListingQueryTotal(total);
+          const noListingFilters =
+            !debouncedListingKeyword &&
+            listingFilterProductId === LISTING_PRODUCT_FILTER_ALL;
+          if (noListingFilters) {
+            setFacilityListingsBadgeTotal(total);
+          }
         }
       } catch (e) {
         if (!cancelled) {
@@ -547,7 +650,13 @@ export function FacilityView({
     return () => {
       cancelled = true;
     };
-  }, [facility.id, hubTab, listingPage]);
+  }, [
+    facility.id,
+    hubTab,
+    listingPage,
+    debouncedListingKeyword,
+    listingFilterProductId,
+  ]);
 
   const resetProductFilters = () => {
     setProductNameInput("");
@@ -555,6 +664,13 @@ export function FacilityView({
     setProductSort(DEFAULT_PRODUCT_SORT);
     setSelectedCatalogCategoryIds([]);
     setProductSubcategorySelections([]);
+  };
+
+  const resetListingFilters = () => {
+    setListingKeywordInput("");
+    setDebouncedListingKeyword("");
+    setListingFilterProductId(LISTING_PRODUCT_FILTER_ALL);
+    setListingPage(0);
   };
 
   const toggleCatalogCategory = (categoryId: string) => {
@@ -570,7 +686,7 @@ export function FacilityView({
   };
 
   const productPageCount = Math.max(1, Math.ceil(productTotal / PRODUCT_PAGE_SIZE));
-  const listingPageCount = Math.max(1, Math.ceil(listingTotal / LISTING_PAGE_SIZE));
+  const listingPageCount = Math.max(1, Math.ceil(listingQueryTotal / LISTING_PAGE_SIZE));
 
   return (
     <div className="space-y-5">
@@ -708,7 +824,7 @@ export function FacilityView({
                       : "bg-black/[0.06] dark:bg-white/10 text-muted-foreground",
                   )}
                 >
-                  {listingTotal}
+                  {facilityListingsBadgeTotal}
                 </span>
               </span>
             </TabsTrigger>
@@ -991,9 +1107,16 @@ export function FacilityView({
                               type="button"
                               size="sm"
                               className="w-full rounded-full shadow-md shadow-primary/20 text-xs font-medium"
+                              disabled={p.status !== "PUBLISHED"}
+                              title={
+                                p.status === "PUBLISHED"
+                                  ? undefined
+                                  : "Chỉ sản phẩm đã xuất bản (published) mới tạo được bài đăng — mở chi tiết để xuất bản."
+                              }
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                if (p.status !== "PUBLISHED") return;
                                 onCreateListingForProduct(p.id);
                               }}
                             >
@@ -1023,10 +1146,112 @@ export function FacilityView({
             </TabsContent>
 
             <TabsContent value="listings" className="space-y-4 mt-0 focus-visible:outline-none">
+              {hubTab === "listings" && (
+                <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden">
+                  <div className="border-b border-border px-4 py-3 sm:px-5 bg-muted/40">
+                    <p className="text-sm font-medium">Tìm & lọc bài đăng</p>
+                  </div>
+                  <div className="p-4 sm:p-5 space-y-4">
+                    <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <Label
+                          htmlFor="facility-listing-search-text"
+                          className="text-xs font-medium text-muted-foreground"
+                        >
+                          Theo chữ (tiêu đề, mô tả, SKU)
+                        </Label>
+                        <div className="relative">
+                          <Search
+                            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
+                            aria-hidden
+                          />
+                          <Input
+                            id="facility-listing-search-text"
+                            placeholder="Tiêu đề, mô tả hoặc mã SKU biến thể…"
+                            value={listingKeywordInput}
+                            onChange={(e) => setListingKeywordInput(e.target.value)}
+                            className="pl-9 h-9 bg-background"
+                          />
+                        </div>
+                      </div>
+                      <div className="w-full lg:flex-1 min-w-0 lg:max-w-md space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground">
+                          Theo sản phẩm
+                        </Label>
+                        <Select
+                          value={listingFilterProductId}
+                          onValueChange={setListingFilterProductId}
+                          onOpenChange={handleListingProductSelectOpenChange}
+                        >
+                          <SelectTrigger className="h-9 bg-background w-full">
+                            <SelectValue placeholder="Tất cả sản phẩm" />
+                          </SelectTrigger>
+                          <SelectContent
+                            position="popper"
+                            sideOffset={6}
+                            className="max-h-72"
+                            onScroll={(e) => handleListingProductPickerScroll(e.currentTarget)}
+                          >
+                            <SelectGroup>
+                              <SelectItem value={LISTING_PRODUCT_FILTER_ALL}>
+                                <span className="font-medium">Tất cả sản phẩm</span>
+                              </SelectItem>
+                              {listingPickerLoadingInit && listingPickerProducts.length === 0 ? (
+                                <div className="flex items-center gap-2 py-3 px-2 text-muted-foreground text-sm">
+                                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                                  Đang tải danh sách…
+                                </div>
+                              ) : (
+                                listingPickerProducts.map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    <span className="truncate">{p.name}</span>
+                                  </SelectItem>
+                                ))
+                              )}
+                              {listingPickerLoadingMore && listingPickerProducts.length > 0 && (
+                                <div className="flex items-center gap-2 py-2 px-2 text-xs text-muted-foreground">
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                  Đang tải thêm…
+                                </div>
+                              )}
+                              {!listingPickerLoadingInit &&
+                                listingPickerProducts.length === 0 &&
+                                listingPickerTotal === 0 && (
+                                  <p className="px-2 py-3 text-xs text-muted-foreground text-center">
+                                    Chưa có sản phẩm trong cơ sở.
+                                  </p>
+                                )}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex lg:justify-end shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 gap-2 w-full lg:w-auto"
+                          onClick={resetListingFilters}
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 shrink-0" aria-hidden /> Xóa bộ lọc
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
                   <h3 className="font-bold flex items-center gap-2 text-sm">
-                    <FileText className="w-4 h-4 text-primary" /> Bài đăng ({listingTotal})
+                    <FileText className="w-4 h-4 text-primary" /> Bài đăng ({listingQueryTotal}
+                    {facilityListingsBadgeTotal !== listingQueryTotal ? (
+                      <span className="font-normal text-muted-foreground tabular-nums">
+                        {" "}
+                        · toàn cửa hàng: {facilityListingsBadgeTotal}
+                      </span>
+                    ) : null}
+                    )
                   </h3>
                   <Button
                     type="button"
@@ -1096,12 +1321,12 @@ export function FacilityView({
                 {!listingsLoading &&
                   !listingsError &&
                   hubTab === "listings" &&
-                  listingTotal > 0 && (
+                  listingQueryTotal > 0 && (
                     <ManagePagination
                       currentPage={listingPage}
                       totalPages={listingPageCount}
                       pageSize={LISTING_PAGE_SIZE}
-                      totalItems={listingTotal}
+                      totalItems={listingQueryTotal}
                       itemLabel="bài đăng"
                       onPageChange={setListingPage}
                     />

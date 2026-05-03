@@ -29,7 +29,64 @@ export type ListingItemResponse = {
 export type GetFacilityListingPageParams = {
   page?: number;
   pageSize?: number;
+  /** Title, listing description, or variant SKU (partial match). */
+  keyword?: string | null;
+  productId?: string | null;
 };
+
+/** Mirrors `FacilityProductSort` / `GET /products/by-facility` sort query (ElasticsearchSortBy). */
+export type ListingSearchSort =
+  | "UPDATED_AT_DESC"
+  | "CREATED_AT_DESC"
+  | "RELEVANCE"
+  | "NAME_ASC"
+  | "DISTANCE";
+
+/** Query params aligned with backend `ListingSearchRequest` / manage product listing filters (`categoryIds`, `subCategoryIds`, `keyword`, `sortBy`, …). */
+export type SearchListingsParams = {
+  keyword?: string | null;
+  listingType?: "BUY" | "RENT" | null;
+  categoryIds?: string[] | null;
+  subCategoryIds?: string[] | null;
+  provinceCode?: string | null;
+  wardCode?: string | null;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  sortBy?: ListingSearchSort | null;
+  page?: number | null;
+  pageSize?: number | null;
+};
+
+export async function searchListings(
+  params: SearchListingsParams = {},
+): Promise<ListingItemResponse[]> {
+  const q = new URLSearchParams();
+  if (params.keyword != null && params.keyword.trim()) q.set("keyword", params.keyword.trim());
+  if (params.listingType) q.set("listingType", params.listingType);
+  if (params.sortBy) q.set("sortBy", params.sortBy);
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
+  if (params.priceMin != null && Number.isFinite(params.priceMin)) q.set("priceMin", String(params.priceMin));
+  if (params.priceMax != null && Number.isFinite(params.priceMax)) q.set("priceMax", String(params.priceMax));
+  if (params.provinceCode?.trim()) q.set("provinceCode", params.provinceCode.trim());
+  if (params.wardCode?.trim()) q.set("wardCode", params.wardCode.trim());
+  if (params.categoryIds?.length) {
+    for (const id of params.categoryIds) {
+      if (id?.trim()) q.append("categoryIds", id.trim());
+    }
+  }
+  if (params.subCategoryIds?.length) {
+    for (const id of params.subCategoryIds) {
+      if (id?.trim()) q.append("subCategoryIds", id.trim());
+    }
+  }
+  const qs = q.toString();
+  const raw = await customFetch<ApiResponseEnvelope<ListingItemResponse[]>>(`/api/v1/listings/search${qs ? `?${qs}` : ""}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return unwrapApiData(raw);
+}
 
 export async function getFacilityListingPage(
   facilityId: string,
@@ -38,6 +95,8 @@ export async function getFacilityListingPage(
   const q = new URLSearchParams();
   if (params.page != null) q.set("page", String(params.page));
   if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
+  if (params.keyword != null && params.keyword.trim()) q.set("keyword", params.keyword.trim());
+  if (params.productId != null && params.productId.trim()) q.set("productId", params.productId.trim());
   const qs = q.toString();
   const path = `/api/v1/listings/by-facility/${encodeURIComponent(facilityId)}${qs ? `?${qs}` : ""}`;
   const raw = await customFetch<ApiResponseEnvelope<PagedItemsResponse<ListingItemResponse>>>(path, {

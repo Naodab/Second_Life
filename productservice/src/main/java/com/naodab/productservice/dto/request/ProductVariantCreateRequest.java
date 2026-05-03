@@ -22,6 +22,9 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ProductVariantCreateRequest {
+  /** When present, identifies an existing SKU row to merge (preserve id & sku). Omit for newly added variants on update. */
+  String id;
+
   @NotNull(message = "REQUIRED_FIELD")
   @PositiveOrZero(message = "INVALID_INPUT")
   Long quantity;

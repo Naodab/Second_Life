@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,13 +32,16 @@ import com.naodab.productservice.models.Product;
 import com.naodab.productservice.models.ProductMedia;
 import com.naodab.productservice.models.ProductSubCategory;
 import com.naodab.productservice.models.ProductSubCategoryId;
+import com.naodab.productservice.models.ProductVariantAttributeValue;
 import com.naodab.productservice.models.ProductVariant;
 import com.naodab.productservice.models.SubCategory;
 import com.naodab.productservice.repositories.AttributeRepository;
 import com.naodab.productservice.repositories.AttributeValueRepository;
 import com.naodab.productservice.repositories.FacilityRepository;
 import com.naodab.productservice.repositories.ProductRepository;
+import com.naodab.productservice.repositories.ListingVariantRepository;
 import com.naodab.productservice.repositories.SubCategoryRepository;
+import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ProductSearchService;
 import com.naodab.productservice.services.ProductService;
 
@@ -52,7 +57,9 @@ public class ProductServiceImpl implements ProductService {
   SubCategoryRepository subCategoryRepository;
   AttributeRepository attributeRepository;
   AttributeValueRepository attributeValueRepository;
+  ListingVariantRepository listingVariantRepository;
   ProductSearchService productSearchService;
+  ListingSearchService listingSearchService;
   ProductMapper productMapper;
   ProductVariantMapper productVariantMapper;
 
@@ -96,6 +103,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     productSearchService.sync(savedProduct.getId());
+    listingSearchService.reindexAllListingsForProduct(savedProduct.getId());
     return productMapper.toProductResponse(savedProduct, requestData.attributes());
   }
 
@@ -134,16 +142,139 @@ public class ProductServiceImpl implements ProductService {
                 .build())
             .toList());
 
-    final int[] sequence = { 1 };
-    product.getVariants().clear();
-    product.getVariants().addAll(request.getVariants().stream()
-        .map(variantRequest -> toProductVariant(product, variantRequest, requestData.attributeValueById(),
-            sequence[0]++))
-        .toList());
+    mergeVariantsKeepingIds(product, request.getVariants(), requestData.attributeValueById());
 
     Product savedProduct = productRepository.save(product);
     productSearchService.sync(savedProduct.getId());
+    listingSearchService.reindexAllListingsForProduct(savedProduct.getId());
     return productMapper.toProductResponse(savedProduct, requestData.attributes());
+  }
+
+  @Override
+  @Transactional
+  public ProductResponse publishDraftProduct(String profileId, String productId) {
+    if (!StringUtils.hasText(productId) || !StringUtils.hasText(profileId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    Product product = productRepository.findByIdAndDeletedAtIsNull(productId.trim())
+        .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+    if (product.getFacility() == null || !profileId.trim().equals(product.getFacility().getOwnerId())) {
+      throw new AppException(ErrorCode.UNAUTHORIZED);
+    }
+    if (product.getStatus() != Product.ProductStatus.DRAFT) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    if (!StringUtils.hasText(productMapper.thumbnailImageUrl(product))) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    product.setStatus(Product.ProductStatus.PUBLISHED);
+    Product saved = productRepository.save(product);
+    productSearchService.sync(saved.getId());
+    listingSearchService.reindexAllListingsForProduct(saved.getId());
+    List<Attribute> attrs = extractAttributesFromProductVariants(product);
+    return productMapper.toProductResponse(saved, attrs);
+  }
+
+  /** Sort & trim IDs for deterministic comparison vs update requests. */
+  private static List<String> sortedDistinctIds(List<String> raw) {
+    if (raw == null || raw.isEmpty()) {
+      return List.of();
+    }
+    List<String> out = raw.stream()
+        .filter(StringUtils::hasText)
+        .map(String::trim)
+        .distinct()
+        .sorted()
+        .toList();
+    return out.isEmpty() ? List.of() : out;
+  }
+
+  private static List<String> attributeValueIdsSorted(ProductVariant v) {
+    if (v == null || v.getVariantAttributeValues() == null) {
+      return List.of();
+    }
+    List<String> raw = new ArrayList<>();
+    for (ProductVariantAttributeValue link : v.getVariantAttributeValues()) {
+      AttributeValue av = link.getAttributeValue();
+      if (av != null && StringUtils.hasText(av.getId())) {
+        raw.add(av.getId().trim());
+      }
+    }
+    return sortedDistinctIds(raw);
+  }
+
+  private void validateSameComboOrThrow(ProductVariant existing, ProductVariantCreateRequest vr) {
+    List<String> a = attributeValueIdsSorted(existing);
+    List<String> b = sortedDistinctIds(vr.getAttributeValueIds());
+    if (!a.equals(b)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+  }
+
+  private void mergeVariantsKeepingIds(
+      Product product,
+      List<ProductVariantCreateRequest> incoming,
+      Map<String, AttributeValue> attributeValueById) {
+    if (product.getVariants() == null) {
+      product.setVariants(new ArrayList<>());
+    }
+    List<ProductVariantCreateRequest> safe = incoming == null ? List.of() : incoming;
+
+    Set<String> keepIdsReq = safe.stream()
+        .map(ProductVariantCreateRequest::getId)
+        .filter(StringUtils::hasText)
+        .map(String::trim)
+        .collect(Collectors.toSet());
+
+    Iterator<ProductVariant> it = product.getVariants().iterator();
+    while (it.hasNext()) {
+      ProductVariant row = it.next();
+      if (!keepIdsReq.contains(row.getId())) {
+        if (listingVariantRepository.existsByProductVariantId(row.getId())) {
+          throw new AppException(ErrorCode.PRODUCT_VARIANT_IN_USE);
+        }
+        it.remove();
+      }
+    }
+
+    Set<String> seenReqIds = new HashSet<>();
+
+    for (ProductVariantCreateRequest vr : safe) {
+      if (StringUtils.hasText(vr.getId())) {
+        String tid = vr.getId().trim();
+        if (!seenReqIds.add(tid)) {
+          throw new AppException(ErrorCode.INVALID_INPUT);
+        }
+        ProductVariant existing = product.getVariants().stream()
+            .filter(v -> tid.equals(v.getId()))
+            .findFirst()
+            .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+        validateSameComboOrThrow(existing, vr);
+        existing.setQuantity(vr.getQuantity());
+      } else {
+        int seq = product.getVariants().size() + 1;
+        product.getVariants().add(toProductVariant(product, vr, attributeValueById, seq));
+      }
+    }
+  }
+
+  private List<Attribute> extractAttributesFromProductVariants(Product product) {
+    LinkedHashMap<String, Attribute> byId = new LinkedHashMap<>();
+    if (product.getVariants() == null) {
+      return List.of();
+    }
+    for (ProductVariant variant : product.getVariants()) {
+      if (variant.getVariantAttributeValues() == null) {
+        continue;
+      }
+      for (ProductVariantAttributeValue link : variant.getVariantAttributeValues()) {
+        AttributeValue av = link.getAttributeValue();
+        if (av != null && av.getAttribute() != null && StringUtils.hasText(av.getAttribute().getId())) {
+          byId.put(av.getAttribute().getId().trim(), av.getAttribute());
+        }
+      }
+    }
+    return List.copyOf(byId.values());
   }
 
   private Facility getFacilityByOwnerAndId(String profileId, String facilityId) {
@@ -303,7 +434,8 @@ public class ProductServiceImpl implements ProductService {
     if (product.getFacility() == null || !profileId.trim().equals(product.getFacility().getOwnerId())) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
-    return productMapper.toProductResponse(product, List.of());
+    List<Attribute> attrs = extractAttributesFromProductVariants(product);
+    return productMapper.toProductResponse(product, attrs);
   }
 
   @Override
@@ -366,6 +498,7 @@ public class ProductServiceImpl implements ProductService {
     product.getMedias().addAll(medias);
     Product savedProduct = productRepository.save(product);
     productSearchService.sync(savedProduct.getId());
+    listingSearchService.reindexAllListingsForProduct(savedProduct.getId());
   }
 
   @Override
@@ -380,6 +513,7 @@ public class ProductServiceImpl implements ProductService {
     product.setDeletedAt(LocalDateTime.now());
     productRepository.save(product);
     productSearchService.delete(id);
+    listingSearchService.deleteListingsIndexByProductId(id);
   }
 
   @Override

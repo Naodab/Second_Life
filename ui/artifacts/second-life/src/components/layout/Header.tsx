@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Search, ShoppingCart, Bell, MessageSquare, User, ChevronDown, LogOut,
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCart } from "@/hooks/use-mock-api";
 import { cn } from "@/lib/utils";
+import { buildFreshSearchPath, buildSearchPath } from "@/lib/search-url";
 import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { formatDistanceToNow } from "date-fns";
@@ -145,12 +146,38 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
 }
 
 export function Header() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, isLoggedIn, logout } = useAuth();
   const { cartItems } = useCart();
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const unreadCount = MOCK_NOTIFICATIONS.filter(n => !n.read).length;
+
+  const isSearchPage = location.startsWith("/search");
+  const urlSearchKeyword = useMemo(() => {
+    const i = location.indexOf("?");
+    if (i < 0) return "";
+    const sp = new URLSearchParams(location.slice(i + 1));
+    return (sp.get("keyword") || sp.get("q") || "").trim();
+  }, [location]);
+
+  const [headerSearchDraft, setHeaderSearchDraft] = useState(urlSearchKeyword);
+
+  useEffect(() => {
+    if (isSearchPage) {
+      setHeaderSearchDraft(urlSearchKeyword);
+    }
+  }, [isSearchPage, urlSearchKeyword]);
+
+  const submitHeaderSearch = (e: FormEvent) => {
+    e.preventDefault();
+    const q = headerSearchDraft.trim();
+    if (isSearchPage) {
+      setLocation(buildSearchPath({ keyword: q || null, q: null }));
+    } else {
+      setLocation(buildFreshSearchPath({ keyword: q || null, q: null }));
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -187,16 +214,18 @@ export function Header() {
 
           {/* Search Bar */}
           <div className="flex-1 max-w-2xl hidden md:flex">
-            <div className="relative w-full group">
+            <form className="relative w-full group" onSubmit={submitHeaderSearch}>
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
                 placeholder="Tìm kiếm điện tử, quần áo, nội thất..."
                 className="w-full pl-10 pr-4 py-6 rounded-full border-border bg-background focus-visible:ring-primary/20 shadow-inner"
+                value={headerSearchDraft}
+                onChange={(ev) => setHeaderSearchDraft(ev.target.value)}
               />
-              <Button className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full px-6" size="sm">
+              <Button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full px-6" size="sm">
                 Tìm
               </Button>
-            </div>
+            </form>
           </div>
 
           {/* Actions */}
@@ -304,9 +333,9 @@ export function Header() {
       <div className="flex items-center">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="hidden md:flex gap-6 text-sm font-medium text-muted-foreground py-2">
-            <Link href="/search?type=buy" className="hover:text-primary transition-colors">Mua</Link>
+            <Link href="/search?listingType=buy" className="hover:text-primary transition-colors">Mua</Link>
             <Link href="/search" className="hover:text-primary transition-colors">Mua & Thuê</Link>
-            <Link href="/search?type=rent" className="hover:text-primary transition-colors">Thuê</Link>
+            <Link href="/search?listingType=rent" className="hover:text-primary transition-colors">Thuê</Link>
           </div>
         </div>
       </div>

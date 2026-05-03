@@ -9,4 +9,6 @@ import com.naodab.productservice.models.ListingVariant;
 public interface ListingVariantRepository extends JpaRepository<ListingVariant, String> {
 
   List<ListingVariant> findByListing_Id(String listingId);
+
+  boolean existsByProductVariantId(String productVariantId);
 }

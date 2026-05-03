@@ -119,9 +119,8 @@ public class ProductMapper {
         .toList();
 
     Facility facility = product.getFacility();
-    GeoPoint location = facility != null && facility.getLatitude() != null && facility.getLongitude() != null
-        ? new GeoPoint(facility.getLatitude(), facility.getLongitude())
-        : null;
+    GeoPoint location = facility == null ? null
+        : toElasticsearchGeoPoint(facility.getLatitude(), facility.getLongitude());
 
     return ProductDocument.builder()
         .id(product.getId())
@@ -146,6 +145,31 @@ public class ProductMapper {
         .wardCode(facility == null ? null : facility.getWardCode())
         .location(location)
         .build();
+  }
+
+  /**
+   * Elasticsearch {@code geo_point} requires latitude ∈ [-90, 90] and longitude ∈ [-180, 180].
+   * Facilities sometimes store lon/lat swapped (e.g. Vietnam ~105°E stored as "latitude"); we correct the common case.
+   */
+  static GeoPoint toElasticsearchGeoPoint(Float lat, Float lon) {
+    if (lat == null || lon == null) {
+      return null;
+    }
+    double latitude = lat.doubleValue();
+    double longitude = lon.doubleValue();
+    if (Double.isNaN(latitude) || Double.isNaN(longitude) || Double.isInfinite(latitude)
+        || Double.isInfinite(longitude)) {
+      return null;
+    }
+    if (Math.abs(latitude) > 90.0 && Math.abs(longitude) <= 90.0) {
+      double tmp = latitude;
+      latitude = longitude;
+      longitude = tmp;
+    }
+    if (latitude < -90.0 || latitude > 90.0 || longitude < -180.0 || longitude > 180.0) {
+      return null;
+    }
+    return new GeoPoint(latitude, longitude);
   }
 
   public String thumbnailImageUrl(Product product) {
@@ -283,11 +307,23 @@ public class ProductMapper {
   }
 
   public ProductVariantSummaryResponse toVariantSummary(ProductVariant v) {
+    List<String> attributeValueIds =
+        v.getVariantAttributeValues() == null ? List.of() : v.getVariantAttributeValues().stream()
+            .map(ProductVariantAttributeValue::getAttributeValue)
+            .filter(Objects::nonNull)
+            .map(AttributeValue::getId)
+            .filter(StringUtils::hasText)
+            .map(String::trim)
+            .distinct()
+            .sorted()
+            .toList();
+
     return ProductVariantSummaryResponse.builder()
         .id(v.getId())
         .sku(v.getSku())
         .quantity(v.getQuantity())
         .label(buildProductVariantLabel(v))
+        .attributeValueIds(attributeValueIds)
         .build();
   }
 

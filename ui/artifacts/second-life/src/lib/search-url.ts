@@ -51,3 +51,22 @@ export function buildFreshSearchPath(updates: Record<string, SearchParamValue>):
   const q = p.toString();
   return q ? `/search?${q}` : "/search";
 }
+
+/** Compare two `/search?…` paths ignoring query parameter order (avoids replace loops). */
+export function searchPathsQueryEqual(a: string, b: string): boolean {
+  const qa = a.includes("?") ? (a.split("?")[1] ?? "") : "";
+  const qb = b.includes("?") ? (b.split("?")[1] ?? "") : "";
+  return canonicalQueryString(qa) === canonicalQueryString(qb);
+}
+
+function canonicalQueryString(q: string): string {
+  const p = new URLSearchParams(q);
+  const keys = [...new Set([...p.keys()])].sort();
+  const out = new URLSearchParams();
+  for (const k of keys) {
+    for (const v of [...p.getAll(k)].sort()) {
+      out.append(k, v);
+    }
+  }
+  return out.toString();
+}

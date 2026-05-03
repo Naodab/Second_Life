@@ -8,7 +8,6 @@ import {
   type FacilityWithPlaceNames,
 } from "@/api/facility";
 import { getProvinces, getWards } from "@/api/location";
-import { MOCK_PRODUCTS } from "@/lib/mock-data";
 import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/lib/cloudinary";
 import { createProduct, uploadProductImages } from "@/api/product";
 import { useToast } from "@/hooks/use-toast";
@@ -293,9 +292,6 @@ export default function Listings() {
     }
   };
 
-  const activeProduct =
-    route?.tag === "product" ? MOCK_PRODUCTS.find((p) => p.id === route.productId) : null;
-
   const unpublishedFacilityId =
     route?.tag === "unpublished" ? route.facilityId : contextFacilityId;
   const unpublishedProducts = pendingProducts.filter((p) => p.facilityId === unpublishedFacilityId);
@@ -363,9 +359,10 @@ export default function Listings() {
                 />
               )}
 
-              {route?.tag === "product" && activeProduct && (
+              {route?.tag === "product" && (
                 <OwnerProductDetail
-                  product={activeProduct}
+                  facilityId={route.facilityId}
+                  productId={route.productId}
                   onBack={() => setLocation(manageFacilityPath(route.facilityId))}
                 />
               )}

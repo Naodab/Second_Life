@@ -115,6 +115,17 @@ public class ProductController {
         .build());
   }
 
+  @PostMapping("/{id}/publish")
+  public ResponseEntity<ApiResponse<ProductResponse>> publishDraftProduct(
+      @PathVariable String id,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role,
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
+    String profileId = validateProfileId(profileIdHeader);
+    return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
+        .data(productService.publishDraftProduct(profileId, id))
+        .build());
+  }
+
   @PutMapping("/{id}")
   public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
       @PathVariable String id,

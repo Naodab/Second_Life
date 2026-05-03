@@ -4,8 +4,7 @@ import { useLocation } from "wouter";
 import { Filter, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ProductCard } from "@/components/ProductCard";
-import { useProducts } from "@/hooks/use-mock-api";
+import { ListingSearchCard } from "@/components/ListingSearchCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -16,13 +15,50 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getProvinces, ProvinceResponse, getWards, WardResponse } from "@/api/location";
+import {
+  searchListings,
+  type ListingItemResponse,
+  type ListingSearchSort,
+} from "@/api/listing";
 import { LocationPickerCombobox } from "@/components/LocationPickerCombobox";
 import { useCategories } from "@/hooks/use-categories";
-import { buildFreshSearchPath } from "@/lib/search-url";
+import { buildFreshSearchPath, searchPathsQueryEqual } from "@/lib/search-url";
+
+const DEFAULT_SORT: ListingSearchSort = "UPDATED_AT_DESC";
 
 function readArrayParam(searchParams: URLSearchParams, key: string): string[] {
   const values = [...searchParams.getAll(`${key}[]`), ...searchParams.getAll(key)].filter(Boolean);
   return Array.from(new Set(values.map(String)));
+}
+
+function listingTypeFromSearchParams(searchParams: URLSearchParams): "all" | "buy" | "rent" {
+  const raw = searchParams.get("listingType") ?? searchParams.get("type");
+  if (!raw) return "all";
+  const t = raw.trim().toLowerCase();
+  if (t === "buy" || t === "rent") return t;
+  const u = raw.trim().toUpperCase();
+  if (u === "BUY") return "buy";
+  if (u === "RENT") return "rent";
+  return "all";
+}
+
+function parseSortParam(raw: string | null): ListingSearchSort {
+  const allowed = new Set<ListingSearchSort>([
+    "UPDATED_AT_DESC",
+    "CREATED_AT_DESC",
+    "RELEVANCE",
+    "NAME_ASC",
+    "DISTANCE",
+  ]);
+  if (raw && allowed.has(raw as ListingSearchSort)) return raw as ListingSearchSort;
+  return DEFAULT_SORT;
+}
+
+function parseCommaNumber(raw: string): number | undefined {
+  const t = raw.trim().replace(/\s/g, "").replace(",", ".");
+  if (!t) return undefined;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 export default function Search() {
@@ -33,6 +69,10 @@ export default function Search() {
   const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number } | null>(null);
   const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { data: categories = [] } = useCategories();
+
+  const [listings, setListings] = useState<ListingItemResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const clearHoverCloseTimer = () => {
     if (hoverCloseTimerRef.current) {
@@ -67,22 +107,34 @@ export default function Search() {
   };
 
   const parsedFilters = useMemo(() => {
-    const query = location.includes("?") ? location.split("?")[1] ?? "" : "";
+    const query = location.includes("?") ? (location.split("?")[1] ?? "") : "";
     const searchParams = new URLSearchParams(query);
     return {
-      listingType: searchParams.get("listingType") || "all",
+      listingType: listingTypeFromSearchParams(searchParams),
       categoryIds: readArrayParam(searchParams, "categoryIds"),
       subCategoryIds: readArrayParam(searchParams, "subCategoryIds"),
       provinceCode: searchParams.get("provinceCode") || undefined,
       wardCode: searchParams.get("WardCode") || searchParams.get("wardCode") || undefined,
+      keyword: (searchParams.get("keyword") || searchParams.get("q") || "").trim(),
+      sortBy: parseSortParam(searchParams.get("sortBy")),
+      priceMin: parseCommaNumber(searchParams.get("priceMin") ?? "") ?? undefined,
+      priceMax: parseCommaNumber(searchParams.get("priceMax") ?? "") ?? undefined,
     };
   }, [location]);
 
-  const [typeFilter, setTypeFilter] = useState(parsedFilters.listingType);
+  const [typeFilter, setTypeFilter] = useState<"all" | "buy" | "rent">(parsedFilters.listingType);
   const [categoryIds, setCategoryIds] = useState<string[]>(parsedFilters.categoryIds);
   const [subCategoryIds, setSubCategoryIds] = useState<string[]>(parsedFilters.subCategoryIds);
   const [provinceCode, setProvinceCode] = useState<string | undefined>(parsedFilters.provinceCode);
   const [wardCode, setWardCode] = useState<string | undefined>(parsedFilters.wardCode);
+  const [keyword, setKeyword] = useState(parsedFilters.keyword);
+  const [sortBy, setSortBy] = useState<ListingSearchSort>(parsedFilters.sortBy);
+  const [priceMinInput, setPriceMinInput] = useState(
+    parsedFilters.priceMin != null ? String(parsedFilters.priceMin) : "",
+  );
+  const [priceMaxInput, setPriceMaxInput] = useState(
+    parsedFilters.priceMax != null ? String(parsedFilters.priceMax) : "",
+  );
 
   useEffect(() => {
     setTypeFilter(parsedFilters.listingType);
@@ -90,6 +142,10 @@ export default function Search() {
     setSubCategoryIds(parsedFilters.subCategoryIds);
     setProvinceCode(parsedFilters.provinceCode);
     setWardCode(parsedFilters.wardCode);
+    setKeyword(parsedFilters.keyword);
+    setSortBy(parsedFilters.sortBy);
+    setPriceMinInput(parsedFilters.priceMin != null ? String(parsedFilters.priceMin) : "");
+    setPriceMaxInput(parsedFilters.priceMax != null ? String(parsedFilters.priceMax) : "");
   }, [parsedFilters]);
 
   useEffect(() => {
@@ -104,19 +160,40 @@ export default function Search() {
     }
   }, [provinceCode]);
 
+  const priceMinNum = useMemo(() => parseCommaNumber(priceMinInput), [priceMinInput]);
+  const priceMaxNum = useMemo(() => parseCommaNumber(priceMaxInput), [priceMaxInput]);
+
   useEffect(() => {
     const nextPath = buildFreshSearchPath({
+      keyword: keyword.trim() ? keyword.trim() : null,
+      q: null,
+      sortBy: sortBy !== DEFAULT_SORT ? sortBy : null,
       listingType: typeFilter === "all" ? null : typeFilter,
+      type: null,
       "categoryIds[]": categoryIds.length > 0 ? categoryIds : null,
       "subCategoryIds[]": subCategoryIds.length > 0 ? subCategoryIds : null,
       provinceCode: provinceCode ?? null,
       WardCode: wardCode ?? null,
+      priceMin: priceMinNum != null ? String(priceMinNum) : null,
+      priceMax: priceMaxNum != null ? String(priceMaxNum) : null,
     });
 
-    if (nextPath !== location) {
+    if (!searchPathsQueryEqual(nextPath, location)) {
       setLocation(nextPath);
     }
-  }, [typeFilter, categoryIds, subCategoryIds, provinceCode, wardCode, location, setLocation]);
+  }, [
+    typeFilter,
+    categoryIds,
+    subCategoryIds,
+    provinceCode,
+    wardCode,
+    keyword,
+    sortBy,
+    priceMinNum,
+    priceMaxNum,
+    location,
+    setLocation,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -124,25 +201,49 @@ export default function Search() {
     };
   }, []);
 
-  const selectedProvinceName = useMemo(() => {
-    if (!provinceCode) return null;
-    const province = provinces.find((item) => item.code === provinceCode);
-    return province?.fullName || province?.name || null;
-  }, [provinceCode, provinces]);
-
-  const selectedWardName = useMemo(() => {
-    if (!wardCode) return null;
-    const ward = wards.find((item) => item.code === wardCode);
-    return ward?.fullName || ward?.name || null;
-  }, [wardCode, wards]);
-
-  const { data: products, isLoading } = useProducts(
-    subCategoryIds.length > 0 ? subCategoryIds : null,
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        const rows = await searchListings({
+          keyword: keyword.trim() || undefined,
+          listingType: typeFilter === "all" ? null : typeFilter === "buy" ? "BUY" : "RENT",
+          categoryIds: categoryIds.length > 0 ? categoryIds : null,
+          subCategoryIds: subCategoryIds.length > 0 ? subCategoryIds : null,
+          provinceCode: provinceCode ?? null,
+          wardCode: wardCode ?? null,
+          priceMin: priceMinNum ?? null,
+          priceMax: priceMaxNum ?? null,
+          sortBy,
+          page: 0,
+          pageSize: 60,
+        });
+        if (!cancelled) setListings(Array.isArray(rows) ? rows : []);
+      } catch (e) {
+        if (!cancelled) {
+          setListings([]);
+          setFetchError(e instanceof Error ? e.message : "Không tải được tin đăng.");
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    keyword,
     typeFilter,
-    categoryIds.length > 0 ? categoryIds : null,
-    selectedProvinceName,
-    selectedWardName,
-  );
+    categoryIds.join("\0"),
+    subCategoryIds.join("\0"),
+    provinceCode,
+    wardCode,
+    priceMinNum,
+    priceMaxNum,
+    sortBy,
+  ]);
 
   const categoryNameMap = useMemo(
     () => new Map(categories.map((cat) => [String(cat.id), cat.name])),
@@ -169,6 +270,17 @@ export default function Search() {
     });
   };
 
+  const resetFiltersPreserveKeyword = () => {
+    setCategoryIds([]);
+    setSubCategoryIds([]);
+    setTypeFilter("all");
+    setProvinceCode(undefined);
+    setWardCode(undefined);
+    setSortBy(DEFAULT_SORT);
+    setPriceMinInput("");
+    setPriceMaxInput("");
+  };
+
   return (
     <div className="min-h-screen bg-muted/40 pt-8 pb-20 dark:bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -193,7 +305,10 @@ export default function Search() {
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
                       Loại tin
                     </h4>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <Select
+                      value={typeFilter === "all" ? "all" : typeFilter}
+                      onValueChange={(v) => setTypeFilter(v === "all" ? "all" : (v as "buy" | "rent"))}
+                    >
                       <SelectTrigger className="border-transparent bg-muted/60 dark:bg-card">
                         <SelectValue placeholder="Chọn loại tin" />
                       </SelectTrigger>
@@ -321,15 +436,24 @@ export default function Search() {
                     </div>
                   </div>
 
-                  {/* Price Range */}
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
                       Khoảng giá
                     </h4>
                     <div className="flex items-center gap-2">
-                      <Input placeholder="Thấp nhất" className="border-transparent bg-muted/60 text-sm dark:bg-card" />
+                      <Input
+                        placeholder="Thấp nhất"
+                        className="border-transparent bg-muted/60 text-sm dark:bg-card"
+                        value={priceMinInput}
+                        onChange={(e) => setPriceMinInput(e.target.value)}
+                      />
                       <span className="text-muted-foreground">-</span>
-                      <Input placeholder="Cao nhất" className="border-transparent bg-muted/60 text-sm dark:bg-card" />
+                      <Input
+                        placeholder="Cao nhất"
+                        className="border-transparent bg-muted/60 text-sm dark:bg-card"
+                        value={priceMaxInput}
+                        onChange={(e) => setPriceMaxInput(e.target.value)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -342,24 +466,37 @@ export default function Search() {
             <div className="mb-6 flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center">
               <div>
                 <h1 className="text-2xl font-bold font-display hidden md:block">{selectedCategoryText}</h1>
-                <p className="text-muted-foreground text-sm">{products.length} kết quả tìm thấy</p>
+                {fetchError ? (
+                  <p className="mt-1 text-sm text-destructive">{fetchError}</p>
+                ) : (
+                  <p className="text-muted-foreground text-sm">{listings.length} kết quả tìm thấy</p>
+                )}
               </div>
 
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">Sắp xếp:</span>
-                <Select defaultValue="newest">
-                  <SelectTrigger className="w-full border-transparent bg-muted/60 sm:w-[180px] dark:bg-card">
+                <Select
+                  value={sortBy}
+                  onValueChange={(v) => setSortBy(v as ListingSearchSort)}
+                >
+                  <SelectTrigger className="w-full border-transparent bg-muted/60 sm:w-[220px] dark:bg-card">
                     <SelectValue placeholder="Sắp xếp theo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="newest">Mới nhất</SelectItem>
-                    <SelectItem value="price-asc">Giá: Thấp đến cao</SelectItem>
-                    <SelectItem value="price-desc">Giá: Cao đến thấp</SelectItem>
-                    <SelectItem value="distance">Gần nhất</SelectItem>
+                    <SelectItem value="UPDATED_AT_DESC">Cập nhật mới nhất</SelectItem>
+                    <SelectItem value="CREATED_AT_DESC">Đăng mới nhất</SelectItem>
+                    <SelectItem value="NAME_ASC">Tên A → Z</SelectItem>
+                    <SelectItem value="RELEVANCE">Liên quan từ khóa</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {sortBy === "RELEVANCE" && !keyword.trim() && (
+              <p className="mb-4 text-xs text-muted-foreground leading-snug">
+                Không có từ khóa trong URL thì máy chủ xếp theo «Cập nhật mới nhất».
+              </p>
+            )}
 
             {isLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -372,10 +509,10 @@ export default function Search() {
                   </div>
                 ))}
               </div>
-            ) : products.length > 0 ? (
+            ) : listings.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                {listings.map((row) => (
+                  <ListingSearchCard key={row.id} row={row} />
                 ))}
               </div>
             ) : (
@@ -385,23 +522,15 @@ export default function Search() {
                   alt="Không tìm thấy"
                   className="w-48 h-48 mx-auto opacity-50 mb-4"
                 />
-                <h3 className="text-xl font-bold text-foreground mb-2">Không tìm thấy sản phẩm</h3>
+                <h3 className="text-xl font-bold text-foreground mb-2">Không tìm thấy tin đăng</h3>
                 <p className="text-muted-foreground mb-6">Hãy thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm.</p>
-                <Button
-                  onClick={() => {
-                    setCategoryIds([]);
-                    setSubCategoryIds([]);
-                    setTypeFilter("all");
-                    setProvinceCode(undefined);
-                    setWardCode(undefined);
-                  }}
-                >
+                <Button type="button" onClick={resetFiltersPreserveKeyword}>
                   Xóa bộ lọc
                 </Button>
               </div>
             )}
 
-            {products.length > 0 && !isLoading && (
+            {listings.length > 0 && !isLoading && (
               <div className="mt-12 flex justify-center">
                 <div className="flex gap-2">
                   <Button

@@ -1,5 +1,7 @@
 package com.naodab.productservice.dto.response;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,4 +24,7 @@ public class ProductVariantSummaryResponse {
   Long quantity;
 
   String label;
+
+  /** Must match PUT body when merging existing variants without changing SKU. */
+  List<String> attributeValueIds;
 }

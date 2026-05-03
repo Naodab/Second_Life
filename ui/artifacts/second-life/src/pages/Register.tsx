@@ -107,11 +107,11 @@ export default function Register() {
           className="w-full h-full object-cover opacity-60 transform scale-x-[-1]"
           alt="Nền"
         />
-        <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px]"></div>
+        <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] dark:bg-black/55 dark:backdrop-blur-[2px]" aria-hidden />
       </div>
 
       <div className="w-full max-w-md m-auto relative z-10 p-4">
-        <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] p-8 sm:p-10 border shadow-2xl">
+        <div className="rounded-[2rem] border border-border bg-card/85 p-8 text-card-foreground shadow-2xl backdrop-blur-xl dark:bg-card/90 sm:p-10">
           <div className="flex justify-center mb-8">
             <Link href="/" className="flex items-center gap-2">
               <div className="bg-primary/20 p-2 rounded-xl">
@@ -151,7 +151,7 @@ export default function Register() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full h-12 rounded-xl border-2 hover:bg-gray-50 transition-colors"
+                  className="w-full h-12 rounded-xl border-2 hover:bg-muted transition-colors"
                   onClick={handleGoogleRegister}
                   disabled={isGoogleLoading}
                 >
@@ -181,47 +181,47 @@ export default function Register() {
                     <span className="w-full border-t" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-muted-foreground">hoặc email</span>
+                    <span className="bg-card px-2 text-muted-foreground">hoặc email</span>
                   </div>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="text-sm font-semibold mb-1.5 block">Email</label>
+                  <label className="text-sm font-semibold mb-1.5 block text-foreground">Email</label>
                   <Input
                     required
                     type="email"
                     autoComplete="email"
                     placeholder="ban@example.com"
-                    className="h-12 rounded-xl bg-white/50"
+                    className="h-12 rounded-xl bg-muted/50"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold mb-1.5 block">Mật khẩu</label>
+                  <label className="text-sm font-semibold mb-1.5 block text-foreground">Mật khẩu</label>
                   <Input
                     required
                     type="password"
                     autoComplete="new-password"
                     minLength={6}
                     placeholder="••••••••"
-                    className="h-12 rounded-xl bg-white/50"
+                    className="h-12 rounded-xl bg-muted/50"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground mt-1">Tối thiểu 6 ký tự.</p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold mb-1.5 block">Xác nhận mật khẩu</label>
+                  <label className="text-sm font-semibold mb-1.5 block text-foreground">Xác nhận mật khẩu</label>
                   <Input
                     required
                     type="password"
                     autoComplete="new-password"
                     minLength={6}
                     placeholder="••••••••"
-                    className="h-12 rounded-xl bg-white/50"
+                    className="h-12 rounded-xl bg-muted/50"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                   />
