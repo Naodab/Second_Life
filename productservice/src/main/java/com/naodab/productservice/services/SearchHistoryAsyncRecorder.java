@@ -7,11 +7,14 @@ import org.springframework.util.StringUtils;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 
 import lombok.RequiredArgsConstructor;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SearchHistoryAsyncRecorder {
 
   SearchHistoryPersistService searchHistoryPersistService;
