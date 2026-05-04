@@ -25,14 +25,6 @@ public final class ElasticsearchNativeQueryHelper {
 
   private static final String DEFAULT_GEO_FIELD = "location";
 
-  private static final Set<String> EXACT_TERM_ID_FIELDS_DOT_KEYWORD = Set.of(
-      "facilityId",
-      "productId",
-      "categoryIds",
-      "categoryId",
-      "subCategoryIds",
-      "subCategoryId");
-
   private static final Set<String> KNOWN_SCALAR_FILTER_FIELDS = Set.of(
       "facilityId",
       "provinceCode",
@@ -50,11 +42,7 @@ public final class ElasticsearchNativeQueryHelper {
   }
 
   public static String exactTermElasticsearchField(String baseFilterFieldName) {
-    String base = baseFilterFieldName;
-    if (base != null && EXACT_TERM_ID_FIELDS_DOT_KEYWORD.contains(base)) {
-      return base + ".keyword";
-    }
-    return base;
+    return baseFilterFieldName;
   }
 
   public static Query exactTermQuery(String baseFilterFieldName, String value) {
@@ -262,7 +250,7 @@ public final class ElasticsearchNativeQueryHelper {
     }
 
     if (sortBy == ElasticsearchSortBy.NAME_ASC) {
-      queryBuilder.withSort(fieldSort("name.keyword", SortOrder.Asc));
+      queryBuilder.withSort(fieldSort("name", SortOrder.Asc));
     }
   }
 

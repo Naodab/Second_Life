@@ -45,6 +45,7 @@ public class ListingDocument {
   }
 
   @Id
+  @Field(type = FieldType.Keyword)
   String id;
 
   @Field(type = FieldType.Text, analyzer = "standard")
