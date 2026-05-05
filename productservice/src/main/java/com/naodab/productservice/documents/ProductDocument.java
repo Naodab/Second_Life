@@ -45,6 +45,7 @@ public class ProductDocument {
   }
 
   @Id
+  @Field(type = FieldType.Keyword)
   String id;
 
   @MultiField(mainField = @Field(type = FieldType.Text, analyzer = "standard"), otherFields = {

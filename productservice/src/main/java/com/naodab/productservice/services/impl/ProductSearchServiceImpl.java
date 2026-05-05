@@ -227,11 +227,8 @@ public class ProductSearchServiceImpl implements ProductSearchService {
         .withMaxResults(0)
         .withQuery(root)
         .withAggregation(
-            "psc_base",
+            "psc",
             Aggregation.of(a -> a.terms(t -> t.field("primarySubCategoryId").size(500).minDocCount(1))))
-        .withAggregation(
-            "psc_kw",
-            Aggregation.of(a -> a.terms(t -> t.field("primarySubCategoryId.keyword").size(500).minDocCount(1))))
         .build();
 
     SearchHits<ProductDocument> hits = elasticsearchOperations.search(aggregationQuery, ProductDocument.class,
@@ -247,9 +244,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
       return List.of();
     }
 
-    Map<String, Long> base = extractStringTermCounts(esAggs, "psc_base");
-    Map<String, Long> kw = extractStringTermCounts(esAggs, "psc_kw");
-    Map<String, Long> counts = !base.isEmpty() ? base : kw;
+    Map<String, Long> counts = extractStringTermCounts(esAggs, "psc");
 
     List<PrimarySubcategorySummaryResponse> rows = new ArrayList<>();
     for (Map.Entry<String, Long> entry : counts.entrySet()) {

@@ -86,8 +86,7 @@ public class ListingController {
   public ResponseEntity<ApiResponse<List<ListingItemResponse>>> recommendListings(
       @RequestBody(required = false) @Valid ListingRecommendationRequest body,
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
-    String profileId =
-        profileIdHeader == null || profileIdHeader.isBlank() ? null : profileIdHeader.trim();
+    String profileId = profileIdHeader == null || profileIdHeader.isBlank() ? null : profileIdHeader.trim();
     return ResponseEntity.ok(
         ApiResponse.<List<ListingItemResponse>>builder()
             .data(listingRecommendationService.recommend(profileId, body))
