@@ -229,6 +229,8 @@ export type ProductVariantSummaryDto = {
   sku?: string | null;
   quantity?: number | null;
   label?: string | null;
+  /** ID các giá trị thuộc tính gắn với biến thể sản phẩm (để ghép với `product.attributes`). */
+  attributeValueIds?: string[] | null;
 };
 
 export type ProductMediaDto = {
