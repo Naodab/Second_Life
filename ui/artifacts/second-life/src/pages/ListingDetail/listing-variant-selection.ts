@@ -11,7 +11,6 @@ export function attributeAxisKey(attr: AttributeDto): string {
   return k || "__attr";
 }
 
-/** Chỉ thuộc tính có ít nhất một giá trị nằm trong biến thể tin đang bán. */
 export function buildListingVariantAxes(detail: ListingPublicDetailResponse): AttributeDto[] {
   const rows = mergeVariantRows(detail);
   const listed = new Set<string>();

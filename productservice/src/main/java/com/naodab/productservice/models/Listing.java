@@ -20,6 +20,7 @@ import lombok.experimental.FieldDefaults;
 @Entity
 @Table(name = "listings", indexes = {
     @Index(name = "idx_product_id", columnList = "product_id"),
+    @Index(name = "idx_listing_facility_id", columnList = "facility_id"),
 })
 @Getter
 @Setter
@@ -35,6 +36,10 @@ public class Listing {
   @ManyToOne
   @JoinColumn(name = "product_id", nullable = false)
   Product product;
+
+  @ManyToOne
+  @JoinColumn(name = "facility_id", nullable = false)
+  Facility facility;
 
   String title;
 

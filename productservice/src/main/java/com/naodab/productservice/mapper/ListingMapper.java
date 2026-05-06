@@ -38,6 +38,7 @@ public class ListingMapper {
     if (productDocument == null) {
       return null;
     }
+    Facility facility = listing.getFacility();
 
     return ListingDocument.builder()
         .id(listing.getId())
@@ -51,7 +52,7 @@ public class ListingMapper {
         .description(productDocument.getDescription())
         .thumbnailUrl(productDocument.getThumbnailUrl())
         .productMedias(productDocument.getProductMedias())
-        .facilityId(productDocument.getFacilityId())
+        .facilityId(facility == null ? null : facility.getId())
         .primaryCategoryId(productDocument.getPrimaryCategoryId())
         .categoryIds(productDocument.getCategoryIds())
         .subCategoryIds(productDocument.getSubCategoryIds())
@@ -61,17 +62,17 @@ public class ListingMapper {
         .variantSkus(productDocument.getVariantSkus())
         .variants(toDocumentVariantSnapshots(productDocument.getVariants()))
         .status(productDocument.getStatus())
-        .facilityName(facilitySnapshotName(product))
-        .facilityImageUrl(facilitySnapshotImageUrl(product))
-        .facilityAddress(facilitySnapshotAddress(product))
-        .averageRating(facilitySnapshotAverageRating(product))
+        .facilityName(facilitySnapshotName(facility))
+        .facilityImageUrl(facilitySnapshotImageUrl(facility))
+        .facilityAddress(facilitySnapshotAddress(facility))
+        .averageRating(facilitySnapshotAverageRating(facility))
         .primarySubCategoryName(primarySubCategorySnapshotName(product))
         .productId(product.getId())
         .createdAt(productDocument.getCreatedAt())
         .updatedAt(productDocument.getUpdatedAt())
-        .provinceCode(productDocument.getProvinceCode())
-        .wardCode(productDocument.getWardCode())
-        .location(productDocument.getLocation())
+        .provinceCode(facility == null ? null : facility.getProvinceCode())
+        .wardCode(facility == null ? null : facility.getWardCode())
+        .location(facility == null ? null : ProductMapper.toElasticsearchGeoPoint(facility.getLatitude(), facility.getLongitude()))
         .build();
   }
 
@@ -85,7 +86,7 @@ public class ListingMapper {
     String productName = product == null ? null : product.getName();
     String thumb = product == null ? null : productMapper.thumbnailImageUrl(product);
 
-    Facility facility = product == null ? null : product.getFacility();
+    Facility facility = listing.getFacility();
     return ListingItemResponse.builder()
         .id(listing.getId())
         .title(listing.getTitle())
@@ -132,18 +133,18 @@ public class ListingMapper {
         .build();
   }
 
-  private static String facilitySnapshotName(Product product) {
-    if (product == null || product.getFacility() == null) {
+  private static String facilitySnapshotName(Facility facility) {
+    if (facility == null) {
       return null;
     }
-    return product.getFacility().getName();
+    return facility.getName();
   }
 
-  private static String facilitySnapshotAddress(Product product) {
-    if (product == null || product.getFacility() == null) {
+  private static String facilitySnapshotAddress(Facility facility) {
+    if (facility == null) {
       return null;
     }
-    return product.getFacility().getAddress();
+    return facility.getAddress();
   }
 
   private static String primarySubCategorySnapshotName(Product product) {
@@ -154,18 +155,18 @@ public class ListingMapper {
     return sub.getName();
   }
 
-  private static String facilitySnapshotImageUrl(Product product) {
-    if (product == null || product.getFacility() == null) {
+  private static String facilitySnapshotImageUrl(Facility facility) {
+    if (facility == null) {
       return null;
     }
-    return product.getFacility().getImageUrl();
+    return facility.getImageUrl();
   }
 
-  private static Double facilitySnapshotAverageRating(Product product) {
-    if (product == null || product.getFacility() == null || product.getFacility().getAverageRating() == null) {
+  private static Double facilitySnapshotAverageRating(Facility facility) {
+    if (facility == null || facility.getAverageRating() == null) {
       return null;
     }
-    return product.getFacility().getAverageRating().doubleValue();
+    return facility.getAverageRating().doubleValue();
   }
 
   public ListingResponse toListingResponse(Listing listing, List<ListingVariant> variants) {
@@ -180,6 +181,7 @@ public class ListingMapper {
     return ListingResponse.builder()
         .id(listing.getId())
         .productId(product == null ? null : product.getId())
+        .facilityId(listing.getFacility() == null ? null : listing.getFacility().getId())
         .title(listing.getTitle())
         .description(listing.getDescription())
         .listingType(listing.getListingType())

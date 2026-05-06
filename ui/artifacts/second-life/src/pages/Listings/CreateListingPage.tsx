@@ -304,6 +304,7 @@ export function CreateListingPage({
 
     const body: ListingCreateBody = {
       productId: selectedProductId,
+      facilityId,
       title: t,
       description: description.trim() || null,
       listingType,

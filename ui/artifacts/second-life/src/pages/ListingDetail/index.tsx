@@ -199,7 +199,7 @@ export default function ListingDetail() {
   }
 
   const { listing, product } = data;
-  const facility = product.facility;
+  const facility = data.facility;
   const subName = product.primarySubCategory?.name ?? "Danh mục";
   const conditionLabel = listing.listingType === "RENT" ? "Cho thuê" : "Đăng bán";
 

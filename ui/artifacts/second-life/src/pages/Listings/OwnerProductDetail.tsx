@@ -241,7 +241,6 @@ export function OwnerProductDetail({
     await updateProduct(product.id, {
       name: name.trim(),
       description: description.trim() || undefined,
-      facilityId,
       subCategoryIds: subIds,
       primarySubCategoryId: primaryId,
       attributeIds: attrIds,
@@ -517,11 +516,7 @@ export function OwnerProductDetail({
                   {product.primarySubCategory.name}
                 </Badge>
               )}
-              {product.facility?.name && (
-                <Badge variant="outline" className="bg-muted text-muted-foreground max-w-[12rem] truncate">
-                  {product.facility.name}
-                </Badge>
-              )}
+              {product.ownerId && <Badge variant="outline" className="bg-muted text-muted-foreground">Owner: {product.ownerId}</Badge>}
             </div>
 
             <div className="space-y-2">

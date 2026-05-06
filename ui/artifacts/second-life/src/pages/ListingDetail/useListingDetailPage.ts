@@ -34,7 +34,7 @@ export function useListingDetailPage(listingId: string) {
   const similarSearchKey = useMemo(() => {
     if (!data) return null;
     const kw = (data.product.name ?? "").trim();
-    const f = data.product.facility;
+    const f = data.facility;
     return {
       keyword: kw.length >= 2 ? kw.slice(0, 200) : null,
       provinceCode: f?.provinceCode?.trim() || null,
@@ -112,8 +112,8 @@ export function useListingDetailPage(listingId: string) {
   );
 
   const locationLine = useMemo(() => {
-    if (!data?.product.facility) return "";
-    const f = data.product.facility;
+    if (!data?.facility) return "";
+    const f = data.facility;
     return [f.address, f.wardCode, f.provinceCode].filter(Boolean).join(", ");
   }, [data]);
 

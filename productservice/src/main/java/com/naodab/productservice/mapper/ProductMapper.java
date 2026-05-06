@@ -16,13 +16,11 @@ import com.naodab.productservice.documents.ProductDocument;
 import com.naodab.productservice.dto.response.AttributeResponse;
 import com.naodab.productservice.dto.response.AttributeValueResponse;
 import com.naodab.productservice.dto.response.CategoryResponse;
-import com.naodab.productservice.dto.response.FacilityResponse;
 import com.naodab.productservice.dto.response.ProductItemResponse;
 import com.naodab.productservice.dto.response.ProductResponse;
 import com.naodab.productservice.dto.response.ProductVariantSummaryResponse;
 import com.naodab.productservice.models.AttributeValue;
 import com.naodab.productservice.models.Attribute;
-import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Category;
 import com.naodab.productservice.models.Product;
 import com.naodab.productservice.models.ProductMedia;
@@ -195,17 +193,13 @@ public class ProductMapper {
         .distinct()
         .toList();
 
-    Facility facility = product.getFacility();
-    GeoPoint location = facility == null ? null
-        : toElasticsearchGeoPoint(facility.getLatitude(), facility.getLongitude());
-
     return ProductDocument.builder()
         .id(product.getId())
         .name(product.getName())
         .description(product.getDescription())
         .thumbnailUrl(thumbnailUrl)
         .productMedias(productMedias)
-        .facilityId(facility == null ? null : facility.getId())
+        .ownerId(product.getOwnerId())
         .primaryCategoryId(primaryCategoryId)
         .categoryIds(categoryIds.isEmpty() ? List.of() : categoryIds)
         .subCategoryIds(subCategoryIds)
@@ -218,9 +212,6 @@ public class ProductMapper {
         .status(product.getStatus())
         .createdAt(product.getCreatedAt())
         .updatedAt(product.getUpdatedAt())
-        .provinceCode(facility == null ? null : facility.getProvinceCode())
-        .wardCode(facility == null ? null : facility.getWardCode())
-        .location(location)
         .build();
   }
 
@@ -311,29 +302,12 @@ public class ProductMapper {
     }
 
     List<Attribute> safeAttributes = attributes == null ? List.of() : attributes;
-    Facility facility = product.getFacility();
     return ProductResponse.builder()
         .id(product.getId())
         .name(product.getName())
         .description(product.getDescription())
+        .ownerId(product.getOwnerId())
         .thumbnailUrl(thumbnailImageUrl(product))
-        .facility(facility == null ? null
-            : FacilityResponse.builder()
-                .id(facility.getId())
-                .name(facility.getName())
-                .ownerId(facility.getOwnerId())
-                .description(facility.getDescription())
-                .imageUrl(facility.getImageUrl())
-                .linkGoogleMap(facility.getLinkGoogleMap())
-                .address(facility.getAddress())
-                .provinceCode(facility.getProvinceCode())
-                .wardCode(facility.getWardCode())
-                .latitude(facility.getLatitude())
-                .longitude(facility.getLongitude())
-                .viewCount(facility.getViewCount())
-                .orderCount(facility.getOrderCount())
-                .averageRating(facility.getAverageRating())
-                .build())
         .primarySubCategory(product.getPrimarySubCategory() == null ? null
             : CategoryResponse.builder()
                 .id(product.getPrimarySubCategory().getId())

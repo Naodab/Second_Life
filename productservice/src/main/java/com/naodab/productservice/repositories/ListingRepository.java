@@ -29,7 +29,7 @@ public interface ListingRepository extends JpaRepository<Listing, String> {
 
   @EntityGraph(attributePaths = {
       "product",
-      "product.facility",
+      "facility",
       "product.primarySubCategory",
       "product.primarySubCategory.category",
   })

@@ -26,7 +26,6 @@ import com.naodab.productservice.mapper.ProductMapper;
 import com.naodab.productservice.mapper.ProductVariantMapper;
 import com.naodab.productservice.models.Attribute;
 import com.naodab.productservice.models.AttributeValue;
-import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Product;
 import com.naodab.productservice.models.ProductMedia;
 import com.naodab.productservice.models.ProductSubCategory;
@@ -36,7 +35,6 @@ import com.naodab.productservice.models.ProductVariant;
 import com.naodab.productservice.models.SubCategory;
 import com.naodab.productservice.repositories.AttributeRepository;
 import com.naodab.productservice.repositories.AttributeValueRepository;
-import com.naodab.productservice.repositories.FacilityRepository;
 import com.naodab.productservice.repositories.ProductRepository;
 import com.naodab.productservice.repositories.ListingVariantRepository;
 import com.naodab.productservice.repositories.SubCategoryRepository;
@@ -52,7 +50,6 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class ProductServiceImpl implements ProductService {
   ProductRepository productRepository;
-  FacilityRepository facilityRepository;
   SubCategoryRepository subCategoryRepository;
   AttributeRepository attributeRepository;
   AttributeValueRepository attributeValueRepository;
@@ -65,7 +62,6 @@ public class ProductServiceImpl implements ProductService {
   @Override
   @Transactional
   public ProductResponse createProduct(String profileId, ProductCreateRequest request) {
-    Facility facility = getFacilityByOwnerAndId(profileId, request.getFacilityId());
     ProductRequestData requestData = getAndValidateProductRequestData(
         request.getSubCategoryIds(),
         request.getPrimarySubCategoryId(),
@@ -75,7 +71,7 @@ public class ProductServiceImpl implements ProductService {
     Product product = Product.builder()
         .name(request.getName())
         .description(request.getDescription())
-        .facility(facility)
+        .ownerId(profileId)
         .primarySubCategory(requestData.primarySubCategory())
         .status(Product.ProductStatus.DRAFT)
         .build();
@@ -115,11 +111,10 @@ public class ProductServiceImpl implements ProductService {
 
     Product product = productRepository.findByIdAndDeletedAtIsNull(id)
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
-    if (product.getFacility() == null || !profileId.equals(product.getFacility().getOwnerId())) {
+    if (!profileId.equals(product.getOwnerId())) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
 
-    Facility facility = getFacilityByOwnerAndId(profileId, request.getFacilityId());
     ProductRequestData requestData = getAndValidateProductRequestData(
         request.getSubCategoryIds(),
         request.getPrimarySubCategoryId(),
@@ -128,7 +123,6 @@ public class ProductServiceImpl implements ProductService {
 
     product.setName(request.getName());
     product.setDescription(request.getDescription());
-    product.setFacility(facility);
     product.setPrimarySubCategory(requestData.primarySubCategory());
 
     product.getProductSubCategories().clear();
@@ -157,7 +151,7 @@ public class ProductServiceImpl implements ProductService {
     }
     Product product = productRepository.findByIdAndDeletedAtIsNull(productId.trim())
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
-    if (product.getFacility() == null || !profileId.trim().equals(product.getFacility().getOwnerId())) {
+    if (!profileId.trim().equals(product.getOwnerId())) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
     if (product.getStatus() != Product.ProductStatus.DRAFT) {
@@ -258,11 +252,6 @@ public class ProductServiceImpl implements ProductService {
 
   private List<Attribute> extractAttributesFromProductVariants(Product product) {
     return productMapper.collectDistinctAttributesFromProduct(product);
-  }
-
-  private Facility getFacilityByOwnerAndId(String profileId, String facilityId) {
-    return facilityRepository.findByOwnerIdAndIdAndDeletedAtIsNull(profileId, facilityId)
-        .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
   }
 
   private List<SubCategory> getSubCategories(List<String> subCategoryIds) {
@@ -414,7 +403,7 @@ public class ProductServiceImpl implements ProductService {
     }
     Product product = productRepository.findByIdWithVariantsGraph(productId.trim())
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
-    if (product.getFacility() == null || !profileId.trim().equals(product.getFacility().getOwnerId())) {
+    if (!profileId.trim().equals(product.getOwnerId())) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
     List<Attribute> attrs = extractAttributesFromProductVariants(product);
@@ -440,7 +429,7 @@ public class ProductServiceImpl implements ProductService {
 
     Product product = productRepository.findByIdAndDeletedAtIsNull(id)
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
-    if (product.getFacility() == null || !profileId.equals(product.getFacility().getOwnerId())) {
+    if (!profileId.equals(product.getOwnerId())) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
 
@@ -508,7 +497,7 @@ public class ProductServiceImpl implements ProductService {
     Product product = productRepository.findByIdWithVariantsGraph(productId.trim())
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
 
-    if (product.getFacility() == null || !profileId.trim().equals(product.getFacility().getOwnerId())) {
+    if (!profileId.trim().equals(product.getOwnerId())) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
 

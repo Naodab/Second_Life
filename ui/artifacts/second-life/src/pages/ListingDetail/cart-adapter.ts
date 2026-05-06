@@ -34,13 +34,13 @@ export function listingDetailToCartProduct(
   detail: ListingPublicDetailResponse,
   ctx: { images: string[]; buyPrice: number; rentPrice: number; stock: number; location: string },
 ): Product {
-  const { listing, product } = detail;
+  const { listing, product, facility } = detail;
   const sub = product.primarySubCategory;
   const type =
     listing.listingType === "RENT" ? "rent" : listing.listingType === "BUY" ? "buy" : "both";
   const rating =
-    product.facility?.averageRating != null && product.facility.averageRating > 0
-      ? Number(product.facility.averageRating)
+    facility?.averageRating != null && facility.averageRating > 0
+      ? Number(facility.averageRating)
       : 4.5;
 
   return {
@@ -59,7 +59,7 @@ export function listingDetailToCartProduct(
     stock: Math.max(0, Math.floor(ctx.stock)),
     rating,
     reviewsCount: 0,
-    facilityId: product.facility?.id ?? "",
+    facilityId: facility?.id ?? "",
     createdAt: new Date().toISOString(),
   };
 }
