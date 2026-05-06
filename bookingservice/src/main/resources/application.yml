@@ -1,0 +1,22 @@
+server:
+  port: ${SERVER_PORT_BOOKING_SERVICE:8087}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+    context-path: /api/v1
+
+spring:
+  application:
+    name: bookingservice
+  datasource:
+    url: ${MYSQL_URL}
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: false
