@@ -118,12 +118,18 @@ class ListingServiceImplTest {
 
   @Test
   void suggestSearch_deduplicatesTitles() {
-    ListingDocument doc1 = ListingDocument.builder().id("l1").title(" Winter Boot ").productId("p1").build();
-    ListingDocument doc2 =
-        ListingDocument.builder().id("l2").title("  winter BOOT ").productId("p1").build();
+    ListingDocument doc1 = ListingDocument.builder()
+        .id("l1")
+        .title(" Winter Boot ")
+        .productId("p1")
+        .build();
+    ListingDocument doc2 = ListingDocument.builder()
+        .id("l2")
+        .title("  winter BOOT ")
+        .productId("p1")
+        .build();
     ListingItemResponse item1 = ListingItemResponse.builder().id("l1").title(" Winter Boot ").productId("p1").build();
-    ListingItemResponse item2 =
-        ListingItemResponse.builder().id("l2").title("winter boot").productId("p2").build();
+    ListingItemResponse item2 = ListingItemResponse.builder().id("l2").title("winter boot").productId("p2").build();
     when(listingSearchService.searchListingsPaged(any()))
         .thenReturn(new ListingSearchService.ListingDocumentPage(List.of(doc1, doc2), 2));
     when(listingMapper.toListingItemResponse(doc1)).thenReturn(item1);
@@ -210,9 +216,14 @@ class ListingServiceImplTest {
   private static Product minimalProduct(String ownerId, ProductStatus status) {
     var sc = new com.naodab.productservice.models.SubCategory();
     sc.setId("sc");
-    Product p =
-        Product.builder().id("p1").name("n").ownerId(ownerId).primarySubCategory(sc).status(status).build();
-    return p;
+
+    return Product.builder()
+        .id("p1")
+        .name("n")
+        .ownerId(ownerId)
+        .primarySubCategory(sc)
+        .status(status)
+        .build();
   }
 
   private static Listing minimalListing(Product product, Listing.ListingStatus listingStatus) {

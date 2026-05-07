@@ -74,8 +74,8 @@ public class ListingServiceImpl implements ListingService {
     if (!StringUtils.hasText(listingId)) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
-    Listing listing =
-        listingRepository.findWithProductGraphById(listingId.trim()).orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+    Listing listing = listingRepository.findWithProductGraphById(listingId.trim())
+        .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
     Product product = listing.getProduct();
     if (product == null || product.getDeletedAt() != null) {
       throw new AppException(ErrorCode.INVALID_INPUT);
@@ -90,8 +90,7 @@ public class ListingServiceImpl implements ListingService {
     if (listing.getFacility() != null) {
       Hibernate.initialize(listing.getFacility());
     }
-    List<ListingVariant> listingVariants =
-        listingVariantRepository.findByListing_Id(listing.getId());
+    List<ListingVariant> listingVariants = listingVariantRepository.findByListing_Id(listing.getId());
     ProductResponse productResp = productMapper.toProductResponse(
         product, productMapper.collectDistinctAttributesFromProduct(product));
     Facility listingFacility = listing.getFacility();
@@ -301,20 +300,8 @@ public class ListingServiceImpl implements ListingService {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
-    boolean any = false;
-    if (request.getTitle() != null) {
-      any = true;
-    }
-    if (request.getDescription() != null) {
-      any = true;
-    }
-    if (request.getListingStatus() != null) {
-      any = true;
-    }
-    if (request.getFacilityId() != null) {
-      any = true;
-    }
-    if (!any) {
+    if (request.getTitle() == null && request.getDescription() == null && request.getListingStatus() == null
+        && request.getFacilityId() == null) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
@@ -332,19 +319,15 @@ public class ListingServiceImpl implements ListingService {
       listing.setFacility(facility);
     }
 
-    if (product.getDeletedAt() != null) {
+    String t = request.getTitle().trim();
+    if (product.getDeletedAt() != null || !StringUtils.hasText(t)) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
-    if (request.getTitle() != null) {
-      String t = request.getTitle().trim();
-      if (!StringUtils.hasText(t)) {
-        throw new AppException(ErrorCode.INVALID_INPUT);
-      }
-      listing.setTitle(t);
-    }
+    listing.setTitle(t);
     if (request.getDescription() != null) {
-      listing.setDescription(trimToNull(request.getDescription()));
+      String d = request.getDescription().trim();
+      listing.setDescription(StringUtils.hasText(d) ? d : null);
     }
     if (request.getListingStatus() != null) {
       listing.setListingStatus(request.getListingStatus());
