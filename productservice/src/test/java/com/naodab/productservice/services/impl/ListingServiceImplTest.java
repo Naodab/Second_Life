@@ -25,15 +25,19 @@ import com.naodab.productservice.documents.ListingDocument;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
+import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.mapper.FacilityMapper;
 import com.naodab.productservice.mapper.ListingMapper;
 import com.naodab.productservice.mapper.ProductMapper;
 import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Listing;
+import com.naodab.productservice.models.ListingVariant;
 import com.naodab.productservice.models.Product;
 import com.naodab.productservice.models.Product.ProductStatus;
+import com.naodab.productservice.models.ProductVariant;
 import com.naodab.productservice.repositories.FacilityRepository;
 import com.naodab.productservice.repositories.ListingRepository;
 import com.naodab.productservice.repositories.ListingVariantRepository;
@@ -188,6 +192,52 @@ class ListingServiceImplTest {
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UNAUTHORIZED);
     verify(listingRepository, never()).save(any());
+  }
+
+  @Test
+  void createListing_withVariantQuantity_persistsQuantityOnListingVariant() {
+    ListingVariantCreateRequest variantReq = ListingVariantCreateRequest.builder()
+        .productVariantId("pv-1")
+        .quantity(7L)
+        .buyPrice(250_000d)
+        .build();
+    ListingCreateRequest req = ListingCreateRequest.builder()
+        .productId("prod")
+        .facilityId("fac")
+        .title("Listing")
+        .listingType(Listing.ListingType.BUY)
+        .variants(List.of(variantReq))
+        .build();
+
+    Product mine = minimalProduct("me", ProductStatus.PUBLISHED);
+    mine.setId("prod");
+    Facility fac = Facility.builder().id("fac").build();
+    Listing savedListing = Listing.builder()
+        .id("listing-1")
+        .product(mine)
+        .facility(fac)
+        .title("Listing")
+        .listingType(Listing.ListingType.BUY)
+        .listingStatus(Listing.ListingStatus.ACTIVE)
+        .build();
+    ProductVariant productVariant = ProductVariant.builder().id("pv-1").product(mine).sku("SKU-1").build();
+    ListingResponse mappedResponse = ListingResponse.builder().id("listing-1").variants(List.of()).build();
+
+    when(productRepository.findByIdAndDeletedAtIsNull("prod")).thenReturn(Optional.of(mine));
+    when(facilityRepository.findByOwnerIdAndIdAndDeletedAtIsNull("me", "fac")).thenReturn(Optional.of(fac));
+    when(productVariantRepository.findByIdAndProduct_IdAndDeletedAtIsNull("pv-1", "prod"))
+        .thenReturn(Optional.of(productVariant));
+    when(listingRepository.save(any(Listing.class))).thenReturn(savedListing);
+    when(listingRepository.findWithProductGraphById("listing-1")).thenReturn(Optional.of(savedListing));
+    when(listingVariantRepository.findByListing_Id("listing-1")).thenReturn(List.of());
+    when(listingMapper.toListingResponse(savedListing, List.of())).thenReturn(mappedResponse);
+
+    ListingResponse out = listingService.createListing("me", req);
+
+    ArgumentCaptor<ListingVariant> variantCaptor = ArgumentCaptor.forClass(ListingVariant.class);
+    verify(listingVariantRepository).save(variantCaptor.capture());
+    assertThat(variantCaptor.getValue().getQuantity()).isEqualTo(7L);
+    assertThat(out).isSameAs(mappedResponse);
   }
 
   @Test

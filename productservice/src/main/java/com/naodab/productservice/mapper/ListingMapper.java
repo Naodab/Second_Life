@@ -6,7 +6,6 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.naodab.productservice.documents.ListingDocument;
-import com.naodab.productservice.documents.ProductDocument;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.ListingVariantResponse;
@@ -25,7 +24,7 @@ public class ListingMapper {
 
   private final ProductMapper productMapper;
 
-  public ListingDocument toListingDocument(Listing listing) {
+  public ListingDocument toListingDocument(Listing listing, List<ListingVariant> listingVariants) {
     if (listing == null) {
       return null;
     }
@@ -34,7 +33,7 @@ public class ListingMapper {
       return null;
     }
 
-    ProductDocument productDocument = productMapper.toProductDocument(product);
+    var productDocument = productMapper.toProductDocument(product);
     if (productDocument == null) {
       return null;
     }
@@ -60,7 +59,7 @@ public class ListingMapper {
         .attributeIds(productDocument.getAttributeIds())
         .attributeValues(productDocument.getAttributeValues())
         .variantSkus(productDocument.getVariantSkus())
-        .variants(toDocumentVariantSnapshots(productDocument.getVariants()))
+        .variants(toDocumentVariantSnapshots(listingVariants))
         .status(productDocument.getStatus())
         .facilityName(facilitySnapshotName(facility))
         .facilityImageUrl(facilitySnapshotImageUrl(facility))
@@ -197,6 +196,7 @@ public class ListingMapper {
     return ListingVariantResponse.builder()
         .id(variant.getId())
         .productVariantId(pv == null ? null : pv.getId())
+        .quantity(variant.getQuantity())
         .buyPrice(variant.getBuyPrice())
         .rentPrice(variant.getRentPrice())
         .rentUnit(variant.getRentUnit())
@@ -205,15 +205,18 @@ public class ListingMapper {
   }
 
   private List<ListingDocument.VariantDocument> toDocumentVariantSnapshots(
-      List<ProductDocument.VariantDocument> variants) {
+      List<ListingVariant> variants) {
     if (variants == null || variants.isEmpty()) {
       return List.of();
     }
     return variants.stream()
-        .map(variant -> ListingDocument.VariantDocument.builder()
-            .sku(variant.getSku())
-            .quantity(variant.getQuantity())
-            .build())
+        .map(variant -> {
+          ProductVariant productVariant = variant.getProductVariant();
+          return ListingDocument.VariantDocument.builder()
+              .sku(productVariant == null ? null : productVariant.getSku())
+              .quantity(variant.getQuantity())
+              .build();
+        })
         .toList();
   }
 }

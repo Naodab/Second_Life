@@ -18,6 +18,7 @@ import lombok.experimental.FieldDefaults;
 public class ListingVariantResponse {
   String id;
   String productVariantId;
+  Long quantity;
   Double buyPrice;
   Double rentPrice;
   RentUnit rentUnit;

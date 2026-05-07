@@ -149,7 +149,6 @@ class ProductControllerTest {
     body.setPrimarySubCategoryId("sub-1");
     body.setAttributeIds(List.of("attr-1"));
     body.setVariants(List.of(ProductVariantCreateRequest.builder()
-        .quantity(10L)
         .attributeValueIds(List.of("av-1"))
         .build()));
 

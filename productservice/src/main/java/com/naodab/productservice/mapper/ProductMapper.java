@@ -150,7 +150,6 @@ public class ProductMapper {
     List<ProductDocument.VariantDocument> variantDocuments = variants.stream()
         .map(variant -> ProductDocument.VariantDocument.builder()
             .sku(variant.getSku())
-            .quantity(variant.getQuantity())
             .build())
         .toList();
     List<ProductMedia> medias = product.getMedias() == null ? List.of() : product.getMedias();
@@ -362,7 +361,6 @@ public class ProductMapper {
     return ProductVariantSummaryResponse.builder()
         .id(v.getId())
         .sku(v.getSku())
-        .quantity(v.getQuantity())
         .label(buildProductVariantLabel(v))
         .attributeValueIds(attributeValueIds)
         .build();

@@ -88,7 +88,7 @@ export type ProductCreateBody = {
   subCategoryIds: string[];
   primarySubCategoryId: string;
   attributeIds: string[];
-  variants: { quantity: number; attributeValueIds: string[] }[];
+  variants: { attributeValueIds: string[] }[];
 };
 
 export type ProductCreateResponse = {
@@ -102,7 +102,6 @@ export type ProductCreateResponse = {
 export type ProductVariantSummaryResponse = {
   id: string;
   sku?: string | null;
-  quantity?: number | null;
   label?: string | null;
   attributeValueIds?: string[] | null;
 };
@@ -143,7 +142,6 @@ export type UploadProductImagesBody = {
 
 export type ProductVariantUpdatePayload = {
   id?: string | null;
-  quantity: number;
   attributeValueIds: string[];
 };
 

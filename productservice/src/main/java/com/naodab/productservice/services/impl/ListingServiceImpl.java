@@ -276,6 +276,7 @@ public class ListingServiceImpl implements ListingService {
         listingVariantRepository.save(ListingVariant.builder()
             .listing(saved)
             .productVariant(pv)
+            .quantity(variantReq.getQuantity())
             .buyPrice(variantReq.getBuyPrice())
             .rentPrice(variantReq.getRentPrice())
             .rentUnit(variantReq.getRentUnit() != null ? variantReq.getRentUnit()

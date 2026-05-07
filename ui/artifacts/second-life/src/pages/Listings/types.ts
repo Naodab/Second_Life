@@ -20,7 +20,6 @@ export interface AddProductSubmitPayload {
   attributeIds: string[];
   variants: {
     skuPreview: string;
-    quantity: number;
     attributeValueIds: string[];
   }[];
   thumbnailFile: File;

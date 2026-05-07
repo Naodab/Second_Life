@@ -187,6 +187,7 @@ export async function getFacilityListingPage(
 
 export type ListingVariantCreateBody = {
   productVariantId: string;
+  quantity: number;
   buyPrice?: number | null;
   rentPrice?: number | null;
   rentUnit?: RentUnit | null;
@@ -214,6 +215,7 @@ export type ListingCreateResponse = {
 export type ListingVariantResponse = {
   id: string;
   productVariantId: string;
+  quantity: number;
   buyPrice?: number | null;
   rentPrice?: number | null;
   rentUnit?: RentUnit | null;
@@ -235,7 +237,6 @@ export type ListingResponseDetailed = {
 export type ProductVariantSummaryDto = {
   id: string;
   sku?: string | null;
-  quantity?: number | null;
   label?: string | null;
   attributeValueIds?: string[] | null;
 };

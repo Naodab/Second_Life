@@ -37,9 +37,6 @@ public class ProductDocument {
   public static class VariantDocument {
     @Field(type = FieldType.Keyword)
     String sku;
-
-    @Field(type = FieldType.Long)
-    Long quantity;
   }
 
   @Id

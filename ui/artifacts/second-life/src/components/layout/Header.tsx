@@ -247,9 +247,10 @@ export function Header() {
   };
 
   const pickSuggestionListing = (item: ListingSuggestionResponse) => {
-    setHeaderSearchDraft(item.title);
+    const nextKeyword = item.title.trim();
+    setHeaderSearchDraft(nextKeyword);
     setSuggestOpen(false);
-    setLocation(`/listing/${encodeURIComponent(item.id)}`);
+    setLocation(buildFreshSearchPath({ keyword: nextKeyword || null, q: null }));
   };
 
   const showSuggestPanel = suggestOpen && debouncedDraft.length >= 2;

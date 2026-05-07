@@ -215,7 +215,6 @@ export default function Listings() {
         primarySubCategoryId: data.primarySubCategoryId,
         attributeIds: data.attributeIds,
         variants: data.variants.map((v) => ({
-          quantity: v.quantity,
           attributeValueIds: v.attributeValueIds,
         })),
       });
@@ -240,7 +239,7 @@ export default function Listings() {
         subCategoryIds: data.subCategoryIds,
         attributeIds: data.attributeIds,
         variantCount: data.variants.length,
-        totalQty: data.variants.reduce((sum, variant) => sum + variant.quantity, 0),
+        totalQty: 0,
         previewUrl: thumbnailUrl,
         facilityId: contextFacilityId,
       };
@@ -389,6 +388,7 @@ export default function Listings() {
               {route?.tag === "add-listing" && route.facilityId && (
                 <CreateListingPage
                   facilityId={route.facilityId}
+                  facilities={facilities}
                   initialProductId={addListingInitialProductId}
                   onBack={() => setLocation(manageFacilityPath(route.facilityId))}
                 />

@@ -104,8 +104,8 @@ export function useListingDetailPage(listingId: string) {
 
   const totalStock = useMemo(
     () =>
-      rows.reduce((s, { pv }) => {
-        const q = pv?.quantity;
+      rows.reduce((s, { lv }) => {
+        const q = lv?.quantity;
         return s + (typeof q === "number" && Number.isFinite(q) ? q : 0);
       }, 0),
     [rows],

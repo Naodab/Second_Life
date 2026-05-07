@@ -105,8 +105,8 @@ export function lineRentUnitPrice(detail: ListingPublicDetailResponse, lv: Listi
   return typeof m === "number" && Number.isFinite(m) && m > 0 ? m : 0;
 }
 
-export function productVariantStock(pv: { quantity?: number | null } | null | undefined): number {
-  const q = pv?.quantity;
+export function productVariantStock(variant: { quantity?: number | null } | null | undefined): number {
+  const q = variant?.quantity;
   if (typeof q !== "number" || !Number.isFinite(q)) return 0;
   return Math.max(0, Math.floor(q));
 }

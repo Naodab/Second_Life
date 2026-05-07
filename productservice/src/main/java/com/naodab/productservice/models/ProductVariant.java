@@ -46,8 +46,6 @@ public class ProductVariant extends BaseEntity {
 
   String sku;
 
-  Long quantity;
-
   @BatchSize(size = 32)
   @OneToMany(mappedBy = "productVariant", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default

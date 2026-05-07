@@ -29,6 +29,7 @@ import com.naodab.commonservice.constant.AppConstants;
 import com.naodab.commonservice.exception.GlobalExceptionHandler;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
+import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
@@ -198,6 +199,26 @@ class ListingControllerTest {
         .andExpect(jsonPath("$.data.id").value("new-lid"));
 
     verify(listingService).createListing(eq("seller"), any(ListingCreateRequest.class));
+  }
+
+  @Test
+  void createListing_withVariantMissingQuantity_returnsBadRequest() throws Exception {
+    ListingCreateRequest body = new ListingCreateRequest();
+    body.setProductId("prod");
+    body.setFacilityId("fac");
+    body.setTitle("Bán máy giặt");
+    body.setListingType(ListingType.BUY);
+    body.setVariants(List.of(ListingVariantCreateRequest.builder()
+        .productVariantId("pv-1")
+        .build()));
+
+    mockMvc.perform(post("/listings")
+        .header(AppConstants.HEADER_PROFILE_ID, "seller")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(body)))
+        .andExpect(status().isBadRequest());
+
+    verify(listingService, never()).createListing(any(), any());
   }
 
   @Test

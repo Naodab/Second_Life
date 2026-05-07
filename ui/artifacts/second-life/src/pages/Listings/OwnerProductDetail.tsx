@@ -9,6 +9,8 @@ import {
   Video,
   RefreshCw,
   Megaphone,
+  Plus,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/lib/cloudinary";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { getAllAttributes, type AttributeResponse } from "@/api/attributes";
 import {
   getOwnedProductWithVariants,
   updateProduct,
@@ -69,7 +72,10 @@ export function OwnerProductDetail({
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [qtyByVariantId, setQtyByVariantId] = useState<Record<string, string>>({});
+  const [allAttributes, setAllAttributes] = useState<AttributeResponse[]>([]);
+  const [newVariantDrafts, setNewVariantDrafts] = useState<
+    { id: string; selectedAttributeValueByAttributeId: Record<string, string> }[]
+  >([]);
 
   const [removedMediaIds, setRemovedMediaIds] = useState<Set<string>>(new Set());
   const [videoRemoved, setVideoRemoved] = useState(false);
@@ -91,11 +97,7 @@ export function OwnerProductDetail({
       setProduct(p);
       setName(p.name ?? "");
       setDescription(p.description ?? "");
-      const qty: Record<string, string> = {};
-      for (const v of p.variants ?? []) {
-        qty[v.id] = String(v.quantity ?? 0);
-      }
-      setQtyByVariantId(qty);
+      setNewVariantDrafts([]);
       setRemovedMediaIds(new Set());
       setVideoRemoved(false);
       setNewThumbFile(null);
@@ -113,6 +115,25 @@ export function OwnerProductDetail({
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const attrs = await getAllAttributes();
+        if (!cancelled) {
+          setAllAttributes(attrs);
+        }
+      } catch {
+        if (!cancelled) {
+          setAllAttributes([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const mediasSorted = useMemo(
     () => sortMedias(product?.medias ?? []).filter((m) => m.id && !removedMediaIds.has(m.id)),
@@ -141,6 +162,10 @@ export function OwnerProductDetail({
     setActiveImageIdx((i) => (i + 1) % displaySliderUrls.length);
 
   const variants = product?.variants ?? [];
+  const productAttributeIds = (product?.attributes ?? []).map((a) => a.id).filter(Boolean);
+  const productAttributes = allAttributes.filter((attribute) =>
+    productAttributeIds.includes(attribute.id),
+  );
 
   function toggleRemoveMedia(mediaId?: string) {
     if (!mediaId) return;
@@ -150,6 +175,36 @@ export function OwnerProductDetail({
       else n.add(mediaId);
       return n;
     });
+  }
+
+  function addVariantDraft() {
+    setNewVariantDrafts((prev) => [
+      ...prev,
+      {
+        id: `new-variant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        selectedAttributeValueByAttributeId: {},
+      },
+    ]);
+  }
+
+  function removeVariantDraft(draftId: string) {
+    setNewVariantDrafts((prev) => prev.filter((draft) => draft.id !== draftId));
+  }
+
+  function setDraftAttributeValue(draftId: string, attributeId: string, valueId: string) {
+    setNewVariantDrafts((prev) =>
+      prev.map((draft) =>
+        draft.id === draftId
+          ? {
+              ...draft,
+              selectedAttributeValueByAttributeId: {
+                ...draft.selectedAttributeValueByAttributeId,
+                [attributeId]: valueId,
+              },
+            }
+          : draft,
+      ),
+    );
   }
 
   async function commitMediaAndMetadata(mediaDirty: boolean) {
@@ -167,18 +222,29 @@ export function OwnerProductDetail({
       return;
     }
 
-    const variantBodies = variants.map((v) => {
-      const raw = qtyByVariantId[v.id];
-      const n = Number(String(raw ?? "").replace(",", ".").replace(/\s/g, ""));
-      if (!Number.isFinite(n) || n < 0) {
-        throw new Error(`Số lượng SKU không hợp lệ: ${v.sku ?? v.label ?? v.id}`);
+    const existingVariantSignatures = new Set(
+      variants.map((variant) => [...(variant.attributeValueIds ?? [])].filter(Boolean).sort().join("|")),
+    );
+    const variantBodies: { id?: string; attributeValueIds: string[] }[] = variants.map((v) => ({
+      id: v.id,
+      attributeValueIds: [...(v.attributeValueIds ?? [])].filter(Boolean),
+    }));
+    for (const draft of newVariantDrafts) {
+      const values = productAttributes
+        .map((attribute) => draft.selectedAttributeValueByAttributeId[attribute.id] || "")
+        .filter(Boolean);
+      if (values.length !== productAttributes.length) {
+        throw new Error("Vui lòng chọn đủ giá trị thuộc tính cho biến thể mới.");
       }
-      return {
-        id: v.id,
-        quantity: n,
-        attributeValueIds: [...(v.attributeValueIds ?? [])].filter(Boolean),
-      };
-    });
+      const signature = [...values].sort().join("|");
+      if (existingVariantSignatures.has(signature)) {
+        throw new Error("Biến thể mới bị trùng tổ hợp thuộc tính với SKU hiện có.");
+      }
+      existingVariantSignatures.add(signature);
+      variantBodies.push({
+        attributeValueIds: values,
+      });
+    }
 
     if (mediaDirty) {
       const keptImageRows = sortMedias(product.medias ?? []).filter(
@@ -578,7 +644,20 @@ export function OwnerProductDetail({
           </div>
 
           <div className="rounded-2xl border bg-card p-5 shadow-sm">
-            <h4 className="mb-3 text-sm font-bold">Biến thể (SKU)</h4>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h4 className="text-sm font-bold">Biến thể (SKU)</h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={addVariantDraft}
+                disabled={productAttributes.length === 0}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Thêm biến thể
+              </Button>
+            </div>
             <div className="space-y-3">
               {variants.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Chưa có biến thể.</p>
@@ -592,20 +671,48 @@ export function OwnerProductDetail({
                       <p className="text-sm font-medium line-clamp-2">{v.label ?? v.sku}</p>
                       <p className="text-[11px] text-muted-foreground font-mono truncate">{v.sku}</p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Label className="text-xs text-muted-foreground whitespace-nowrap">SL</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        className="h-9 w-24 tabular-nums"
-                        value={qtyByVariantId[v.id] ?? "0"}
-                        onChange={(e) =>
-                          setQtyByVariantId((prev) => ({ ...prev, [v.id]: e.target.value }))
-                        }
-                      />
-                    </div>
                   </div>
                 ))
+              )}
+              {newVariantDrafts.map((draft) => (
+                <div key={draft.id} className="rounded-xl border border-dashed bg-muted/20 px-3 py-3 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">Biến thể mới</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => removeVariantDraft(draft.id)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {productAttributes.map((attribute) => (
+                      <div key={`${draft.id}-${attribute.id}`} className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">{attribute.name}</Label>
+                        <select
+                          value={draft.selectedAttributeValueByAttributeId[attribute.id] ?? ""}
+                          onChange={(e) => setDraftAttributeValue(draft.id, attribute.id, e.target.value)}
+                          className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                        >
+                          <option value="">Chọn giá trị</option>
+                          {(attribute.attributeValues ?? []).map((value) => (
+                            <option key={value.id} value={value.id}>
+                              {value.value}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {newVariantDrafts.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Biến thể mới sẽ được tạo khi bấm <strong>Cập nhật</strong>.
+                </p>
               )}
             </div>
           </div>

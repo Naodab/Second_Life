@@ -242,7 +242,6 @@ public class ProductServiceImpl implements ProductService {
             .findFirst()
             .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
         validateSameComboOrThrow(existing, vr);
-        existing.setQuantity(vr.getQuantity());
       } else {
         int seq = product.getVariants().size() + 1;
         product.getVariants().add(toProductVariant(product, vr, attributeValueById, seq));
@@ -345,7 +344,6 @@ public class ProductServiceImpl implements ProductService {
     ProductVariant variant = ProductVariant.builder()
         .product(product)
         .sku(generateSku(product, attributeValues, sequence))
-        .quantity(variantRequest.getQuantity())
         .build();
 
     variant.setVariantAttributeValues(productVariantMapper.toVariantAttributeValues(variant, attributeValues));
