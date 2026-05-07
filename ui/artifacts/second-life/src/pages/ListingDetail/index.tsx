@@ -75,7 +75,7 @@ export default function ListingDetail() {
     if (!data) return 0;
     if (variantAxes.length === 0) return totalStock;
     if (!matchedVariantRow) return 0;
-    return productVariantStock(matchedVariantRow.pv);
+    return productVariantStock(matchedVariantRow.lv);
   }, [data, variantAxes.length, matchedVariantRow, totalStock]);
 
   const dialogBuyUnitPrice = useMemo(() => {
@@ -199,7 +199,7 @@ export default function ListingDetail() {
   }
 
   const { listing, product } = data;
-  const facility = product.facility;
+  const facility = data.facility;
   const subName = product.primarySubCategory?.name ?? "Danh mục";
   const conditionLabel = listing.listingType === "RENT" ? "Cho thuê" : "Đăng bán";
 

@@ -14,8 +14,6 @@ import org.springframework.data.repository.query.Param;
 import com.naodab.productservice.models.Product;
 
 public interface ProductRepository extends JpaRepository<Product, String> {
-  boolean existsByFacilityIdAndDeletedAtIsNull(String facilityId);
-
   Optional<Product> findByIdAndDeletedAtIsNull(String id);
 
   @Query("""
@@ -28,7 +26,6 @@ public interface ProductRepository extends JpaRepository<Product, String> {
   Page<String> findIdsForElasticsearchReindex(Pageable pageable);
 
   @EntityGraph(attributePaths = {
-      "facility",
       "primarySubCategory",
       "primarySubCategory.category",
       "productSubCategories",

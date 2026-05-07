@@ -17,4 +17,6 @@ public class ListingPublicDetailResponse {
   ListingResponse listing;
 
   ProductResponse product;
+
+  FacilityResponse facility;
 }

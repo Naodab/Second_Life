@@ -29,7 +29,7 @@ import lombok.experimental.FieldDefaults;
 
 @Entity
 @Table(name = "products", indexes = {
-    @Index(name = "idx_facility_id", columnList = "facility_id"),
+    @Index(name = "idx_owner_id", columnList = "owner_id"),
 })
 @Getter
 @Setter
@@ -47,9 +47,8 @@ public class Product extends BaseEntity {
   @Column(length = 8096)
   String description;
 
-  @ManyToOne
-  @JoinColumn(name = "facility_id", nullable = false)
-  Facility facility;
+  @Column(name = "owner_id", nullable = false)
+  String ownerId;
 
   @BatchSize(size = 32)
   @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)

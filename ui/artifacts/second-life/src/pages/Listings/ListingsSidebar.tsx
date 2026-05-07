@@ -9,6 +9,7 @@ import {
   Search,
   FileText,
   Plus,
+  Package,
 } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,8 @@ import type { ManageRouteParsed } from "./manageRoutes";
 import {
   facilityScopeActive,
   manageDashboardPath,
+  manageListingsPath,
+  manageProductsPath,
   manageFacilityPath,
   manageOrdersPath,
 } from "./manageRoutes";
@@ -88,6 +91,8 @@ export function ListingsSidebar({
           manageDashboardPath(),
           route?.tag === "dashboard",
         )}
+        {navLink("Products", <Package className="w-4 h-4" />, manageProductsPath(), route?.tag === "products")}
+        {navLink("Listings", <FileText className="w-4 h-4" />, manageListingsPath(), route?.tag === "listings")}
 
         <div>
           <button

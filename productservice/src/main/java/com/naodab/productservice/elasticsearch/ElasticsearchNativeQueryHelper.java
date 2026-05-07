@@ -26,6 +26,7 @@ public final class ElasticsearchNativeQueryHelper {
   private static final String DEFAULT_GEO_FIELD = "location";
 
   private static final Set<String> KNOWN_SCALAR_FILTER_FIELDS = Set.of(
+      "ownerId",
       "facilityId",
       "provinceCode",
       "wardCode",

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/base.xml"/>
+
+  <logger name="com.naodab.productservice.services.impl.ProductSearchServiceImpl" level="OFF"/>
+
+  <logger name="com.naodab.productservice.services.impl.ListingSearchServiceImpl" level="OFF"/>
+
+  <logger name="com.naodab.productservice.elasticsearch.ElasticsearchNativeQueryHelper" level="WARN"/>
+</configuration>

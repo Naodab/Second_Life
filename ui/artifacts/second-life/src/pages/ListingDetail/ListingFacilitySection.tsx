@@ -2,15 +2,12 @@ import { Link } from "wouter";
 import { Clock, MapPin, MessageSquare, Package, ShieldCheck, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { facilityAvatarUrl } from "@/api/facility";
-import type { ListingPublicDetailResponse } from "@/api/listing";
-
-type Facility = NonNullable<ListingPublicDetailResponse["product"]["facility"]>;
+import type { FacilityOverviewDto } from "@/api/listing";
 
 type Props = {
-  facility: Facility;
+  facility: FacilityOverviewDto;
 };
 
-/** Chỉ mount khi `facility.id` đã có — block hiển thị hồ sơ cơ sở. */
 export function ListingFacilitySection({ facility }: Props) {
   return (
     <div className="mt-10 overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 shadow-sm ring-1 ring-border/35 dark:from-card dark:via-card dark:to-muted/10 dark:shadow-xl dark:shadow-black/20 dark:ring-border/25">

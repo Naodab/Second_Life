@@ -56,6 +56,9 @@ export type ListingSuggestionResponse = {
 
 export type SearchListingsParams = {
   keyword?: string | null;
+  facilityId?: string | null;
+  productId?: string | null;
+  listingStatus?: ListingStatus | null;
   listingType?: "BUY" | "RENT" | null;
   categoryIds?: string[] | null;
   subCategoryIds?: string[] | null;
@@ -85,6 +88,9 @@ export async function searchListings(
 ): Promise<SearchListingsPagedResult> {
   const q = new URLSearchParams();
   if (params.keyword != null && params.keyword.trim()) q.set("keyword", params.keyword.trim());
+  if (params.facilityId?.trim()) q.set("facilityId", params.facilityId.trim());
+  if (params.productId?.trim()) q.set("productId", params.productId.trim());
+  if (params.listingStatus) q.set("listingStatus", params.listingStatus);
   if (params.listingType) q.set("listingType", params.listingType);
   if (params.sortBy) q.set("sortBy", params.sortBy);
   if (params.page != null) q.set("page", String(params.page));
@@ -181,6 +187,7 @@ export async function getFacilityListingPage(
 
 export type ListingVariantCreateBody = {
   productVariantId: string;
+  quantity: number;
   buyPrice?: number | null;
   rentPrice?: number | null;
   rentUnit?: RentUnit | null;
@@ -189,6 +196,7 @@ export type ListingVariantCreateBody = {
 
 export type ListingCreateBody = {
   productId: string;
+  facilityId: string;
   title: string;
   description?: string | null;
   listingType: ListingType;
@@ -198,6 +206,7 @@ export type ListingCreateBody = {
 export type ListingCreateResponse = {
   id: string;
   productId?: string | null;
+  facilityId?: string | null;
   title: string;
   description?: string | null;
   listingType: ListingType;
@@ -206,6 +215,7 @@ export type ListingCreateResponse = {
 export type ListingVariantResponse = {
   id: string;
   productVariantId: string;
+  quantity: number;
   buyPrice?: number | null;
   rentPrice?: number | null;
   rentUnit?: RentUnit | null;
@@ -227,9 +237,7 @@ export type ListingResponseDetailed = {
 export type ProductVariantSummaryDto = {
   id: string;
   sku?: string | null;
-  quantity?: number | null;
   label?: string | null;
-  /** ID các giá trị thuộc tính gắn với biến thể sản phẩm (để ghép với `product.attributes`). */
   attributeValueIds?: string[] | null;
 };
 
@@ -273,7 +281,7 @@ export type ListingProductBundleDto = {
   name: string;
   description?: string | null;
   thumbnailUrl?: string | null;
-  facility?: FacilityOverviewDto | null;
+  ownerId?: string | null;
   primarySubCategory?: CategoryRefDto | null;
   medias?: ProductMediaDto[] | null;
   variants?: ProductVariantSummaryDto[] | null;
@@ -283,6 +291,7 @@ export type ListingProductBundleDto = {
 export type ListingPublicDetailResponse = {
   listing: ListingResponseDetailed;
   product: ListingProductBundleDto;
+  facility?: FacilityOverviewDto | null;
 };
 
 export async function fetchListingPublicDetail(listingId: string): Promise<ListingPublicDetailResponse> {

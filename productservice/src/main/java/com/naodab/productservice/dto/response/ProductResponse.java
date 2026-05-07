@@ -25,7 +25,7 @@ public class ProductResponse {
 
   String description;
 
-  FacilityResponse facility;
+  String ownerId;
 
   String thumbnailUrl;
 

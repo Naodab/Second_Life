@@ -10,7 +10,9 @@ import org.springframework.util.StringUtils;
 
 import com.naodab.productservice.mapper.ListingMapper;
 import com.naodab.productservice.models.Listing;
+import com.naodab.productservice.models.ListingVariant;
 import com.naodab.productservice.repositories.ListingRepository;
+import com.naodab.productservice.repositories.ListingVariantRepository;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ public class ListingElasticsearchIndexWriter {
   static final IndexCoordinates LISTING_INDEX = IndexCoordinates.of("listings");
 
   ListingRepository listingRepository;
+  ListingVariantRepository listingVariantRepository;
   ListingMapper listingMapper;
   ElasticsearchOperations elasticsearchOperations;
 
@@ -46,7 +49,8 @@ public class ListingElasticsearchIndexWriter {
 
     ProductDocumentGraphInitializer.initialize(listing.getProduct());
 
-    var doc = listingMapper.toListingDocument(listing);
+    java.util.List<ListingVariant> listingVariants = listingVariantRepository.findByListing_Id(listing.getId());
+    var doc = listingMapper.toListingDocument(listing, listingVariants);
     if (doc != null && doc.getId() != null) {
       elasticsearchOperations.save(doc, LISTING_INDEX);
     }

@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@workspace/api-client-react";
+import type { FacilityWithPlaceNames } from "@/api/facility";
 
 function readErrorCode(err: unknown): number | undefined {
   if (!(err instanceof ApiError) || err.data == null || typeof err.data !== "object") {
@@ -50,22 +51,25 @@ const RENT_UNIT_OPTIONS: { value: RentUnit; label: string }[] = [
 ];
 
 type VariantPriceDraft = {
+  quantity: string;
   buyPrice: string;
   rentPrice: string;
   rentUnit: RentUnit;
 };
 
 function emptyVariantDraft(): VariantPriceDraft {
-  return { buyPrice: "", rentPrice: "", rentUnit: "DAY" };
+  return { quantity: "1", buyPrice: "", rentPrice: "", rentUnit: "DAY" };
 }
 
 export function CreateListingPage({
   facilityId,
+  facilities,
   initialProductId,
   onBack,
   onCreated,
 }: {
   facilityId: string;
+  facilities: FacilityWithPlaceNames[];
   initialProductId?: string;
   onBack: () => void;
   onCreated?: () => void;
@@ -80,6 +84,7 @@ export function CreateListingPage({
   >([]);
 
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(facilityId);
   const [variantsLoading, setVariantsLoading] = useState(false);
   const [variantsError, setVariantsError] = useState<string | null>(null);
   const [variants, setVariants] = useState<ProductVariantSummaryResponse[]>([]);
@@ -93,12 +98,19 @@ export function CreateListingPage({
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    const current = facilities.some((f) => f.id === selectedFacilityId);
+    if (current) return;
+    const fallback = facilities.find((f) => f.id === facilityId)?.id ?? facilities[0]?.id ?? "";
+    setSelectedFacilityId(fallback);
+  }, [facilities, facilityId, selectedFacilityId]);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       setProductsLoading(true);
       setProductsError(null);
       try {
-        const page = await getFacilityProductPage(facilityId, {
+        const page = await getFacilityProductPage(selectedFacilityId, {
           page: 0,
           pageSize: PRODUCT_PICK_PAGE_SIZE,
         });
@@ -130,11 +142,15 @@ export function CreateListingPage({
     return () => {
       cancelled = true;
     };
-  }, [facilityId]);
+  }, [selectedFacilityId]);
 
   useEffect(() => {
     initialProductAppliedRef.current = false;
-  }, [facilityId, initialProductId]);
+    setSelectedProductId("");
+    setVariants([]);
+    setSelectedVariantIds(new Set());
+    setPriceByVariantId({});
+  }, [selectedFacilityId, initialProductId]);
 
   useEffect(() => {
     if (!initialProductId?.trim()) return;
@@ -238,6 +254,10 @@ export function CreateListingPage({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const t = title.trim();
+    if (!selectedFacilityId) {
+      toast({ title: "Chọn cơ sở đăng bài", variant: "destructive" });
+      return;
+    }
     if (!selectedProductId) {
       toast({ title: "Chọn sản phẩm", variant: "destructive" });
       return;
@@ -268,6 +288,15 @@ export function CreateListingPage({
 
     for (const vid of selectedVariantIds) {
       const draft = priceByVariantId[vid] ?? emptyVariantDraft();
+      const qty = Number(String(draft.quantity).replace(",", ".").replace(/\s/g, ""));
+      if (!Number.isFinite(qty) || qty < 0) {
+        toast({
+          title: "Số lượng không hợp lệ",
+          description: "Kiểm tra các loại sản phẩm đã chọn.",
+          variant: "destructive",
+        });
+        return;
+      }
       if (listingType === "BUY") {
         const n = Number(String(draft.buyPrice).replace(",", ".").replace(/\s/g, ""));
         if (!Number.isFinite(n) || n < 0) {
@@ -280,6 +309,7 @@ export function CreateListingPage({
         }
         variantBodies.push({
           productVariantId: vid,
+          quantity: qty,
           buyPrice: n,
           isActive: true,
         });
@@ -295,6 +325,7 @@ export function CreateListingPage({
         }
         variantBodies.push({
           productVariantId: vid,
+          quantity: qty,
           rentPrice: n,
           rentUnit: draft.rentUnit,
           isActive: true,
@@ -304,6 +335,7 @@ export function CreateListingPage({
 
     const body: ListingCreateBody = {
       productId: selectedProductId,
+      facilityId: selectedFacilityId,
       title: t,
       description: description.trim() || null,
       listingType,
@@ -372,6 +404,28 @@ export function CreateListingPage({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="rounded-2xl border border-emerald-100 bg-white/90 dark:border-emerald-900/45 dark:bg-card/95 backdrop-blur p-4 sm:p-5 space-y-2">
+            <label className="text-sm font-semibold block">
+              Cơ sở đăng bài <span className="text-destructive">*</span>
+            </label>
+            {facilities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Bạn chưa có cơ sở để đăng bài.</p>
+            ) : (
+              <Select value={selectedFacilityId} onValueChange={setSelectedFacilityId}>
+                <SelectTrigger className="rounded-xl border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card">
+                  <SelectValue placeholder="Chọn cơ sở" />
+                </SelectTrigger>
+                <SelectContent position="popper" className="rounded-xl border-emerald-100 dark:border-emerald-900/50">
+                  {facilities.map((facility) => (
+                    <SelectItem key={facility.id} value={facility.id}>
+                      {facility.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           <div className="rounded-2xl border border-emerald-100 bg-white/90 dark:border-emerald-900/45 dark:bg-card/95 backdrop-blur p-4 sm:p-5 space-y-3">
             <label className="text-sm font-semibold block">
               Sản phẩm <span className="text-destructive">*</span>
@@ -588,8 +642,8 @@ export function CreateListingPage({
                 </RadioGroup>
                 <p className="text-xs text-muted-foreground">
                   {listingType === "BUY"
-                    ? "Với bán: nhập giá mỗi loại (₫)."
-                    : "Với thuê: nhập giá thuê và đơn vị (giờ / ngày / tuần / tháng) cho từng loại."}
+                    ? "Với bán: nhập số lượng và giá mỗi loại (₫)."
+                    : "Với thuê: nhập số lượng, giá thuê và đơn vị (giờ / ngày / tuần / tháng) cho từng loại."}
                 </p>
               </div>
 
@@ -611,19 +665,43 @@ export function CreateListingPage({
                           <p className="text-sm font-semibold leading-snug text-emerald-900 dark:text-emerald-100">{name}</p>
 
                           {listingType === "BUY" ? (
-                            <div className="space-y-1.5 max-w-md">
-                              <label className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Giá bán</label>
-                              <Input
-                                type="text"
-                                inputMode="decimal"
-                                placeholder="vd. 199000"
-                                value={draft.buyPrice}
-                                onChange={(e) => setVariantField(vid, "buyPrice", e.target.value)}
-                                className="rounded-xl border-emerald-200 bg-background tabular-nums focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
-                              />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Số lượng</label>
+                                <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="vd. 1"
+                                  value={draft.quantity}
+                                  onChange={(e) => setVariantField(vid, "quantity", e.target.value)}
+                                  className="rounded-xl border-emerald-200 bg-background tabular-nums focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Giá bán</label>
+                                <Input
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder="vd. 199000"
+                                  value={draft.buyPrice}
+                                  onChange={(e) => setVariantField(vid, "buyPrice", e.target.value)}
+                                  className="rounded-xl border-emerald-200 bg-background tabular-nums focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
+                                />
+                              </div>
                             </div>
                           ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Số lượng</label>
+                                <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="vd. 1"
+                                  value={draft.quantity}
+                                  onChange={(e) => setVariantField(vid, "quantity", e.target.value)}
+                                  className="rounded-xl border-emerald-200 bg-background tabular-nums focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
+                                />
+                              </div>
                               <div className="space-y-1.5">
                                 <label className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Giá thuê</label>
                                 <Input
@@ -665,7 +743,7 @@ export function CreateListingPage({
               <div className="flex flex-wrap gap-3 pt-1">
                 <Button
                   type="submit"
-                  disabled={submitting || productsLoading}
+                  disabled={submitting || productsLoading || !selectedFacilityId}
                   className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-900/15"
                 >
                   {submitting ? (

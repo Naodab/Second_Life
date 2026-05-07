@@ -21,6 +21,7 @@ import lombok.experimental.FieldDefaults;
 public class ListingResponse {
   String id;
   String productId;
+  String facilityId;
   String title;
   String description;
   ListingType listingType;

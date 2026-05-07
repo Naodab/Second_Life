@@ -16,6 +16,8 @@ import { AddProductPage } from "./AddProductPage";
 import { CreateListingPage } from "./CreateListingPage";
 import { DashboardView } from "./DashboardView";
 import { FacilityView } from "./FacilityView";
+import { ManageListingsView } from "./ManageListingsView";
+import { ManageProductsView } from "./ManageProductsView";
 import { ListingsSidebar } from "./ListingsSidebar";
 import { OwnerProductDetail } from "./OwnerProductDetail";
 import { OrdersView } from "./OrdersView";
@@ -26,11 +28,25 @@ import {
   manageAddProductPath,
   manageDashboardPath,
   manageFacilityPath,
+  manageListingsPath,
   manageProductDetailPath,
+  manageProductsPath,
   manageUnpublishedPath,
   parseManageRoute,
 } from "./manageRoutes";
 import type { AddProductSubmitPayload, PendingProduct } from "./types";
+
+function hasFacilityScope(
+  r: ReturnType<typeof parseManageRoute>,
+): r is
+  | { tag: "facility"; facilityId: string }
+  | { tag: "add-product"; facilityId: string }
+  | { tag: "add-listing"; facilityId: string }
+  | { tag: "product"; facilityId: string; productId: string }
+  | { tag: "unpublished"; facilityId: string }
+  | { tag: "orders"; facilityId: string } {
+  return !!r && !["dashboard", "products", "listings"].includes(r.tag);
+}
 
 async function attachPlaceNames(
   facilities: FacilityResponse[],
@@ -114,15 +130,14 @@ export default function Listings() {
   }, [toast]);
 
   useEffect(() => {
-    if (!route || route.tag === "dashboard") {
+    if (!hasFacilityScope(route)) {
       return;
     }
-
     setContextFacilityId(route.facilityId);
   }, [route]);
 
   useEffect(() => {
-    if (facilitiesLoading || !route || route.tag === "dashboard") {
+    if (facilitiesLoading || !hasFacilityScope(route)) {
       return;
     }
     const { facilityId } = route;
@@ -146,10 +161,9 @@ export default function Listings() {
     }
   }, [location, setLocation]);
 
-  const activeFacility =
-    route && route.tag !== "dashboard"
-      ? facilities.find((s) => s.id === route.facilityId)
-      : undefined;
+  const activeFacility = hasFacilityScope(route)
+    ? facilities.find((s) => s.id === route.facilityId)
+    : undefined;
 
   const handleAddProductSubmit = async (data: AddProductSubmitPayload) => {
     const uploads: File[] = [data.thumbnailFile, ...data.galleryImageFiles];
@@ -197,12 +211,10 @@ export default function Listings() {
       const created = await createProduct({
         name: data.name.trim(),
         description: data.description.trim() || undefined,
-        facilityId: data.facilityId,
         subCategoryIds: data.subCategoryIds,
         primarySubCategoryId: data.primarySubCategoryId,
         attributeIds: data.attributeIds,
         variants: data.variants.map((v) => ({
-          quantity: v.quantity,
           attributeValueIds: v.attributeValueIds,
         })),
       });
@@ -227,9 +239,9 @@ export default function Listings() {
         subCategoryIds: data.subCategoryIds,
         attributeIds: data.attributeIds,
         variantCount: data.variants.length,
-        totalQty: data.variants.reduce((sum, variant) => sum + variant.quantity, 0),
+        totalQty: 0,
         previewUrl: thumbnailUrl,
-        facilityId: data.facilityId,
+        facilityId: contextFacilityId,
       };
       setPendingProducts((prev) => [...prev, pending]);
       toast({
@@ -238,7 +250,7 @@ export default function Listings() {
           "Ảnh/video đã lên Cloudinary; sản phẩm lưu ở trạng thái nháp và đã đồng bộ tìm kiếm. Vào Sản phẩm chưa đăng để định giá.",
       });
 
-      setLocation(manageFacilityPath(data.facilityId));
+      setLocation(manageProductsPath());
     } catch (e) {
       setIsUploadingModal(false);
       toast({
@@ -266,8 +278,7 @@ export default function Listings() {
   };
 
   const handleUpdateFacilityAvatar = async (file: File) => {
-    const fid =
-      route && route.tag !== "dashboard" ? route.facilityId : contextFacilityId;
+    const fid = hasFacilityScope(route) ? route.facilityId : contextFacilityId;
     if (!fid) return;
 
     try {
@@ -323,24 +334,47 @@ export default function Listings() {
               {route?.tag === "dashboard" && !!contextFacilityId && (
                 <DashboardView facilityId={contextFacilityId} />
               )}
-
-              {route?.tag === "facility" && activeFacility && (
-                <FacilityView
-                  facility={activeFacility}
+              {route?.tag === "products" && (
+                <ManageProductsView
+                  contextFacilityId={contextFacilityId}
                   onViewProduct={(productId) =>
-                    setLocation(manageProductDetailPath(activeFacility.id, productId))
+                    setLocation(manageProductDetailPath(contextFacilityId, productId))
                   }
-                  onAddProduct={() => setLocation(manageAddProductPath(activeFacility.id))}
-                  onCreateListing={() => setLocation(manageAddListingPath(activeFacility.id))}
-                  onCreateListingForProduct={(productId) =>
-                    setLocation(manageAddListingPath(activeFacility.id, productId))
+                  onCreateProduct={() =>
+                    setLocation(
+                      contextFacilityId ? manageAddProductPath(contextFacilityId) : manageDashboardPath(),
+                    )
                   }
-                  onViewUnpublished={() => setLocation(manageUnpublishedPath(activeFacility.id))}
-                  onUpdateAvatar={handleUpdateFacilityAvatar}
-                  pendingCount={
-                    pendingProducts.filter((p) => p.facilityId === activeFacility.id).length
+                  onCreateListingForProduct={
+                    contextFacilityId
+                      ? (productId) => setLocation(manageAddListingPath(contextFacilityId, productId))
+                      : undefined
                   }
                 />
+              )}
+              {route?.tag === "listings" && (
+                <ManageListingsView
+                  facilities={facilities}
+                  onCreateListing={(facilityId, productId) =>
+                    setLocation(manageAddListingPath(facilityId, productId))
+                  }
+                />
+              )}
+
+              {route?.tag === "facility" && activeFacility && (
+                <div className="space-y-4">
+                  <DashboardView facilityId={activeFacility.id} />
+                  <FacilityView
+                    facility={activeFacility}
+                    onManageProducts={() => setLocation(manageProductsPath())}
+                    onCreateListing={() => setLocation(manageListingsPath())}
+                    onViewUnpublished={() => setLocation(manageUnpublishedPath(activeFacility.id))}
+                    onUpdateAvatar={handleUpdateFacilityAvatar}
+                    pendingCount={
+                      pendingProducts.filter((p) => p.facilityId === activeFacility.id).length
+                    }
+                  />
+                </div>
               )}
 
               {route?.tag === "add-product" && route.facilityId && (
@@ -354,6 +388,7 @@ export default function Listings() {
               {route?.tag === "add-listing" && route.facilityId && (
                 <CreateListingPage
                   facilityId={route.facilityId}
+                  facilities={facilities}
                   initialProductId={addListingInitialProductId}
                   onBack={() => setLocation(manageFacilityPath(route.facilityId))}
                 />

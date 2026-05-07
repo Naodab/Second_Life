@@ -21,6 +21,8 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class ListingUpdateRequest {
 
+  String facilityId;
+
   @Size(min = 3, max = 500)
   String title;
 

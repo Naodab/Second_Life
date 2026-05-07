@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.naodab.productservice.models.ListingVariant.RentUnit;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,6 +25,10 @@ public class ListingVariantCreateRequest {
 
   @NotBlank
   String productVariantId;
+
+  @NotNull(message = "REQUIRED_FIELD")
+  @PositiveOrZero(message = "INVALID_INPUT")
+  Long quantity;
 
   Double buyPrice;
   Double rentPrice;

@@ -13,6 +13,7 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Index;
+import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -43,6 +44,9 @@ public class ListingVariant extends BaseEntity {
   @ManyToOne
   @JoinColumn(name = "product_variant_id", nullable = false)
   ProductVariant productVariant;
+
+  @Column(nullable = false)
+  Long quantity;
 
   Double buyPrice;
   Double rentPrice;
