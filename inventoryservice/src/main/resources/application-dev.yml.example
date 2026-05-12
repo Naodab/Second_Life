@@ -6,9 +6,9 @@ spring:
       include-message: always
       include-binding-errors: always
   datasource:
-    url: ${INVENTORY_MYSQL_URL:}
-    username: ${INVENTORY_MYSQL_USERNAME:}
-    password: ${INVENTORY_MYSQL_PASSWORD:-}
+    url: ${INVENTORY_MYSQL_URL:${MYSQL_URL:jdbc:mysql://127.0.0.1:3306/second_life?ssl-mode=REQUIRED}}
+    username: ${INVENTORY_MYSQL_USERNAME:${MYSQL_USERNAME:dev}}
+    password: ${INVENTORY_MYSQL_PASSWORD:${MYSQL_PASSWORD:changeme}}
   jpa:
     hibernate:
       ddl-auto: update

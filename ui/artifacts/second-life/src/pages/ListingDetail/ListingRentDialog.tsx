@@ -1,5 +1,6 @@
-import { AlertCircle, CheckCircle2, Minus, Plus } from "lucide-react";
-import { useMemo } from "react";
+import { AlertCircle, Minus, Plus } from "lucide-react";
+import { format, startOfDay } from "date-fns";
+import { useEffect, useMemo, useState } from "react";
 
 import type { RentalPeriodDto } from "@/api/inventory";
 import type { AttributeDto, RentUnit } from "@/api/listing";
@@ -18,7 +19,7 @@ import type { Product } from "@/lib/mock-data";
 import { ListingVariantAttributePickers } from "./ListingVariantAttributePickers";
 
 import type { RentScheduleValidityPayload } from "./ListingRentScheduler";
-import { ListingRentScheduler, rentalWindowToCartDates, type RentScheduleWindow } from "./ListingRentScheduler";
+import { ListingRentScheduler, type RentScheduleWindow } from "./ListingRentScheduler";
 import { rentalPeriodsToBookings, rentUnitLabelVu } from "./rent-schedule-utils";
 
 type Props = {
@@ -70,6 +71,11 @@ export function ListingRentDialog({
 }: Props) {
   const bookings = useMemo(() => rentalPeriodsToBookings(rentalPeriods), [rentalPeriods]);
 
+  const [hourRentDay, setHourRentDay] = useState(() => startOfDay(new Date()));
+  useEffect(() => {
+    setHourRentDay(startOfDay(new Date()));
+  }, [schedulerResetKey]);
+
   const showVariantUi = variantAxes.length > 0;
   const showUnitPrice = !showVariantUi ? lineUnitRentPrice > 0 : lineStock > 0 && lineUnitRentPrice > 0;
 
@@ -78,184 +84,176 @@ export function ListingRentDialog({
 
   const unitLabelVu = rentUnitLabelVu(rentUnit);
 
+  const scheduleLocked = lineStock <= 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "sm:max-w-lg rounded-3xl max-h-[90vh] overflow-y-auto",
+          "mx-auto flex min-h-0 min-w-0 max-h-[90vh] w-[min(calc(100vw-1.5rem),60vw)] max-w-[60vw] flex-col gap-0 overflow-hidden rounded-3xl p-5 sm:p-7",
           "border-border/80 bg-card/95 backdrop-blur-md shadow-2xl dark:border-border/50 dark:bg-card/98 dark:shadow-black/50",
+          "transition-[max-width,width] duration-300 ease-out motion-reduce:transition-none",
         )}
       >
-        <div className="absolute left-0 top-0 h-1 w-full rounded-t-3xl bg-gradient-to-r from-secondary/50 via-secondary to-secondary/50 dark:from-secondary/40 dark:via-secondary/90 dark:to-secondary/40" />
-        <DialogHeader className="pt-1">
+        <div className="pointer-events-none absolute left-0 top-0 z-10 h-1 w-full rounded-t-3xl bg-gradient-to-r from-secondary/50 via-secondary to-secondary/50 dark:from-secondary/40 dark:via-secondary/90 dark:to-secondary/40" />
+        <DialogHeader className="shrink-0 pt-1">
           <DialogTitle className="text-xl font-display">Thuê ngay</DialogTitle>
           <DialogDescription className="sr-only">Chọn tùy chọn, khung giờ theo đơn vị và số lượng</DialogDescription>
         </DialogHeader>
-        <div className="py-2 space-y-6">
-          <div className="flex items-center gap-4 pb-5 border-b border-border/60 dark:border-border/50">
-            <img
-              src={heroImageUrl}
-              className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-2 ring-border/50 shadow-sm dark:ring-border/40"
-              alt={cartBridge.name}
-            />
-            <div className="min-w-0">
-              <h4 className="font-bold text-foreground line-clamp-2 leading-snug">{cartBridge.name}</h4>
-              {!showVariantUi && lineUnitRentPrice > 0 ? (
-                <p className="text-secondary-foreground font-semibold mt-1.5 tabular-nums">
-                  {formatCurrency(lineUnitRentPrice)}{" "}
-                  <span className="text-xs font-normal text-muted-foreground">/ {unitLabelVu}</span>
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          <p className="text-xs text-muted-foreground -mt-2">
-            Thuê được tính theo đơn vị <span className="font-semibold text-foreground">{unitLabelVu.toUpperCase()}</span>; lịch
-            dưới đây tô các khoản đã bị chiếm theo reservation.
-          </p>
-
-          {showVariantUi ? (
-            <>
-              <ListingVariantAttributePickers
-                axes={variantAxes}
-                selection={variantSelection}
-                onChange={onVariantSelectionChange}
+        <div className="hide-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto py-2">
+          <div className="space-y-6">
+            <div className="flex items-start gap-4 border-b border-border/60 pb-5 dark:border-border/50">
+              <img
+                src={heroImageUrl}
+                className="aspect-square h-36 w-36 shrink-0 rounded-xl object-cover ring-1 ring-border/50 shadow-sm sm:h-44 sm:w-44 dark:ring-border/40"
+                alt={cartBridge.name}
               />
-              <div className="rounded-2xl border border-border/70 bg-muted/35 px-4 py-3.5 text-sm dark:bg-muted/20 dark:border-border/50">
-                <p>
-                  <span className="text-muted-foreground">Kho khả dụng (ước tính): </span>
-                  <span className="font-semibold tabular-nums text-foreground">
-                    {rentalsLoading ? "…" : lineStock}
-                  </span>
-                </p>
-                {showUnitPrice ? (
-                  <p className="mt-1.5 font-semibold tabular-nums text-secondary-foreground">
+              <div className="min-w-0 flex-1 space-y-3">
+                <h4 className="font-bold text-foreground line-clamp-2 leading-snug">{cartBridge.name}</h4>
+                {!showVariantUi && lineUnitRentPrice > 0 ? (
+                  <p className="text-sm font-semibold tabular-nums text-secondary-foreground">
                     {formatCurrency(lineUnitRentPrice)}{" "}
                     <span className="text-xs font-normal text-muted-foreground">/ {unitLabelVu}</span>
                   </p>
                 ) : null}
+                {showVariantUi ? (
+                  <ListingVariantAttributePickers
+                    axes={variantAxes}
+                    selection={variantSelection}
+                    onChange={onVariantSelectionChange}
+                  />
+                ) : null}
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span>
+                    Kho: <span className="font-semibold tabular-nums text-foreground">{rentalsLoading ? "…" : lineStock}</span>
+                  </span>
+                  {showUnitPrice ? (
+                    <span>
+                      Giá:{" "}
+                      <span className="font-semibold tabular-nums text-secondary-foreground">
+                        {formatCurrency(lineUnitRentPrice)} / {unitLabelVu}
+                      </span>
+                    </span>
+                  ) : null}
+                </div>
               </div>
-            </>
-          ) : null}
-
-          {!showVariantUi && (
-            <div className="rounded-2xl border border-border/70 bg-muted/35 px-4 py-3.5 text-sm dark:bg-muted/20 dark:border-border/50">
-              <p className="text-muted-foreground">
-                Kho khả dụng:{" "}
-                <span className="font-semibold tabular-nums text-foreground">{rentalsLoading ? "…" : lineStock}</span>
-              </p>
-              {showUnitPrice ? (
-                <p className="mt-1.5 font-semibold tabular-nums text-secondary-foreground">
-                  {formatCurrency(lineUnitRentPrice)}{" "}
-                  <span className="text-xs font-normal text-muted-foreground">/ {unitLabelVu}</span>
-                </p>
-              ) : null}
             </div>
-          )}
 
-          <ListingRentScheduler
-            resetKey={schedulerResetKey}
-            rentUnit={rentUnit}
-            bookings={bookings}
-            concurrencyCap={lineStock}
-            rentQty={rentQty}
-            parentWindow={rentWindow}
-            onWindowChange={onRentWindowChange}
-            onValidityChange={onRentValidityChange}
-          />
-
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-sm text-foreground">Số lượng</span>
-            <div className="flex items-center gap-3 rounded-xl border border-border/80 bg-muted/25 px-2 py-1.5 dark:bg-muted/20">
-              <button
-                type="button"
-                onClick={() => onRentQtyChange(Math.max(1, rentQty - 1))}
-                className="rounded-lg p-1.5 transition-colors hover:bg-accent disabled:opacity-40"
-                disabled={lineStock <= 0 || rentQty <= 1}
-              >
-                <Minus className="w-4 h-4" />
-              </button>
-              <span className="font-bold w-8 text-center tabular-nums">{rentQty}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (lineStock <= 0) return;
-                  onRentQtyChange(Math.min(lineStock, rentQty + 1));
-                }}
-                disabled={lineStock <= 0 || rentQty >= lineStock}
-                className="rounded-lg p-1.5 transition-colors hover:bg-accent disabled:opacity-40"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {billUnits > 0 && (
-            <div className="rounded-2xl bg-muted/45 p-3.5 text-sm dark:bg-muted/25">
-              <div className="flex justify-between text-muted-foreground mb-1">
-                <span>Số đơn vị tính tiền</span>
-                <span className="font-medium tabular-nums text-foreground">
-                  {billUnits} {unitLabelVu}
-                </span>
+            <div
+              className={cn(
+                "min-w-0 max-w-full overflow-hidden rounded-2xl border border-border/50 shadow-sm transition-[padding,box-shadow] duration-300 dark:border-border/45",
+                rentUnit === "HOUR"
+                  ? "bg-gradient-to-br from-sky-50/70 via-background to-emerald-50/30 p-4 sm:p-5 dark:from-sky-950/25 dark:via-card dark:to-emerald-950/20"
+                  : "bg-gradient-to-br from-muted/25 via-background to-muted/15 p-4 sm:p-5 dark:from-muted/15 dark:via-card dark:to-muted/10",
+              )}
+            >
+              {rentUnit === "HOUR" ? (
+                <div className="mb-4 flex min-w-0 flex-col gap-3 border-b border-border/40 pb-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4 dark:border-border/35">
+                  <p className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Lịch và khung thuê
+                  </p>
+                  <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:max-w-[13rem]">
+                    <label htmlFor="rent-hour-day" className="text-[11px] font-medium text-muted-foreground">
+                      Ngày thuê
+                    </label>
+                    <input
+                      id="rent-hour-day"
+                      type="date"
+                      disabled={scheduleLocked}
+                      className={cn(
+                        "w-full min-w-0 rounded-xl border bg-background px-3 py-2 text-sm tabular-nums outline-none sm:w-[12.5rem]",
+                        "border-border/70 shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/55 disabled:opacity-50",
+                      )}
+                      min={format(startOfDay(new Date()), "yyyy-MM-dd")}
+                      value={format(hourRentDay, "yyyy-MM-dd")}
+                      onChange={(ev) => {
+                        const raw = ev.target.value;
+                        if (!raw) return;
+                        setHourRentDay(startOfDay(new Date(`${raw}T12:00:00`)));
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lịch và khung thuê</p>
+              )}
+              <div className="min-w-0 max-w-full">
+                <ListingRentScheduler
+                  resetKey={schedulerResetKey}
+                  rentUnit={rentUnit}
+                  scheduleResourceLabel={cartBridge.name}
+                  hourDay={rentUnit === "HOUR" ? hourRentDay : undefined}
+                  onHourDayChange={rentUnit === "HOUR" ? setHourRentDay : undefined}
+                  disabled={scheduleLocked}
+                  bookings={bookings}
+                  concurrencyCap={lineStock}
+                  rentQty={rentQty}
+                  parentWindow={rentWindow}
+                  onWindowChange={onRentWindowChange}
+                  onValidityChange={onRentValidityChange}
+                />
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Tạm tính</span>
-                {showUnitPrice ? (
-                  <span className="font-bold text-primary tabular-nums">{formatCurrency(estimatedTotal)}</span>
+
+              <div className="mt-4 rounded-xl border border-border/60 bg-muted/30 p-3.5 dark:border-border/50 dark:bg-muted/20">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tạm tính</p>
+                {rentValidity.ok && billUnits > 0 ? (
+                  <>
+                    <div className="mt-2 flex justify-between text-sm text-muted-foreground">
+                      <span>Số đơn vị</span>
+                      <span className="font-medium tabular-nums text-foreground">
+                        {billUnits} {unitLabelVu}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex justify-between text-sm">
+                      <span className="text-muted-foreground">Thành tiền</span>
+                      {showUnitPrice ? (
+                        <span className="font-bold text-primary tabular-nums">{formatCurrency(estimatedTotal)}</span>
+                      ) : (
+                        <span className="font-medium text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </>
                 ) : (
-                  <span className="font-medium text-muted-foreground">—</span>
+                  <p className="mt-2 text-sm tabular-nums text-muted-foreground">—</p>
                 )}
               </div>
             </div>
-          )}
 
-          {rentWindow && rentValidity.ok && (
-            <p className="text-xs text-muted-foreground px-1">
-              Thời gian chọn:&nbsp;
-              <span className="font-medium text-foreground tabular-nums">
-                {rentalWindowToCartDates(rentWindow).start.toLocaleString(undefined, {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
-              {" → "}
-              <span className="font-medium text-foreground tabular-nums">
-                {rentalWindowToCartDates(rentWindow).end.toLocaleString(undefined, {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
-            </p>
-          )}
-
-          {!rentValidity.ok && "error" in rentValidity && rentValidity.error ? (
-            <div className="flex items-start gap-2 rounded-2xl border border-destructive/35 bg-destructive/10 p-3.5 text-sm text-destructive dark:border-destructive/40 dark:bg-destructive/15">
-              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>{rentValidity.error}</span>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-sm text-foreground">Số lượng</span>
+              <div className="flex items-center gap-3 rounded-xl border border-border/80 bg-muted/25 px-2 py-1.5 dark:bg-muted/20">
+                <button
+                  type="button"
+                  onClick={() => onRentQtyChange(Math.max(1, rentQty - 1))}
+                  className="rounded-lg p-1.5 transition-colors hover:bg-accent disabled:opacity-40"
+                  disabled={lineStock <= 0 || rentQty <= 1}
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="w-8 text-center font-bold tabular-nums">{rentQty}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (lineStock <= 0) return;
+                    onRentQtyChange(Math.min(lineStock, rentQty + 1));
+                  }}
+                  disabled={lineStock <= 0 || rentQty >= lineStock}
+                  className="rounded-lg p-1.5 transition-colors hover:bg-accent disabled:opacity-40"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          ) : null}
 
-          {rentValidity.ok && rentValidity.hint ? (
-            <div className="flex items-start gap-2 rounded-2xl border border-amber-500/35 bg-amber-500/10 p-3.5 text-sm text-amber-950 dark:text-amber-200 dark:border-amber-500/40 dark:bg-amber-950/50">
-              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 opacity-75" />
-              <span>{rentValidity.hint}</span>
-            </div>
-          ) : null}
-
-          {rentValidity.ok && billUnits > 0 && !rentValidity.hint && (
-            <div className="flex items-start gap-2 rounded-2xl border border-emerald-600/35 bg-emerald-600/10 p-3.5 text-sm text-emerald-900 dark:border-emerald-500/35 dark:bg-emerald-950/50 dark:text-emerald-300">
-              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>Chọn được khung giờ hợp lệ trong kho. Bạn có thể đặt thuê.</span>
-            </div>
-          )}
+            {!rentValidity.ok && "error" in rentValidity && rentValidity.error ? (
+              <div className="flex items-start gap-2 rounded-xl border border-destructive/35 bg-destructive/10 p-3 text-sm text-destructive dark:border-destructive/40 dark:bg-destructive/15">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{rentValidity.error}</span>
+              </div>
+            ) : null}
+          </div>
         </div>
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="mt-2 shrink-0 gap-2 border-t border-border/40 pt-4 dark:border-border/35 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-full border-border/80">
             Hủy
           </Button>

@@ -107,9 +107,8 @@ export function stepMsForRentUnit(unit: RentUnit): number {
     case "HOUR":
       return 3600000;
     case "DAY":
-      return 86400000;
     case "WEEK":
-      return 7 * 86400000;
+      return 86400000;
     case "MONTH":
       return 86400000;
     default:
@@ -123,9 +122,8 @@ export function billableRentUnits(unit: RentUnit, startMs: number, endExclusiveM
     case "HOUR":
       return Math.max(1, Math.ceil((endExclusiveMs - startMs) / (60 * 60 * 1000)));
     case "DAY":
-      return Math.max(1, Math.round((endExclusiveMs - startMs) / (24 * 60 * 60 * 1000)));
     case "WEEK":
-      return Math.max(1, Math.ceil((endExclusiveMs - startMs) / (7 * 86400000)));
+      return Math.max(1, Math.round((endExclusiveMs - startMs) / (24 * 60 * 60 * 1000)));
     case "MONTH": {
       const a = startOfDay(new Date(startMs));
       const b = startOfDay(new Date(endExclusiveMs - 1));

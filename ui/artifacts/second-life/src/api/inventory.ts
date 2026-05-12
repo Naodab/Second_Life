@@ -42,3 +42,27 @@ export async function fetchListingRentalPeriods(listingVariantId: string): Promi
   const rows = unwrapApiData(raw);
   return Array.isArray(rows) ? rows : [];
 }
+
+export type ListingVariantIntervalAvailabilityDto = {
+  tracked: boolean;
+  availableQuantity: number | null;
+  intervalStart?: string | null;
+  intervalEnd?: string | null;
+};
+
+export async function fetchListingVariantAvailabilityInRange(
+  listingVariantId: string,
+  params: { from: string; to: string; mode?: InventoryModeApi },
+): Promise<ListingVariantIntervalAvailabilityDto> {
+  const q = new URLSearchParams({
+    from: params.from,
+    to: params.to,
+    mode: params.mode ?? "RENT",
+  });
+  const path = `/api/v1/listing-variants/${encodeURIComponent(listingVariantId.trim())}/availability-in-range?${q.toString()}`;
+  const raw = await customFetch<ApiResponseEnvelope<ListingVariantIntervalAvailabilityDto>>(path, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return unwrapApiData(raw);
+}

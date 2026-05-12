@@ -1,18 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { DateRange } from "react-day-picker";
+import { Leaf } from "lucide-react";
 import type { RentUnit } from "@/api/listing";
-import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { addHours, format, startOfDay } from "date-fns";
+import { addHours, addMonths, format, startOfDay, startOfMonth } from "date-fns";
 
 import {
   billableRentUnits,
   intervalHasCapacity,
   overlapBookedQty,
-  rentUnitLabelVu,
   stepMsForRentUnit,
 } from "./rent-schedule-utils";
 
@@ -24,8 +22,15 @@ export type RentScheduleValidityPayload =
   | { ok: false; billUnits: 0; error?: string }
   | { ok: true; billUnits: number; hint?: string | null };
 
+const MONTH_SHORT = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"] as const;
+
 type Props = {
   rentUnit: RentUnit;
+  scheduleResourceLabel?: string;
+  hourDay?: Date;
+  onHourDayChange?: (day: Date) => void;
+  /** Khi true: không cho chỉnh khung thuê (vd. hết kho variant). */
+  disabled?: boolean;
   bookings: BookingInterval[];
   concurrencyCap: number;
   rentQty: number;
@@ -49,6 +54,10 @@ function hourSlotInsufficient(
 
 export function ListingRentScheduler({
   rentUnit,
+  scheduleResourceLabel = "Khung thuê",
+  hourDay: hourDayProp,
+  onHourDayChange,
+  disabled: scheduleDisabled = false,
   bookings,
   concurrencyCap,
   rentQty,
@@ -58,20 +67,45 @@ export function ListingRentScheduler({
   onValidityChange,
 }: Props) {
   const cap = Math.max(0, Math.floor(concurrencyCap));
+  const pickLocked = scheduleDisabled;
   const stepBase = stepMsForRentUnit(rentUnit);
+  const scheduleDayUnit = rentUnit === "WEEK" ? "DAY" : rentUnit;
 
-  const [hourDay, setHourDay] = useState<Date>(() => startOfDay(new Date()));
+  const hourDayControlled = hourDayProp !== undefined && onHourDayChange !== undefined;
+  const [hourDayInternal, setHourDayInternal] = useState<Date>(() => startOfDay(new Date()));
+  const hourDay = hourDayControlled ? startOfDay(hourDayProp) : hourDayInternal;
+  const setHourDay = useCallback(
+    (d: Date) => {
+      const sd = startOfDay(d);
+      if (hourDayControlled && onHourDayChange) {
+        onHourDayChange(sd);
+      } else {
+        setHourDayInternal(sd);
+      }
+    },
+    [hourDayControlled, onHourDayChange],
+  );
+
   const [hourStartBoundary, setHourStartBoundary] = useState<number | null>(null);
 
-  const [calRange, setCalRange] = useState<DateRange | undefined>();
+  const [dayStartStr, setDayStartStr] = useState("");
+  const [dayEndStr, setDayEndStr] = useState("");
+
+  const [rentYear, setRentYear] = useState<number>(() => new Date().getFullYear());
+  const [monthStartBoundary, setMonthStartBoundary] = useState<number | null>(null);
 
   useEffect(() => {
-    setHourDay(startOfDay(new Date()));
+    if (!hourDayControlled) {
+      setHourDayInternal(startOfDay(new Date()));
+    }
     setHourStartBoundary(null);
-    setCalRange(undefined);
+    setDayStartStr("");
+    setDayEndStr("");
+    setRentYear(new Date().getFullYear());
+    setMonthStartBoundary(null);
     onWindowChange(null);
     onValidityChange({ ok: false, billUnits: 0 });
-  }, [resetKey, onValidityChange, onWindowChange]);
+  }, [resetKey, hourDayControlled, onValidityChange, onWindowChange]);
 
   const runValidation = useCallback(
     (win: RentScheduleWindow | null) => {
@@ -83,8 +117,7 @@ export function ListingRentScheduler({
         onValidityChange({ ok: false, billUnits: 0, error: "Hết chỗ trong kho." });
         return;
       }
-      const step =
-        rentUnit === "HOUR" ? 3600000 : rentUnit === "WEEK" ? 86400000 : Math.min(stepBase, 86400000);
+      const step = scheduleDayUnit === "HOUR" ? 3600000 : Math.min(stepBase, 86400000);
       const ok = intervalHasCapacity(bookings, win.startMs, win.endExclusiveMs, cap, rentQty, step);
       if (!ok) {
         onValidityChange({
@@ -95,15 +128,9 @@ export function ListingRentScheduler({
         return;
       }
       const bill = billableRentUnits(rentUnit, win.startMs, win.endExclusiveMs);
-      let hint: string | null = null;
-      if (rentUnit === "WEEK") {
-        const days = Math.round((win.endExclusiveMs - win.startMs) / 86400000);
-        if (days % 7 !== 0)
-          hint = `Đơn vị là tuần — nên chọn khoảng bội số 7 ngày (${rentUnitLabelVu("WEEK")}).`;
-      }
-      onValidityChange({ ok: true, billUnits: bill, hint });
+      onValidityChange({ ok: true, billUnits: bill, hint: null });
     },
-    [bookings, cap, onValidityChange, rentQty, rentUnit, stepBase],
+    [bookings, cap, onValidityChange, rentQty, rentUnit, scheduleDayUnit, stepBase],
   );
 
   const applyWindow = useCallback(
@@ -114,12 +141,65 @@ export function ListingRentScheduler({
     [onWindowChange, runValidation],
   );
 
+  const prevHourDayMsRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (rentUnit !== "HOUR") {
+      prevHourDayMsRef.current = null;
+      return;
+    }
+    const current = startOfDay(hourDay).getTime();
+    const prev = prevHourDayMsRef.current;
+    prevHourDayMsRef.current = current;
+    if (prev === null) return;
+    if (prev === current) return;
+    setHourStartBoundary(null);
+    applyWindow(null);
+  }, [hourDay, rentUnit, applyWindow]);
+
   useEffect(() => {
     runValidation(parentWindowPayload);
   }, [parentWindowPayload, rentQty, bookings, cap, rentUnit, runValidation]);
 
+  useEffect(() => {
+    if (scheduleDayUnit !== "DAY") return;
+
+    if (!dayStartStr || !dayEndStr) {
+      applyWindow(null);
+      return;
+    }
+
+    const from = startOfDay(new Date(`${dayStartStr}T12:00:00`));
+    const to = startOfDay(new Date(`${dayEndStr}T12:00:00`));
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+      applyWindow(null);
+      return;
+    }
+
+    const startMs = from.getTime();
+    const endExclusive = to.getTime() + 86400000;
+
+    if (!(endExclusive > startMs)) {
+      applyWindow(null);
+      return;
+    }
+
+    applyWindow({ startMs, endExclusiveMs: endExclusive });
+  }, [applyWindow, dayEndStr, dayStartStr, scheduleDayUnit]);
+
   const dayStartMs = useMemo(() => startOfDay(hourDay).getTime(), [hourDay]);
   const hours = useMemo(() => [...Array(24).keys()], []);
+
+  const isHourInConfirmedRange = useCallback(
+    (h: number) => {
+      const w = parentWindowPayload;
+      if (!w) return false;
+      if (startOfDay(new Date(w.startMs)).getTime() !== dayStartMs) return false;
+      const cellStart = addHours(dayStartMs, h).getTime();
+      const cellEnd = cellStart + 3600000;
+      return cellStart < w.endExclusiveMs && cellEnd > w.startMs;
+    },
+    [parentWindowPayload, dayStartMs],
+  );
 
   const onHourClick = useCallback(
     (h: number) => {
@@ -166,140 +246,284 @@ export function ListingRentScheduler({
     [applyWindow, bookings, cap, dayStartMs, hourStartBoundary, rentQty],
   );
 
-  const calendarDisabledMatcher = useCallback(
-    (date: Date) => {
-      if (cap <= 0) return true;
-      const d0 = startOfDay(date).getTime();
-      const d1 = d0 + 86400000;
-      const overlap = overlapBookedQty(bookings, d0, d1);
-      const q = Math.max(1, rentQty);
-      return overlap + q > Math.max(1, cap);
+  const onMonthIndexClick = useCallback(
+    (monthIdx: number) => {
+      if (monthStartBoundary === null) {
+        setMonthStartBoundary(monthIdx);
+        applyWindow(null);
+        return;
+      }
+
+      if (monthIdx < monthStartBoundary) {
+        setMonthStartBoundary(monthIdx);
+        applyWindow(null);
+        return;
+      }
+
+      if (monthIdx === monthStartBoundary) {
+        const startMs = startOfMonth(new Date(rentYear, monthIdx, 1)).getTime();
+        const endExclusive = addMonths(startOfMonth(new Date(rentYear, monthIdx, 1)), 1).getTime();
+        if (!intervalHasCapacity(bookings, startMs, endExclusive, cap, rentQty, 86400000)) return;
+        setMonthStartBoundary(null);
+        applyWindow({ startMs, endExclusiveMs: endExclusive });
+        return;
+      }
+
+      const lo = Math.min(monthStartBoundary, monthIdx);
+      const hi = Math.max(monthStartBoundary, monthIdx);
+      const startMs = startOfMonth(new Date(rentYear, lo, 1)).getTime();
+      const endExclusive = addMonths(startOfMonth(new Date(rentYear, hi, 1)), 1).getTime();
+
+      if (!intervalHasCapacity(bookings, startMs, endExclusive, cap, rentQty, 86400000)) return;
+      setMonthStartBoundary(null);
+      applyWindow({ startMs, endExclusiveMs: endExclusive });
     },
-    [bookings, cap, rentQty],
+    [applyWindow, bookings, cap, monthStartBoundary, rentQty, rentYear],
   );
 
-  const calendarBookedModifiers = useCallback(
-    (date: Date) => {
-      const d0 = startOfDay(date).getTime();
-      const d1 = d0 + 86400000;
-      return overlapBookedQty(bookings, d0, d1) > 0;
+  const isMonthIndexInConfirmedRange = useCallback(
+    (idx: number) => {
+      const w = parentWindowPayload;
+      if (!w || rentUnit !== "MONTH") return false;
+      const start = new Date(w.startMs);
+      if (start.getFullYear() !== rentYear) return false;
+      const lastInclusive = new Date(w.endExclusiveMs - 1);
+      if (lastInclusive.getFullYear() !== rentYear) return false;
+      const lo = start.getMonth();
+      const hi = lastInclusive.getMonth();
+      return idx >= lo && idx <= hi;
     },
-    [bookings],
+    [parentWindowPayload, rentUnit, rentYear],
   );
-
-  useEffect(() => {
-    if (rentUnit === "HOUR") return;
-
-    const from = calRange?.from;
-    const to = calRange?.to ?? calRange?.from;
-    if (!from || !to) {
-      applyWindow(null);
-      return;
-    }
-
-    const startMs = startOfDay(from).getTime();
-    const endExclusive = startOfDay(to).getTime() + 86400000;
-
-    if (!(endExclusive > startMs)) {
-      applyWindow(null);
-      return;
-    }
-
-    applyWindow({ startMs, endExclusiveMs: endExclusive });
-  }, [applyWindow, calRange, rentUnit]);
 
   if (rentUnit === "HOUR") {
+    const hourStripLabel = scheduleResourceLabel.trim() || "Khung chọn giờ thuê";
+
     return (
-      <div className="space-y-4">
-        <div>
-          <p className="text-sm font-semibold mb-2 text-foreground">Chọn ngày</p>
-          <input
-            type="date"
-            className={cn(
-              "w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none",
-              "border-border/70 focus-visible:ring-[3px] focus-visible:ring-ring/55",
-            )}
-            min={format(startOfDay(new Date()), "yyyy-MM-dd")}
-            value={format(hourDay, "yyyy-MM-dd")}
-            onChange={(ev) => {
-              const raw = ev.target.value;
-              if (!raw) return;
-              const d = startOfDay(new Date(`${raw}T12:00:00`));
-              setHourDay(d);
-              setHourStartBoundary(null);
-              applyWindow(null);
-            }}
-          />
-        </div>
+      <div className="space-y-1.5">
+        <div
+          className={cn(
+            "isolate min-w-0 max-w-full overflow-hidden rounded-2xl border border-sky-200/50 bg-gradient-to-b from-sky-50/90 to-background shadow-inner dark:border-sky-900/40 dark:from-sky-950/30 dark:to-card",
+            pickLocked && "pointer-events-none opacity-45",
+          )}
+        >
+          <div
+            className="hide-scrollbar max-w-full overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch]"
+            role="region"
+            aria-label={hourStripLabel}
+          >
+            <div className="inline-flex min-w-max flex-col">
+              <div className="flex shrink-0 border-b border-sky-200/70 px-4 dark:border-sky-800/60">
+                {hours.map((h) => (
+                  <div
+                    key={`h-${h}`}
+                    className={cn(
+                      "relative h-12 w-[3.35rem] shrink-0 border-l border-sky-200/60 bg-sky-100/90 dark:border-sky-800/50 dark:bg-sky-950/45",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none absolute left-0 top-2 z-[4] -translate-x-1/2 whitespace-nowrap text-[12px] font-semibold tabular-nums text-sky-950 dark:text-sky-100",
+                      )}
+                    >
+                      {String(h).padStart(2, "0")}:00
+                    </span>
+                    <span
+                      className="pointer-events-none absolute left-0 bottom-1.5 z-[4] h-2 w-0.5 -translate-x-1/2 rounded-full bg-orange-500/90"
+                      aria-hidden
+                    />
+                    {h === 23 ? (
+                      <>
+                        <span className="pointer-events-none absolute right-0 top-2 z-[4] translate-x-1/2 whitespace-nowrap text-[12px] font-semibold tabular-nums text-sky-950 dark:text-sky-100">
+                          24:00
+                        </span>
+                        <span
+                          className="pointer-events-none absolute right-0 bottom-1.5 z-[4] h-2 w-0.5 translate-x-1/2 rounded-full bg-orange-500/90"
+                          aria-hidden
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+              <div className="flex shrink-0 bg-background px-4 dark:bg-card">
+                {hours.map((h) => {
+                  const cellStart = addHours(dayStartMs, h).getTime();
+                  const cellEnd = cellStart + 3600000;
+                  const insufficient = hourSlotInsufficient(bookings, cellStart, cellEnd, cap, rentQty);
+                  const draftStart = hourStartBoundary === h;
+                  const inRange = isHourInConfirmedRange(h);
+                  const label = `${String(h).padStart(2, "0")}:00 — ${String(h + 1).padStart(2, "0")}:00`;
 
-        <div>
-          <p className="text-sm font-semibold mb-2 text-foreground flex flex-wrap gap-x-2 gap-y-1">
-            <span>Chọn khung giờ</span>
-            <span className="text-muted-foreground font-normal">(Đơn vị: giờ — chọn ô bắt đầu, chọn ô kết để cố định)</span>
-          </p>
-          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-            {hours.map((h) => {
-              const cellStart = addHours(dayStartMs, h).getTime();
-              const cellEnd = cellStart + 3600000;
-              const insufficient = hourSlotInsufficient(bookings, cellStart, cellEnd, cap, rentQty);
+                  const cellClass = cn(
+                    "flex h-[3.25rem] w-[3.35rem] shrink-0 items-stretch border-l border-border/35",
+                    insufficient && "bg-muted-foreground/25 dark:bg-muted-foreground/35",
+                    !insufficient && inRange && "bg-emerald-400/25 dark:bg-emerald-600/25",
+                    !insufficient && !inRange && "bg-background dark:bg-card",
+                  );
 
-              let inDraftRange = false;
-              if (hourStartBoundary !== null) {
-                inDraftRange = h === hourStartBoundary;
-              }
+                  if (insufficient || cap <= 0 || pickLocked) {
+                    return (
+                      <div
+                        key={`c-${h}`}
+                        className={cellClass}
+                        title="Đã có người đặt / không khả dụng"
+                        aria-disabled
+                      />
+                    );
+                  }
 
-              const label = `${String(h).padStart(2, "0")}:00`;
-
-              return (
-                <button
-                  key={h}
-                  type="button"
-                  disabled={insufficient || cap <= 0}
-                  onClick={() => onHourClick(h)}
-                  title={insufficient ? "Không khả dụng" : `Từ ${label}`}
-                  className={cn(
-                    "rounded-lg border px-1 py-2 text-xs tabular-nums transition-colors disabled:opacity-35 disabled:pointer-events-none",
-                    "border-border/80 bg-muted/20 hover:bg-accent/70",
-                    inDraftRange && "ring-2 ring-secondary border-secondary bg-secondary/25",
-                  )}
-                >
-                  {label}
-                </button>
-              );
-            })}
+                  return (
+                    <div key={`c-${h}`} className={cellClass}>
+                      <button
+                        type="button"
+                        disabled={pickLocked}
+                        onClick={() => onHourClick(h)}
+                        title={label}
+                        className={cn(
+                          "m-0.5 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-sm border border-transparent transition-colors hover:bg-accent/60",
+                          draftStart && "ring-2 ring-inset ring-orange-500",
+                        )}
+                      >
+                        {(inRange || draftStart) && (
+                          <Leaf
+                            className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                            aria-hidden
+                          />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-
-          <p className="text-xs text-muted-foreground mt-2">
-            Slot <span className="font-medium text-destructive/90">đã được đặt</span>: ô bị mờ. Chọn ô trống làm điểm bắt đầu, chọn ô kết&nbsp;≤
-            điểm bắt để cố định khoảng.
-          </p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-sm font-semibold mb-2 text-foreground flex flex-wrap items-baseline gap-2">
-          <span>Chọn khoảng thời gian</span>
-          <span className="text-muted-foreground font-normal text-xs">Đơn vị nhỏ nhất ({rentUnitLabelVu(rentUnit)})</span>
-        </p>
+  if (rentUnit === "MONTH") {
+    return (
+      <div className="space-y-3">
+        <div
+          className={cn(
+            "min-w-0 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-b from-muted/25 to-background shadow-inner dark:border-border/45 dark:from-muted/15 dark:to-card",
+            pickLocked && "pointer-events-none opacity-45",
+          )}
+        >
+          <div className="flex flex-wrap items-center gap-3 border-b border-border/40 px-4 py-3 dark:border-border/35">
+            <span className="text-sm font-medium text-muted-foreground">Năm</span>
+            <input
+              type="number"
+              disabled={pickLocked}
+              className={cn(
+                "w-[7.5rem] rounded-xl border bg-background px-3 py-2 text-base font-semibold tabular-nums outline-none",
+                "border-border/70 shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/55",
+              )}
+              min={2000}
+              max={2100}
+              value={rentYear}
+              onChange={(ev) => {
+                const v = Number(ev.target.value);
+                if (!Number.isFinite(v)) return;
+                setRentYear(Math.min(2100, Math.max(2000, Math.floor(v))));
+                setMonthStartBoundary(null);
+                applyWindow(null);
+              }}
+            />
+          </div>
+          <div className="hide-scrollbar max-w-full overflow-x-auto overscroll-x-contain px-3 pb-4 pt-3 touch-pan-x [-webkit-overflow-scrolling:touch]">
+            <table className="w-max border-separate border-spacing-1 text-sm sm:text-base">
+              <tbody>
+                <tr>
+                  {MONTH_SHORT.map((label, idx) => {
+                    const inDraft = monthStartBoundary === idx;
+                    const inConfirmed = isMonthIndexInConfirmedRange(idx);
+                    return (
+                      <td key={label} className="p-0 align-middle text-center">
+                        <button
+                          type="button"
+                          disabled={cap <= 0 || pickLocked}
+                          onClick={() => onMonthIndexClick(idx)}
+                          title={label}
+                          className={cn(
+                            "flex min-h-[3rem] w-full min-w-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-2 text-sm font-medium transition-colors disabled:opacity-35 disabled:pointer-events-none sm:min-h-[3.25rem] sm:min-w-[3.75rem] sm:text-base",
+                            "border-border/70 bg-muted/20 hover:bg-accent/70",
+                            inDraft && "ring-2 ring-inset ring-orange-500 border-orange-500/50 bg-orange-500/10",
+                            inConfirmed &&
+                              !inDraft &&
+                              "border-emerald-600/35 bg-emerald-400/20 dark:border-emerald-500/40 dark:bg-emerald-600/20",
+                          )}
+                        >
+                          <span>{label}</span>
+                          {(inDraft || inConfirmed) && (
+                            <Leaf
+                              className={cn(
+                                "h-3.5 w-3.5 shrink-0",
+                                inDraft ? "text-orange-600 dark:text-orange-400" : "text-emerald-600 dark:text-emerald-400",
+                              )}
+                              aria-hidden
+                            />
+                          )}
+                        </button>
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-        <div className="rounded-2xl border border-border/60 bg-muted/10 p-2 flex justify-center">
-          <Calendar
-            mode="range"
-            numberOfMonths={1}
-            selected={calRange}
-            onSelect={(r) => {
-              setCalRange(r ?? undefined);
-            }}
-            disabled={calendarDisabledMatcher}
-            modifiers={{ booked_day: calendarBookedModifiers }}
-            modifiersClassNames={{
-              booked_day: "bg-muted/80 text-muted-foreground line-through opacity-70 [&_button]:opacity-95",
-            }}
-          />
+  const todayStr = format(startOfDay(new Date()), "yyyy-MM-dd");
+
+  return (
+    <div className="space-y-3">
+      <div
+        className={cn(
+          "min-w-0 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-b from-muted/30 to-background p-4 shadow-inner sm:p-5 dark:border-border/45 dark:from-muted/15 dark:to-card",
+          pickLocked && "pointer-events-none opacity-45",
+        )}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <label htmlFor="rent-day-start" className="text-xs font-medium text-muted-foreground">
+              Ngày bắt đầu
+            </label>
+            <input
+              id="rent-day-start"
+              type="date"
+              min={todayStr}
+              disabled={pickLocked}
+              className={cn(
+                "w-full min-w-0 rounded-xl border bg-background px-3 py-2.5 text-sm tabular-nums outline-none",
+                "border-border/70 shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/55",
+              )}
+              value={dayStartStr}
+              onChange={(ev) => setDayStartStr(ev.target.value)}
+            />
+          </div>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <label htmlFor="rent-day-end" className="text-xs font-medium text-muted-foreground">
+              Ngày kết thúc
+            </label>
+            <input
+              id="rent-day-end"
+              type="date"
+              min={dayStartStr || todayStr}
+              disabled={pickLocked}
+              className={cn(
+                "w-full min-w-0 rounded-xl border bg-background px-3 py-2.5 text-sm tabular-nums outline-none",
+                "border-border/70 shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/55",
+              )}
+              value={dayEndStr}
+              onChange={(ev) => setDayEndStr(ev.target.value)}
+            />
+          </div>
         </div>
       </div>
     </div>

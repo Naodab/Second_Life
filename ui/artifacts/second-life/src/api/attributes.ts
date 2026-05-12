@@ -20,7 +20,6 @@ export async function getAllAttributes(): Promise<AttributeResponse[]> {
     });
     return unwrapApiData(raw);
   } catch {
-    // Some environments route only the trailing-slash path.
     const fallbackRaw = await customFetch<ApiResponseEnvelope<AttributeResponse[]>>(`/api/v1/attributes/`, {
       method: "GET",
     });

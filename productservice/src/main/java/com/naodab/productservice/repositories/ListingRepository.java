@@ -41,4 +41,9 @@ public interface ListingRepository extends JpaRepository<Listing, String> {
 
   @Query("select l.id from Listing l where l.product.id = :productId")
   List<String> findListingIdsByProductId(@Param("productId") String productId);
+
+  @Query(
+      value = "select l.id from Listing l order by l.id asc",
+      countQuery = "select count(l) from Listing l")
+  Page<String> findAllListingIds(Pageable pageable);
 }

@@ -6,6 +6,7 @@ import {
   type RentalPeriodDto,
   fetchListingRentalPeriods,
   fetchListingVariantAvailability,
+  fetchListingVariantAvailabilityInRange,
 } from "@/api/inventory";
 import { useCart } from "@/hooks/use-mock-api";
 import { useToast } from "@/hooks/use-toast";
@@ -135,6 +136,22 @@ export default function ListingDetail() {
     staleTime: 15_000,
   });
 
+  const rentWindowRangeAvailabilityQuery = useQuery({
+    queryKey: [
+      "listingVariantAvailabilityInRange",
+      listingVariantId,
+      rentWindow?.startMs,
+      rentWindow?.endExclusiveMs,
+    ] as const,
+    queryFn: () =>
+      fetchListingVariantAvailabilityInRange(listingVariantId!, {
+        from: new Date(rentWindow!.startMs).toISOString(),
+        to: new Date(rentWindow!.endExclusiveMs).toISOString(),
+      }),
+    enabled: Boolean(rentInventoryEnabled && listingVariantId && rentWindow),
+    staleTime: 5_000,
+  });
+
   const stableRentalPeriods = useMemo((): RentalPeriodDto[] => {
     const rows = rentalPeriodsQuery.data;
     return rows?.length ? rows : [];
@@ -155,6 +172,15 @@ export default function ListingDetail() {
     }
     return Math.min(dialogCatalogStock, q.availableQuantity);
   }, [dialogCatalogStock, rentAvailabilityQuery.data]);
+
+  const effectiveRentStockCapped = useMemo(() => {
+    if (!rentWindow) return effectiveRentStock;
+    const r = rentWindowRangeAvailabilityQuery.data;
+    if (r?.tracked && r.availableQuantity != null) {
+      return Math.min(effectiveRentStock, r.availableQuantity);
+    }
+    return effectiveRentStock;
+  }, [effectiveRentStock, rentWindow, rentWindowRangeAvailabilityQuery.data]);
 
   const buyAvailabilityLoading = buyInventoryEnabled && buyAvailabilityQuery.isFetching;
   const rentAvailabilityLoading = rentInventoryEnabled && rentAvailabilityQuery.isFetching;
@@ -186,9 +212,9 @@ export default function ListingDetail() {
   }, [effectiveBuyStock]);
 
   useEffect(() => {
-    const rentCap = effectiveRentStock > 0 ? effectiveRentStock : 1;
-    setRentQty((q) => (effectiveRentStock <= 0 ? 1 : Math.min(Math.max(1, q), rentCap)));
-  }, [effectiveRentStock]);
+    const rentCap = effectiveRentStockCapped > 0 ? effectiveRentStockCapped : 1;
+    setRentQty((q) => (effectiveRentStockCapped <= 0 ? 1 : Math.min(Math.max(1, q), rentCap)));
+  }, [effectiveRentStockCapped]);
 
   const handleVariantAxisChange = (axisKey: string, valueId: string) => {
     setVariantSelection((prev) => ({ ...prev, [axisKey]: valueId }));
@@ -199,7 +225,7 @@ export default function ListingDetail() {
     const label = anchorVariantRow.pv?.label?.trim();
     const name =
       variantAxes.length > 0 && label ? `${cartBridge.name} (${label})` : cartBridge.name;
-    const liveStock = mode === "buy" ? effectiveBuyStock : effectiveRentStock;
+    const liveStock = mode === "buy" ? effectiveBuyStock : effectiveRentStockCapped;
     return {
       ...cartBridge,
       name,
@@ -211,7 +237,12 @@ export default function ListingDetail() {
     const base = buildProductForCart(mode);
     if (!base) return;
     if (mode === "buy" && (effectiveBuyStock <= 0 || dialogBuyUnitPrice <= 0)) return;
-    if (mode === "rent" && (effectiveRentStock <= 0 || dialogRentUnitPrice <= 0 || !rentWindow || !rentValidity.ok)) return;
+    if (
+      mode === "rent" &&
+      (effectiveRentStockCapped <= 0 || dialogRentUnitPrice <= 0 || !rentWindow || !rentValidity.ok)
+    ) {
+      return;
+    }
 
     const product: Product =
       mode === "buy"
@@ -273,7 +304,7 @@ export default function ListingDetail() {
   const buyCheckoutDisabled = effectiveBuyStock <= 0 || dialogBuyUnitPrice <= 0;
   const rentCheckoutDisabled =
     !rentValidity.ok ||
-    effectiveRentStock <= 0 ||
+    effectiveRentStockCapped <= 0 ||
     dialogRentUnitPrice <= 0 ||
     !rentWindow;
 
@@ -365,7 +396,7 @@ export default function ListingDetail() {
         variantSelection={variantSelection}
         onVariantSelectionChange={handleVariantAxisChange}
         rentUnit={rentUnit}
-        lineStock={effectiveRentStock}
+        lineStock={effectiveRentStockCapped}
         lineUnitRentPrice={dialogRentUnitPrice}
         rentQty={rentQty}
         onRentQtyChange={setRentQty}
@@ -374,7 +405,12 @@ export default function ListingDetail() {
         rentValidity={rentValidity}
         onRentValidityChange={onRentValidityChange}
         rentalPeriods={stableRentalPeriods}
-        rentalsLoading={(rentAvailabilityLoading || rentalPeriodsQuery.isFetching) && rentInventoryEnabled}
+        rentalsLoading={
+          (rentAvailabilityLoading ||
+            rentalPeriodsQuery.isFetching ||
+            (Boolean(rentWindow) && rentWindowRangeAvailabilityQuery.isFetching)) &&
+          rentInventoryEnabled
+        }
         schedulerResetKey={rentSchedulerResetKey}
         checkoutDisabled={rentCheckoutDisabled}
         onCheckout={() => handleCheckoutNow("rent")}

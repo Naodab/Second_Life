@@ -137,6 +137,23 @@ class ListingSearchServiceImplTest {
   }
 
   @Test
+  void removeAllListingDocumentsFromIndex_pagesAndDeletes() {
+    PageRequest pg0 = PageRequest.of(0, 500);
+    PageRequest pg1 = PageRequest.of(1, 500);
+    var first = new PageImpl<>(List.of("a", "b"), pg0, 600);
+    var second = new PageImpl<>(List.of("c"), pg1, 600);
+    when(listingRepository.findAllListingIds(pg0)).thenReturn(first);
+    when(listingRepository.findAllListingIds(pg1)).thenReturn(second);
+
+    long n = listingSearchService.removeAllListingDocumentsFromIndex();
+
+    assertThat(n).isEqualTo(3);
+    verify(elasticsearchOperations).delete("a", IndexCoordinates.of("listings"));
+    verify(elasticsearchOperations).delete("b", IndexCoordinates.of("listings"));
+    verify(elasticsearchOperations).delete("c", IndexCoordinates.of("listings"));
+  }
+
+  @Test
   void reindexAllListingsFromDatabase_iteratesUntilEmptyBatch() {
     PageRequest pg0 = PageRequest.of(0, BATCH);
     PageRequest pg1 = PageRequest.of(1, BATCH);
