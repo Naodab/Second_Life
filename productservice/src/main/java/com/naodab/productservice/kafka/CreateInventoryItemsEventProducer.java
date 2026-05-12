@@ -31,14 +31,27 @@ public class CreateInventoryItemsEventProducer {
     if (savedVariants == null || savedVariants.isEmpty()) {
       return;
     }
+    List<ListingVariantInventoryLine> rows = buildVariantInventoryLines(listingType, savedVariants);
+    if (rows.isEmpty()) {
+      return;
+    }
+    CreateInventoryItemRequestEvent payload = CreateInventoryItemRequestEvent.builder().listingVariants(rows).build();
+
+    log.debug("Publishing {} inventory variant line(s) for listing {}", rows.size(), listingId);
+    createInventoryItemRequestKafkaTemplate.send(createInventoryTopic, listingId, payload)
+        .whenComplete((r, ex) -> logPublishFailureIfPresent(listingId, ex));
+  }
+
+  private static List<ListingVariantInventoryLine> buildVariantInventoryLines(Listing.ListingType listingType,
+      List<ListingVariant> savedVariants) {
     List<ListingVariantInventoryLine> rows = new ArrayList<>();
     for (ListingVariant lv : savedVariants) {
       if (lv == null || lv.getId() == null || lv.getId().isBlank()) {
         continue;
       }
-      Long q = lv.getQuantity() != null ? lv.getQuantity() : 0L;
-      ListingInventoryMode mode = listingType == Listing.ListingType.RENT ? ListingInventoryMode.RENT
-          : ListingInventoryMode.BUY;
+      long q = lv.getQuantity() != null ? lv.getQuantity() : 0L;
+      ListingInventoryMode mode =
+          listingType == Listing.ListingType.RENT ? ListingInventoryMode.RENT : ListingInventoryMode.BUY;
       long buy = listingType == Listing.ListingType.BUY ? q : 0L;
       long rent = listingType == Listing.ListingType.RENT ? q : 0L;
       rows.add(
@@ -49,18 +62,12 @@ public class CreateInventoryItemsEventProducer {
               .mode(mode)
               .build());
     }
-    if (rows.isEmpty()) {
-      return;
-    }
-    CreateInventoryItemRequestEvent payload = CreateInventoryItemRequestEvent.builder().listingVariants(rows).build();
+    return rows;
+  }
 
-    log.debug("Publishing {} inventory variant line(s) for listing {}", rows.size(), listingId);
-    createInventoryItemRequestKafkaTemplate.send(createInventoryTopic, listingId, payload)
-        .whenComplete(
-            (r, ex) -> {
-              if (ex != null) {
-                log.error("Failed to publish create-inventory-items for listing {}", listingId, ex);
-              }
-            });
+  private void logPublishFailureIfPresent(String listingId, Throwable ex) {
+    if (ex != null) {
+      log.error("Failed to publish create-inventory-items for listing {}", listingId, ex);
+    }
   }
 }

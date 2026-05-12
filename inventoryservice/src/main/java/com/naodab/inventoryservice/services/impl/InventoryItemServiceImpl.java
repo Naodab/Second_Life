@@ -45,10 +45,8 @@ public class InventoryItemServiceImpl implements InventoryItemService {
     }
     for (InventoryItemCreateRequestEvent line : items) {
       if (line == null || line.getListingVariantId() == null || line.getListingVariantId().isBlank()
-          || line.getMode() == null) {
-        continue;
-      }
-      if (inventoryItemRepository.existsByListingVariantIdAndMode(line.getListingVariantId(), line.getMode())) {
+          || line.getMode() == null
+          || inventoryItemRepository.existsByListingVariantIdAndMode(line.getListingVariantId(), line.getMode())) {
         continue;
       }
       inventoryItemRepository.save(inventoryItemMapper.toInventoryItem(line));
