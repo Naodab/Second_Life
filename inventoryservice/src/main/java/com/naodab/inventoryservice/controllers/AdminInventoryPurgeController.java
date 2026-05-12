@@ -24,9 +24,6 @@ public class AdminInventoryPurgeController {
 
   InventoryAdminPurgeService inventoryAdminPurgeService;
 
-  /**
-   * Removes every inventory reservation and inventory item row. Intended for dev/admin reset only.
-   */
   @PostMapping("/purge-all")
   public ResponseEntity<ApiResponse<InventoryPurgeStatsResponse>> purgeAll(
       @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {

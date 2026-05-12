@@ -20,7 +20,6 @@ public interface ListingSearchService {
 
   void delete(String listingId);
 
-  /** Deletes every listing document from the search index (uses DB ids first; call before removing listing rows). */
   long removeAllListingDocumentsFromIndex();
 
   ListingDocumentPage searchListingsPaged(ListingSearchRequest request);
