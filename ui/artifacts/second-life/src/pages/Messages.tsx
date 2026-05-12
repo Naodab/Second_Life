@@ -105,7 +105,6 @@ export default function Messages() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-[calc(100vh-80px)]">
       <div className="bg-white rounded-3xl border shadow-sm h-full flex overflow-hidden">
 
-        {/* Sidebar */}
         <div className={cn("w-full md:w-80 border-r flex flex-col flex-shrink-0", activeChat ? "hidden md:flex" : "flex")}>
           <div className="p-4 border-b">
             <h2 className="text-xl font-bold font-display mb-4">Tin nhắn</h2>
@@ -179,7 +178,6 @@ export default function Messages() {
           </div>
         </div>
 
-        {/* Chat Area */}
         <div className={cn("flex-1 flex flex-col min-w-0", !activeChat ? "hidden md:flex" : "flex")}>
           {currentChat ? (
             <>

@@ -12,11 +12,18 @@ http:
           - "Authorization"
 
   routers:
+    auth-api-options:
+      rule: "(PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`) || PathPrefix(`/oauth2`) || PathPrefix(`/login/oauth2`)) && Method(`OPTIONS`)"
+      service: auth-service
+      entryPoints:
+        - web
+      priority: 100
     auth-api:
       rule: "PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`) || PathPrefix(`/oauth2`) || PathPrefix(`/login/oauth2`)"
       service: auth-service
       entryPoints:
         - web
+      priority: 1
     profile-api-options:
       rule: "PathPrefix(`/api/v1/profiles`) && Method(`OPTIONS`)"
       service: profile-service
@@ -46,7 +53,7 @@ http:
         - gateway-jwt
       priority: 1
     location-api-options:
-      rule: "PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`) && Method(`OPTIONS`)"
+      rule: "(PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`)) && Method(`OPTIONS`)"
       service: location-service
       entryPoints:
         - web
@@ -72,6 +79,22 @@ http:
         - gateway-jwt
       priority: 1
 
+    inventory-api-options:
+      rule: "PathPrefix(`/api/v1/listing-variants`) && Method(`OPTIONS`)"
+      service: inventory-service
+      entryPoints:
+        - web
+      priority: 100
+
+    inventory-api:
+      rule: "PathPrefix(`/api/v1/listing-variants`)"
+      service: inventory-service
+      entryPoints:
+        - web
+      middlewares:
+        - gateway-jwt
+      priority: 50
+
   services:
     auth-service:
       loadBalancer:
@@ -93,3 +116,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://product-service:8086"
+
+    inventory-service:
+      loadBalancer:
+        servers:
+          - url: "http://inventory-service:8087"

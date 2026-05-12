@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -49,8 +50,12 @@ public class SecurityConfig {
   JwtAuthenticationFilter jwtAuthenticationFilter;
 
   @NonFinal
-  @Value("${external.cors_allowed_origins:${external.frontend_url}}")
+  @Value("${external.cors_allowed_origins:}")
   String corsAllowedOrigins;
+
+  @NonFinal
+  @Value("${external.frontend_url:}")
+  String frontendUrl;
 
   @Bean
   public PasswordEncoder passwordEncoder() {
@@ -76,6 +81,7 @@ public class SecurityConfig {
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
             .requestMatchers("/auth/reset-password").authenticated()
             .requestMatchers("/auth/**").permitAll()
@@ -97,15 +103,25 @@ public class SecurityConfig {
     return http.build();
   }
 
-  @Bean
-  public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration configuration = new CorsConfiguration();
-    List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
+  private List<String> resolveAllowedOrigins() {
+    List<String> parsed = Arrays.stream(corsAllowedOrigins.split(","))
         .map(String::trim)
         .filter(s -> !s.isEmpty())
         .toList();
-    configuration.setAllowedOrigins(origins);
-    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+    if (!parsed.isEmpty()) {
+      return parsed;
+    }
+    if (frontendUrl != null && !frontendUrl.isBlank()) {
+      return List.of(frontendUrl.trim());
+    }
+    return List.of("http://localhost:5173", "http://localhost");
+  }
+
+  @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+    configuration.setAllowedOrigins(resolveAllowedOrigins());
+    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"));
     configuration.setAllowedHeaders(
         List.of("Authorization", "Content-Type", AppConstants.HEADER_PROFILE_ID));
     var source = new UrlBasedCorsConfigurationSource();

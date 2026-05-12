@@ -1,0 +1,24 @@
+{
+  "properties": [
+    {
+      "name": "spring.kafka.topics.create-inventory-item",
+      "type": "java.lang.String",
+      "description": "The topic to send inventory item create events to"
+    },
+    {
+      "name": "server.servlet.multipart.max-file-size",
+      "type": "java.lang.String",
+      "description": "Max file size"
+    },
+    {
+      "name": "server.servlet.multipart.max-request-size",
+      "type": "java.lang.String",
+      "description": "Max request size"
+    },
+    {
+      "name": "external.cors_allowed_origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated CORS origins (Spring allowedOrigins), e.g. http://localhost:5173,http://localhost"
+    }
+  ]
+}

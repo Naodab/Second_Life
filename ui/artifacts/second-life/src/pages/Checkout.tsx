@@ -199,7 +199,6 @@ export default function Checkout() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
 
-            {/* Address */}
             <div className="bg-white rounded-3xl border p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
                 <MapPin className="w-5 h-5 text-primary" />
@@ -212,7 +211,6 @@ export default function Checkout() {
               </div>
             </div>
 
-            {/* Sub-orders by facility */}
             {Array.from(facilityGroups.entries()).map(([facilityId, facilityItems], idx) => {
               const facility = MOCK_FACILITIES.find((f) => f.id === facilityId);
               const facilitySubtotal = facilityItems.reduce((s, i) => s + itemTotal(i), 0);
@@ -288,7 +286,6 @@ export default function Checkout() {
               );
             })}
 
-            {/* Deposit Policy */}
             {hasRentals && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
                 <div className="flex items-start gap-3">
@@ -306,7 +303,6 @@ export default function Checkout() {
               </div>
             )}
 
-            {/* Payment */}
             <div className="bg-white rounded-3xl border p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
                 <CreditCard className="w-5 h-5 text-primary" />
@@ -340,7 +336,6 @@ export default function Checkout() {
 
           </div>
 
-          {/* Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-3xl border p-6 shadow-sm sticky top-28">
               <h3 className="font-bold text-lg mb-5">Tóm tắt</h3>

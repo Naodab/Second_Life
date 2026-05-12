@@ -164,7 +164,6 @@
     @apply border-zinc-700/60 bg-zinc-950/65 shadow-sm;
   }
 
-  /* box-shadow tách khỏi @apply — arbitrary shadow có khoảng trắng gây lỗi Tailwind v4 generate */
   .glass-card {
     @apply rounded-3xl border border-white/40 bg-white/60 backdrop-blur-md;
     box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
@@ -184,7 +183,6 @@
   }
 }
 
-/* Custom scrollbar for a polished look */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

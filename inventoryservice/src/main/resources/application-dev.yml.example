@@ -1,0 +1,37 @@
+# Local / Docker dev defaults.
+
+spring:
+  web:
+    error:
+      include-message: always
+      include-binding-errors: always
+  datasource:
+    url: ${INVENTORY_MYSQL_URL:}
+    username: ${INVENTORY_MYSQL_USERNAME:}
+    password: ${INVENTORY_MYSQL_PASSWORD:-}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        "[format_sql]": true
+  jackson:
+    serialization:
+      "[indent_output]": true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:inventoryservice-consumer}
+      auto-offset-reset: earliest
+    topics:
+      create-inventory-item: ${KAFKA_TOPIC_CREATE_INVENTORY_ITEM:inventory.item.create}
+
+logging:
+  level:
+    root: INFO
+    "[com.naodab.inventoryservice]": DEBUG
+    org.springframework.kafka.listener: DEBUG
+
+external:
+  cors_allowed_origins: http://localhost:5173,http://localhost

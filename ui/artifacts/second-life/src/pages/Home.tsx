@@ -79,7 +79,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
       <section className="relative overflow-hidden pt-16 pb-24 lg:pt-24 lg:pb-32">
         <div
           className="absolute inset-0 bg-cover bg-no-repeat dark:hidden"
@@ -205,7 +204,6 @@ export default function Home() {
         </div>
       </motion.section>
 
-      {/* Recommended Section */}
       <motion.section
         className="py-16 border-b border-border/60 bg-muted/35"
         initial={{ opacity: 0, y: 24 }}
@@ -246,7 +244,6 @@ export default function Home() {
         </div>
       </motion.section>
 
-      {/* Trust & Features */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="rounded-3xl border border-primary/10 bg-primary/5 p-8 md:p-12 dark:border-primary/25 dark:bg-primary/10">
