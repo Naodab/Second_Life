@@ -1,6 +1,6 @@
 # productservice
 
-Catalog sản phẩm (`Product`, variants, attributes), cơ sở/kho (`Facility`), tin đăng (`Listing`), giá variant theo listing. Tích hợp Elasticsearch cho search; persistence chính trên MySQL.
+Catalog sản phẩm (`Product`, variants, attributes), cơ sở/kho (`Facility`), tin đăng (`Listing`) gắn theo cơ sở, giá variant theo listing. `Product` thuộc chủ sở hữu (`owner_id`) thay vì gắn trực tiếp vào `Facility`. Tích hợp Elasticsearch cho search; persistence chính trên MySQL.
 
 ## Công nghệ
 
@@ -54,7 +54,7 @@ erDiagram
     }
     Product {
         uuid id PK
-        uuid facility_id FK
+        string owner_id
         string primary_sub_category_id FK
         string name
         enum status
@@ -109,6 +109,7 @@ erDiagram
     Listing {
         uuid id PK
         uuid product_id FK
+        uuid facility_id FK
         string title
         enum listing_type
         enum listing_status
@@ -138,7 +139,6 @@ erDiagram
     Category ||--o{ SubCategory : has
     SubCategory ||--o{ ProductSubCategory : links
     Product ||--o{ ProductSubCategory : links
-    Facility ||--o{ Product : holds
     SubCategory ||--o{ Product : primary
     Product ||--o{ ProductMedia : has
     Product ||--o{ ProductVariant : has
@@ -146,6 +146,7 @@ erDiagram
     ProductVariant ||--o{ ProductVariantAttributeValue : assigns
     AttributeValue ||--o{ ProductVariantAttributeValue : referenced_by
     Product ||--o{ Listing : published_as
+    Facility ||--o{ Listing : hosts
     Listing ||--o{ ListingVariant : offers
     ProductVariant ||--o{ ListingVariant : priced_row
 ```

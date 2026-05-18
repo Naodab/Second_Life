@@ -293,7 +293,6 @@ export default function Search() {
     }
   }, [refsReady, provinces, categories]);
 
-  /* Không có tỉnh → xóa xã một lần; tách khỏi deps wards (tránh chạy lại khi list phường đổi). */
   useEffect(() => {
     if (!provinceCode) {
       setWardCode((prev) => (prev === undefined ? prev : undefined));
@@ -303,10 +302,6 @@ export default function Search() {
   useEffect(() => {
     if (!provinceCode) return;
     if (wardsLoading) return;
-    /*
-     * Không prune khi chưa có danh sách phường (list rỗng): trước/sau fetch lỗi hoặc API trả [],
-     * wards.some(...) sẽ xóa wardCode đúng từ URL — cùng nguyên tắc với provinces/categories.
-     */
     if (wards.length === 0) return;
     setWardCode((prev) => {
       if (!prev?.trim()) return prev;
@@ -319,7 +314,6 @@ export default function Search() {
 
   const desiredSearchPath = useMemo(() => {
     if (!refsReady) return null;
-    // Header navigates → URL updates before `keyword` state hydrates; trust parsed URL when mismatched briefly.
     const fromState = keyword.trim();
     const fromUrl = parsedFilters.keyword.trim();
     const keywordForPath = fromState === fromUrl ? fromState : fromUrl;
@@ -500,7 +494,6 @@ export default function Search() {
   return (
     <div className="min-h-screen bg-muted/40 pt-8 pb-20 dark:bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Mobile Filter Toggle */}
         <div className="flex md:hidden items-center justify-between mb-4">
           <h1 className="text-2xl font-bold font-display">Khám phá</h1>
           <Button variant="outline" size="sm" className="bg-card">
@@ -677,7 +670,6 @@ export default function Search() {
             </div>
           </aside>
 
-          {/* Main Content */}
           <main className="flex-1 relative z-0">
             <div className="mb-6 flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center">
               <div>

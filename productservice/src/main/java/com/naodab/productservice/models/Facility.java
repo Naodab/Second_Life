@@ -16,7 +16,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.CascadeType;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -61,6 +61,7 @@ public class Facility extends BaseEntity {
   @Builder.Default
   Float averageRating = 0.0F;
 
-  @OneToMany(mappedBy = "facility", cascade = CascadeType.ALL, orphanRemoval = true)
-  List<Product> products;
+  @OneToMany(mappedBy = "facility")
+  @Builder.Default
+  List<Listing> listings = new ArrayList<>();
 }

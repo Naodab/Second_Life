@@ -22,11 +22,13 @@ import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingRecommendationRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
+import com.naodab.productservice.dto.response.AdminListingPurgeResponse;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
+import com.naodab.productservice.services.ListingAdminPurgeService;
 import com.naodab.productservice.services.ListingRecommendationService;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
@@ -48,6 +50,19 @@ public class ListingController {
   ListingSearchService listingSearchService;
   SearchHistoryAsyncRecorder searchHistoryAsyncRecorder;
   ListingRecommendationService listingRecommendationService;
+  ListingAdminPurgeService listingAdminPurgeService;
+
+  @PostMapping("/admin/purge-all")
+  public ResponseEntity<ApiResponse<AdminListingPurgeResponse>> purgeAllListingsAdmin(
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {
+    if (!AppConstants.ROLE_ADMIN.equals(role)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
+    AdminListingPurgeResponse body =
+        listingAdminPurgeService.purgeAllListingsAndSearchIndexAndRemoteInventory(role);
+    log.warn("Admin purge-all listings completed: {}", body);
+    return ResponseEntity.ok(ApiResponse.<AdminListingPurgeResponse>builder().data(body).build());
+  }
 
   @PostMapping("/admin/search/reindex")
   public ResponseEntity<ApiResponse<Integer>> reindexListingsForSearch(

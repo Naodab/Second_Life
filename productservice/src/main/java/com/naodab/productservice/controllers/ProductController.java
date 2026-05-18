@@ -52,16 +52,18 @@ public class ProductController {
         .build());
   }
 
-  @GetMapping("/by-facility/{facilityId}")
-  public ResponseEntity<ApiResponse<PagedItemsResponse<ProductItemResponse>>> listProductsForFacility(
-      @PathVariable String facilityId, @ModelAttribute ProductSearchRequest request) {
+  @GetMapping("/owned")
+  public ResponseEntity<ApiResponse<PagedItemsResponse<ProductItemResponse>>> listOwnedProducts(
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
+      @ModelAttribute ProductSearchRequest request) {
+    String profileId = validateProfileId(profileIdHeader);
     if (request == null) {
       request = ProductSearchRequest.builder().build();
     }
-    request.setFacilityId(facilityId == null ? null : facilityId.trim());
-    log.info("Listing products for facility: {}", request.getFacilityId());
+    request.setOwnerId(profileId);
+    log.info("Listing products for owner: {}", profileId);
     return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ProductItemResponse>>builder()
-        .data(productSearchService.listProductItemsForFacility(request))
+        .data(productSearchService.listOwnedProductItems(request))
         .build());
   }
 
@@ -76,11 +78,12 @@ public class ProductController {
     return ResponseEntity.ok(ApiResponse.<Integer>builder().data(count).build());
   }
 
-  @GetMapping("/by-facility/{facilityId}/primary-subcategories")
-  public ResponseEntity<ApiResponse<List<PrimarySubcategorySummaryResponse>>> listPrimarySubcategoriesForFacility(
-      @PathVariable String facilityId) {
+  @GetMapping("/owned/primary-subcategories")
+  public ResponseEntity<ApiResponse<List<PrimarySubcategorySummaryResponse>>> listOwnedPrimarySubcategories(
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
+    String profileId = validateProfileId(profileIdHeader);
     return ResponseEntity.ok(ApiResponse.<List<PrimarySubcategorySummaryResponse>>builder()
-        .data(productSearchService.listPrimarySubcategorySummariesForFacility(facilityId))
+        .data(productSearchService.listOwnedPrimarySubcategorySummaries(profileId))
         .build());
   }
 

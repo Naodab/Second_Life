@@ -21,8 +21,6 @@ public class ProductVariantSummaryResponse {
 
   String sku;
 
-  Long quantity;
-
   String label;
 
   List<String> attributeValueIds;

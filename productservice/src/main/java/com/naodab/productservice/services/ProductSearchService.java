@@ -18,7 +18,7 @@ public interface ProductSearchService {
 
   List<ProductItemResponse> searchProductItems(ProductSearchRequest request);
 
-  PagedItemsResponse<ProductItemResponse> listProductItemsForFacility(ProductSearchRequest request);
+  PagedItemsResponse<ProductItemResponse> listOwnedProductItems(ProductSearchRequest request);
 
-  List<PrimarySubcategorySummaryResponse> listPrimarySubcategorySummariesForFacility(String facilityId);
+  List<PrimarySubcategorySummaryResponse> listOwnedPrimarySubcategorySummaries(String ownerId);
 }

@@ -25,6 +25,7 @@ type Props = {
   lineUnitBuyPrice: number;
   buyQty: number;
   onBuyQtyChange: (next: number) => void;
+  availabilityLoading?: boolean;
   checkoutDisabled: boolean;
   onCheckout: () => void;
 };
@@ -41,6 +42,7 @@ export function ListingBuyDialog({
   lineUnitBuyPrice,
   buyQty,
   onBuyQtyChange,
+  availabilityLoading,
   checkoutDisabled,
   onCheckout,
 }: Props) {
@@ -85,14 +87,39 @@ export function ListingBuyDialog({
               />
               <div className="rounded-2xl border border-border/70 bg-muted/35 px-4 py-3.5 text-sm dark:bg-muted/20 dark:border-border/50">
                 <p>
-                  <span className="text-muted-foreground">Kho còn: </span>
-                  <span className="font-semibold tabular-nums text-foreground">{lineStock}</span>
+                  <span className="text-muted-foreground">
+                    Khả dụng
+                    {availabilityLoading ? (
+                      <span className="text-xs text-muted-foreground/80"> (đang kiểm tra kho thật…)</span>
+                    ) : null}
+                    :{" "}
+                  </span>
+                  <span className="font-semibold tabular-nums text-foreground">
+                    {availabilityLoading ? "…" : lineStock}
+                  </span>
                 </p>
                 {showUnitPrice ? (
                   <p className="mt-1.5 text-primary font-bold text-lg tabular-nums">{formatCurrency(lineUnitBuyPrice)}</p>
                 ) : null}
               </div>
             </>
+          ) : null}
+
+          {!showVariantUi ? (
+            <div className="rounded-2xl border border-border/70 bg-muted/35 px-4 py-3.5 text-sm dark:bg-muted/20 dark:border-border/50">
+              <p>
+                <span className="text-muted-foreground">
+                  Khả dụng
+                  {availabilityLoading ? (
+                    <span className="text-xs text-muted-foreground/80"> (đang kiểm tra kho thật…)</span>
+                  ) : null}
+                  :{" "}
+                </span>
+                <span className="font-semibold tabular-nums text-foreground">
+                  {availabilityLoading ? "…" : lineStock}
+                </span>
+              </p>
+            </div>
           ) : null}
 
           <div className="flex items-center justify-between">

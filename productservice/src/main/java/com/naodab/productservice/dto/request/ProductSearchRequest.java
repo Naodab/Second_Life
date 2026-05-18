@@ -20,14 +20,9 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class ProductSearchRequest {
   String keyword;
-  String facilityId;
+  String ownerId;
   List<String> categoryIds;
   List<String> subCategoryIds;
-  String provinceCode;
-  String wardCode;
-  Float latitude;
-  Float longitude;
-  Float radiusMeters;
   ElasticsearchSortBy sortBy;
   ProductStatus status;
   Integer page;

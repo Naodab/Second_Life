@@ -109,7 +109,6 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <TooltipProvider>
-          {/* Wouter must wrap AuthProvider so route hooks and auth share one stable tree (avoids useAuth/useLocation ordering issues during HMR or nested roots). */}
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <AuthProvider>
               <VisitorLocationProvider>

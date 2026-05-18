@@ -2,6 +2,8 @@ export const MANAGE_BASE = "/manage";
 
 export type ManageRouteParsed =
   | { tag: "dashboard" }
+  | { tag: "products" }
+  | { tag: "listings" }
   | { tag: "facility"; facilityId: string }
   | { tag: "add-product"; facilityId: string }
   | { tag: "add-listing"; facilityId: string }
@@ -15,6 +17,14 @@ export function manageDashboardPath(): string {
 
 export function manageFacilityPath(facilityId: string): string {
   return `${MANAGE_BASE}/facilities/${encodeURIComponent(facilityId)}`;
+}
+
+export function manageProductsPath(): string {
+  return `${MANAGE_BASE}/products`;
+}
+
+export function manageListingsPath(): string {
+  return `${MANAGE_BASE}/listings`;
 }
 
 export function manageAddProductPath(facilityId: string): string {
@@ -54,6 +64,12 @@ export function parseManageRoute(pathname: string): ManageRouteParsed | null {
   if (second === "dashboard") {
     return segments.length === 2 ? { tag: "dashboard" } : null;
   }
+  if (second === "products") {
+    return segments.length === 2 ? { tag: "products" } : null;
+  }
+  if (second === "listings") {
+    return segments.length === 2 ? { tag: "listings" } : null;
+  }
 
   if (second !== "facilities") {
     return null;
@@ -89,7 +105,7 @@ export function parseManageRoute(pathname: string): ManageRouteParsed | null {
 }
 
 export function facilityScopeActive(route: ManageRouteParsed, facilityId: string): boolean {
-  if (route.tag === "dashboard") {
+  if (route.tag === "dashboard" || route.tag === "products" || route.tag === "listings") {
     return false;
   }
 

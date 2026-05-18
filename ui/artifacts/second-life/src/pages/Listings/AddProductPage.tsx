@@ -34,13 +34,11 @@ export function AddProductPage({
 }) {
   type VariantDraft = {
     id: string;
-    quantity: number;
     selectedAttributeValueByAttributeId: Record<string, string>;
   };
 
   const createEmptyVariant = (): VariantDraft => ({
     id: `variant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    quantity: 1,
     selectedAttributeValueByAttributeId: {},
   });
 
@@ -311,7 +309,6 @@ export function AddProductPage({
       return {
         id: variant.id,
         title: `${skuPrefix}-${productSkuPart}-${attributeParts.join("-") || "NA"}`,
-        quantity: variant.quantity,
         attributeValueIds: selectedConcreteAttributeIds
           .map((attributeId) => variant.selectedAttributeValueByAttributeId[attributeId])
           .filter(Boolean),
@@ -371,10 +368,8 @@ export function AddProductPage({
     selectedConcreteAttributeIds.length > 0 &&
     form.variants.length > 0 &&
     !hasDuplicateVariants &&
-    form.variants.every(
-      (variant) =>
-        variant.quantity > 0 &&
-        selectedConcreteAttributeIds.every((attributeId) => !!variant.selectedAttributeValueByAttributeId[attributeId]),
+    form.variants.every((variant) =>
+      selectedConcreteAttributeIds.every((attributeId) => !!variant.selectedAttributeValueByAttributeId[attributeId]),
     );
 
   const validationMessage = useMemo(() => {
@@ -389,10 +384,6 @@ export function AddProductPage({
     }
     if (selectedConcreteAttributeIds.length === 0) {
       return "Vui lòng chọn ít nhất một thuộc tính sản phẩm.";
-    }
-    const hasInvalidQuantity = form.variants.some((variant) => variant.quantity <= 0);
-    if (hasInvalidQuantity) {
-      return "Vui lòng nhập số lượng lớn hơn 0 cho từng loại sản phẩm.";
     }
     const hasMissingAttributeValues = form.variants.some((variant) =>
       selectedConcreteAttributeIds.some((attributeId) => !variant.selectedAttributeValueByAttributeId[attributeId]),
@@ -419,7 +410,6 @@ export function AddProductPage({
     setMediaError("");
     const variants = variantPreviewRows.map((row) => ({
       skuPreview: row.title,
-      quantity: row.quantity,
       attributeValueIds: row.attributeValueIds,
     }));
 
@@ -568,31 +558,12 @@ export function AddProductPage({
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_140px] gap-3 flex-1 min-w-0">
+                      <div className="grid grid-cols-1 gap-3 flex-1 min-w-0">
                         <div>
                           <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">SKU biến thể</p>
                           <p className="break-all text-sm font-medium text-emerald-900 dark:text-emerald-100">
                             {variantPreview?.title ?? "NA"}
                           </p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-muted-foreground mb-1 block">Số lượng</label>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={variant.quantity}
-                            onChange={(e) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                variants: prev.variants.map((item) =>
-                                  item.id === variant.id
-                                    ? { ...item, quantity: Math.max(0, Number(e.target.value) || 0) }
-                                    : item,
-                                ),
-                              }))
-                            }
-                            className="h-9 w-full rounded-lg border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
-                          />
                         </div>
                       </div>
                       {form.variants.length > 1 && (

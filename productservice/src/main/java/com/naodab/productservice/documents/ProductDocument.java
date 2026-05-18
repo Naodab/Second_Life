@@ -8,10 +8,8 @@ import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
-import org.springframework.data.elasticsearch.annotations.GeoPointField;
 import org.springframework.data.elasticsearch.annotations.InnerField;
 import org.springframework.data.elasticsearch.annotations.MultiField;
-import org.springframework.data.elasticsearch.core.geo.GeoPoint;
 
 import com.naodab.productservice.models.Product.ProductStatus;
 
@@ -39,9 +37,6 @@ public class ProductDocument {
   public static class VariantDocument {
     @Field(type = FieldType.Keyword)
     String sku;
-
-    @Field(type = FieldType.Long)
-    Long quantity;
   }
 
   @Id
@@ -62,7 +57,7 @@ public class ProductDocument {
   List<String> productMedias;
 
   @Field(type = FieldType.Keyword)
-  String facilityId;
+  String ownerId;
 
   @Field(type = FieldType.Keyword)
   String primaryCategoryId;
@@ -97,12 +92,4 @@ public class ProductDocument {
   @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
   LocalDateTime updatedAt;
 
-  @Field(type = FieldType.Keyword)
-  String provinceCode;
-
-  @Field(type = FieldType.Keyword)
-  String wardCode;
-
-  @GeoPointField
-  GeoPoint location;
 }

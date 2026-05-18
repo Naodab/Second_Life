@@ -7,3 +7,4 @@ export * from "./location";
 export * from "./categories";
 export * from "./product";
 export * from "./listing";
+export * from "./inventory";

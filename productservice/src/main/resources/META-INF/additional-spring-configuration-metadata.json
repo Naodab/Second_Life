@@ -44,6 +44,11 @@
       "name": "default.page-size",
       "type": "java.lang.Integer",
       "description": "Default page size"
+    },
+    {
+      "name": "spring.kafka.topics.create-inventory-item",
+      "type": "java.lang.String",
+      "description": "Create inventory item topic"
     }
   ]
 }

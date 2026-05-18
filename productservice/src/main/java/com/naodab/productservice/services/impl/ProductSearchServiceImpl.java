@@ -125,11 +125,8 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(safeRequest.getPage());
     int normalizedPageSize = ElasticsearchNativeQueryHelper.normalizePageSize(safeRequest.getPageSize(),
         defaultPageSize);
-    boolean geoRadiusFilterEnabled = ElasticsearchNativeQueryHelper.hasGeoRadiusFilter(safeRequest.getLatitude(),
-        safeRequest.getLongitude(),
-        safeRequest.getRadiusMeters());
     Pageable pageable = PageRequest.of(normalizedPage, normalizedPageSize);
-    NativeQuery query = buildNativeQuery(safeRequest, pageable, geoRadiusFilterEnabled);
+    NativeQuery query = buildNativeQuery(safeRequest, pageable);
 
     SearchHits<ProductDocument> hits = elasticsearchOperations.search(query, ProductDocument.class, PRODUCT_INDEX);
     List<ProductDocument> products = hits.getSearchHits().stream().map(SearchHit::getContent).toList();
@@ -150,15 +147,15 @@ public class ProductSearchServiceImpl implements ProductSearchService {
   }
 
   @Override
-  public PagedItemsResponse<ProductItemResponse> listProductItemsForFacility(ProductSearchRequest request) {
+  public PagedItemsResponse<ProductItemResponse> listOwnedProductItems(ProductSearchRequest request) {
     ProductSearchRequest r = request == null ? ProductSearchRequest.builder().build() : request;
-    if (StringUtils.hasText(r.getFacilityId())) {
-      r.setFacilityId(r.getFacilityId().trim());
+    if (StringUtils.hasText(r.getOwnerId())) {
+      r.setOwnerId(r.getOwnerId().trim());
     }
     r.setKeyword(StringUtils.hasText(r.getKeyword()) ? r.getKeyword().trim() : null);
     r.setCategoryIds(emptyToNullNormalize(r.getCategoryIds()));
     r.setSubCategoryIds(emptyToNullNormalize(r.getSubCategoryIds()));
-    ElasticsearchSortBy sort = normalizeFacilityProductSort(r.getSortBy(), r.getKeyword());
+    ElasticsearchSortBy sort = normalizeOwnedProductSort(r.getSortBy(), r.getKeyword());
     r.setSortBy(sort);
     ProductDocumentsPage slice = fetchProductDocumentsPage(r);
     int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(r.getPage());
@@ -182,45 +179,37 @@ public class ProductSearchServiceImpl implements ProductSearchService {
 
   private NativeQuery buildNativeQuery(
       ProductSearchRequest request,
-      Pageable pageable,
-      boolean geoRadiusFilterEnabled) {
-    float lat = geoRadiusFilterEnabled ? request.getLatitude() : 0f;
-    float lon = geoRadiusFilterEnabled ? request.getLongitude() : 0f;
-    float radiusMeters = geoRadiusFilterEnabled ? request.getRadiusMeters() : 0f;
-
+      Pageable pageable) {
     return ElasticsearchNativeQueryHelper.buildPagedSearchQuery(
         pageable,
         request.getSortBy(),
-        geoRadiusFilterEnabled,
-        request.getLatitude(),
-        request.getLongitude(),
+        false,
+        null,
+        null,
         must -> ElasticsearchNativeQueryHelper.addKeywordMultiMatchMust(
             must,
             request.getKeyword(),
             TextQueryType.PhrasePrefix,
             ElasticsearchNativeQueryHelper.productKeywordSearchFields()),
         filter -> {
-          ElasticsearchNativeQueryHelper.addStandardLocationFilters(
-              filter, request.getFacilityId(), request.getProvinceCode(), request.getWardCode());
+          ElasticsearchNativeQueryHelper.addTermIfTextPresent(filter, "ownerId", request.getOwnerId());
           ElasticsearchNativeQueryHelper.addCategoryIdsMatchAllFilterIfPresent(
               filter, request.getCategoryIds());
           ElasticsearchNativeQueryHelper.addSubCategoryIdsMatchAllFilterIfPresent(
               filter, request.getSubCategoryIds());
           ElasticsearchNativeQueryHelper.addTermIfPresent(filter, "status", request.getStatus());
-          ElasticsearchNativeQueryHelper.addGeoDistanceFilterIfEnabled(
-              filter, geoRadiusFilterEnabled, lat, lon, radiusMeters);
         });
   }
 
   @Override
-  public List<PrimarySubcategorySummaryResponse> listPrimarySubcategorySummariesForFacility(String facilityId) {
-    String fid = facilityId == null ? "" : facilityId.trim();
-    if (!StringUtils.hasText(fid)) {
+  public List<PrimarySubcategorySummaryResponse> listOwnedPrimarySubcategorySummaries(String ownerId) {
+    String oid = ownerId == null ? "" : ownerId.trim();
+    if (!StringUtils.hasText(oid)) {
       return List.of();
     }
 
     List<Query> filters = new ArrayList<>();
-    ElasticsearchNativeQueryHelper.addStandardLocationFilters(filters, fid, null, null);
+    ElasticsearchNativeQueryHelper.addTermIfTextPresent(filters, "ownerId", oid);
     Query root = ElasticsearchNativeQueryHelper.boolMustFilterQuery(List.of(), filters);
 
     NativeQuery aggregationQuery = NativeQuery.builder()
@@ -282,7 +271,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     return out;
   }
 
-  private static ElasticsearchSortBy normalizeFacilityProductSort(
+  private static ElasticsearchSortBy normalizeOwnedProductSort(
       ElasticsearchSortBy requested, String keyword) {
     ElasticsearchSortBy s = requested == null ? ElasticsearchSortBy.UPDATED_AT_DESC : requested;
     if (s == ElasticsearchSortBy.RELEVANCE && !StringUtils.hasText(keyword)) {

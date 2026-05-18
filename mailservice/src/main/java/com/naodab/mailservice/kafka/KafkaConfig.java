@@ -60,7 +60,6 @@ public class KafkaConfig {
         deserializer);
   }
 
-  @SuppressWarnings("null")
   public <T> ConcurrentKafkaListenerContainerFactory<String, T> kafkaListenerContainerFactory(
       Class<T> type,
       String groupId) {

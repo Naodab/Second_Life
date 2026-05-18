@@ -31,15 +31,19 @@ export type GetFacilityProductPageParams = {
   sortBy?: FacilityProductSort | null;
 };
 
-export async function getFacilityProductPage(
-  facilityId: string,
-  params: GetFacilityProductPageParams = {},
+export type GetOwnedProductPageParams = GetFacilityProductPageParams & {
+  status?: ProductStatus | null;
+};
+
+export async function getOwnedProductPage(
+  params: GetOwnedProductPageParams = {},
 ): Promise<PagedItemsResponse<ProductItemResponse>> {
   const q = new URLSearchParams();
   if (params.page != null) q.set("page", String(params.page));
   if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
   if (params.keyword != null && params.keyword.trim()) q.set("keyword", params.keyword.trim());
   if (params.sortBy) q.set("sortBy", params.sortBy);
+  if (params.status) q.set("status", params.status);
   if (params.categoryIds?.length) {
     for (const id of params.categoryIds) {
       if (id?.trim()) q.append("categoryIds", id.trim());
@@ -51,19 +55,28 @@ export async function getFacilityProductPage(
     }
   }
   const qs = q.toString();
-  const path = `/api/v1/products/by-facility/${encodeURIComponent(facilityId)}${qs ? `?${qs}` : ""}`;
-  const raw = await customFetch<ApiResponseEnvelope<PagedItemsResponse<ProductItemResponse>>>(path, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
+  const raw = await customFetch<ApiResponseEnvelope<PagedItemsResponse<ProductItemResponse>>>(
+    `/api/v1/products/owned${qs ? `?${qs}` : ""}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
   return unwrapApiData(raw);
 }
 
+export async function getFacilityProductPage(
+  _facilityId: string,
+  params: GetFacilityProductPageParams = {},
+): Promise<PagedItemsResponse<ProductItemResponse>> {
+  return getOwnedProductPage(params);
+}
+
 export async function getFacilityPrimarySubcategories(
-  facilityId: string,
+  _facilityId: string,
 ): Promise<PrimarySubcategorySummary[]> {
   const raw = await customFetch<ApiResponseEnvelope<PrimarySubcategorySummary[]>>(
-    `/api/v1/products/by-facility/${encodeURIComponent(facilityId)}/primary-subcategories`,
+    `/api/v1/products/owned/primary-subcategories`,
     { method: "GET", headers: { "Content-Type": "application/json" } },
   );
   return unwrapApiData(raw);
@@ -72,11 +85,10 @@ export async function getFacilityPrimarySubcategories(
 export type ProductCreateBody = {
   name: string;
   description?: string;
-  facilityId: string;
   subCategoryIds: string[];
   primarySubCategoryId: string;
   attributeIds: string[];
-  variants: { quantity: number; attributeValueIds: string[] }[];
+  variants: { attributeValueIds: string[] }[];
 };
 
 export type ProductCreateResponse = {
@@ -90,7 +102,6 @@ export type ProductCreateResponse = {
 export type ProductVariantSummaryResponse = {
   id: string;
   sku?: string | null;
-  quantity?: number | null;
   label?: string | null;
   attributeValueIds?: string[] | null;
 };
@@ -115,7 +126,7 @@ export type OwnedProductDetailResponse = {
   description?: string | null;
   thumbnailUrl?: string | null;
   status?: ProductStatus;
-  facility?: { id: string; name?: string | null } | null;
+  ownerId?: string | null;
   primarySubCategory?: SellerCategoryRef | null;
   subCategories?: SellerCategoryRef[] | null;
   attributes?: { id: string; name?: string | null }[] | null;
@@ -131,14 +142,12 @@ export type UploadProductImagesBody = {
 
 export type ProductVariantUpdatePayload = {
   id?: string | null;
-  quantity: number;
   attributeValueIds: string[];
 };
 
 export type ProductUpdateBody = {
   name: string;
   description?: string | null;
-  facilityId: string;
   subCategoryIds: string[];
   primarySubCategoryId: string;
   attributeIds: string[];

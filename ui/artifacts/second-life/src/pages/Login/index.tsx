@@ -48,7 +48,7 @@ export default function Login() {
     params.delete("oauth_error");
     const qs = params.toString();
     const path = `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`;
-    // window.history.replaceState({}, "", path);
+    window.history.replaceState({}, "", path);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

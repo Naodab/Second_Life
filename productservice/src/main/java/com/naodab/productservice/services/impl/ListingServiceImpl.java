@@ -22,8 +22,11 @@ import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
+import com.naodab.productservice.dto.response.ProductResponse;
+import com.naodab.productservice.mapper.FacilityMapper;
 import com.naodab.productservice.mapper.ProductMapper;
 import com.naodab.productservice.mapper.ListingMapper;
+import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Listing;
 import com.naodab.productservice.models.ListingVariant;
 import com.naodab.productservice.elasticsearch.ElasticsearchSortBy;
@@ -36,8 +39,11 @@ import com.naodab.productservice.repositories.ListingVariantRepository;
 import com.naodab.productservice.repositories.ProductRepository;
 import com.naodab.productservice.repositories.ProductVariantRepository;
 import com.naodab.productservice.elasticsearch.ElasticsearchNativeQueryHelper;
+import com.naodab.productservice.kafka.CreateInventoryItemsEventProducer;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
+
+import org.hibernate.Hibernate;
 
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +67,8 @@ public class ListingServiceImpl implements ListingService {
   ListingSearchService listingSearchService;
   ListingMapper listingMapper;
   ProductMapper productMapper;
+  FacilityMapper facilityMapper;
+  CreateInventoryItemsEventProducer createInventoryItemsEventProducer;
 
   @Override
   @Transactional(readOnly = true)
@@ -68,8 +76,8 @@ public class ListingServiceImpl implements ListingService {
     if (!StringUtils.hasText(listingId)) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
-    Listing listing =
-        listingRepository.findWithProductGraphById(listingId.trim()).orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+    Listing listing = listingRepository.findWithProductGraphById(listingId.trim())
+        .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
     Product product = listing.getProduct();
     if (product == null || product.getDeletedAt() != null) {
       throw new AppException(ErrorCode.INVALID_INPUT);
@@ -81,12 +89,17 @@ public class ListingServiceImpl implements ListingService {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
     ProductDocumentGraphInitializer.initialize(product);
-    List<ListingVariant> listingVariants =
-        listingVariantRepository.findByListing_Id(listing.getId());
+    if (listing.getFacility() != null) {
+      Hibernate.initialize(listing.getFacility());
+    }
+    List<ListingVariant> listingVariants = listingVariantRepository.findByListing_Id(listing.getId());
+    ProductResponse productResp = productMapper.toProductResponse(
+        product, productMapper.collectDistinctAttributesFromProduct(product));
+    Facility listingFacility = listing.getFacility();
     return ListingPublicDetailResponse.builder()
         .listing(listingMapper.toListingResponse(listing, listingVariants))
-        .product(
-            productMapper.toProductResponse(product, productMapper.collectDistinctAttributesFromProduct(product)))
+        .product(productResp)
+        .facility(listingFacility == null ? null : facilityMapper.toFacilityResponse(listingFacility))
         .build();
   }
 
@@ -227,8 +240,11 @@ public class ListingServiceImpl implements ListingService {
   public ListingResponse createListing(String profileId, ListingCreateRequest request) {
     Product product = productRepository.findByIdAndDeletedAtIsNull(request.getProductId().trim())
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+    Facility facility = facilityRepository
+        .findByOwnerIdAndIdAndDeletedAtIsNull(profileId, request.getFacilityId().trim())
+        .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
 
-    if (product.getFacility() == null || !profileId.equals(product.getFacility().getOwnerId())) {
+    if (!profileId.equals(product.getOwnerId())) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
 
@@ -243,6 +259,7 @@ public class ListingServiceImpl implements ListingService {
 
     Listing listing = Listing.builder()
         .product(product)
+        .facility(facility)
         .title(request.getTitle().trim())
         .description(trimToNull(request.getDescription()))
         .listingType(listingType)
@@ -252,27 +269,32 @@ public class ListingServiceImpl implements ListingService {
 
     Listing saved = listingRepository.save(listing);
 
+    List<ListingVariant> persistedVariants = new ArrayList<>();
     if (request.getVariants() != null && !request.getVariants().isEmpty()) {
       for (ListingVariantCreateRequest variantReq : request.getVariants()) {
         ProductVariant pv = productVariantRepository
             .findByIdAndProduct_IdAndDeletedAtIsNull(
                 variantReq.getProductVariantId().trim(), product.getId())
             .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
-        listingVariantRepository.save(ListingVariant.builder()
+        ListingVariant persisted = listingVariantRepository.save(ListingVariant.builder()
             .listing(saved)
             .productVariant(pv)
+            .quantity(variantReq.getQuantity())
             .buyPrice(variantReq.getBuyPrice())
             .rentPrice(variantReq.getRentPrice())
             .rentUnit(variantReq.getRentUnit() != null ? variantReq.getRentUnit()
                 : ListingVariant.RentUnit.DAY)
             .isActive(variantReq.getIsActive() != null ? variantReq.getIsActive() : Boolean.TRUE)
             .build());
+        persistedVariants.add(persisted);
       }
     }
 
     listingRepository.flush();
     Listing indexed = listingRepository.findWithProductGraphById(saved.getId()).orElse(saved);
     listingSearchService.sync(indexed);
+
+    createInventoryItemsEventProducer.publishForNewListing(saved.getId(), listingType, persistedVariants);
 
     List<ListingVariant> variantEntities = listingVariantRepository.findByListing_Id(saved.getId());
     return listingMapper.toListingResponse(indexed, variantEntities);
@@ -285,17 +307,8 @@ public class ListingServiceImpl implements ListingService {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
-    boolean any = false;
-    if (request.getTitle() != null) {
-      any = true;
-    }
-    if (request.getDescription() != null) {
-      any = true;
-    }
-    if (request.getListingStatus() != null) {
-      any = true;
-    }
-    if (!any) {
+    if (request.getTitle() == null && request.getDescription() == null && request.getListingStatus() == null
+        && request.getFacilityId() == null) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
@@ -303,22 +316,25 @@ public class ListingServiceImpl implements ListingService {
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
 
     Product product = listing.getProduct();
-    if (product == null || product.getFacility() == null || !profileId.equals(product.getFacility().getOwnerId())) {
+    if (product == null || !profileId.equals(product.getOwnerId())) {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
-    if (product.getDeletedAt() != null) {
+    if (StringUtils.hasText(request.getFacilityId())) {
+      Facility facility = facilityRepository
+          .findByOwnerIdAndIdAndDeletedAtIsNull(profileId, request.getFacilityId().trim())
+          .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
+      listing.setFacility(facility);
+    }
+
+    String t = request.getTitle().trim();
+    if (product.getDeletedAt() != null || !StringUtils.hasText(t)) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
-    if (request.getTitle() != null) {
-      String t = request.getTitle().trim();
-      if (!StringUtils.hasText(t)) {
-        throw new AppException(ErrorCode.INVALID_INPUT);
-      }
-      listing.setTitle(t);
-    }
+    listing.setTitle(t);
     if (request.getDescription() != null) {
-      listing.setDescription(trimToNull(request.getDescription()));
+      String d = request.getDescription().trim();
+      listing.setDescription(StringUtils.hasText(d) ? d : null);
     }
     if (request.getListingStatus() != null) {
       listing.setListingStatus(request.getListingStatus());

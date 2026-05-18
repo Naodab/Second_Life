@@ -6,7 +6,13 @@ import { MOCK_ORDERS, type OrderStatus } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from "./constants";
 
-export function OrdersView({ facilityId }: { facilityId: string }) {
+export function OrdersView({
+  facilityId,
+  embedded,
+}: {
+  facilityId: string;
+  embedded?: boolean;
+}) {
   const [activeTab, setActiveTab] = useState<OrderStatus>("pending_approval");
   const allOrders = MOCK_ORDERS.filter((o) => o.facilityId === facilityId);
   const filtered = allOrders.filter((o) => o.status === activeTab);
@@ -20,10 +26,12 @@ export function OrdersView({ facilityId }: { facilityId: string }) {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold mb-1">Đơn hàng</h2>
-        <p className="text-sm text-muted-foreground">{allOrders.length} đơn hàng tổng cộng</p>
-      </div>
+      {!embedded && (
+        <div>
+          <h2 className="text-xl font-bold mb-1">Đơn hàng</h2>
+          <p className="text-sm text-muted-foreground">{allOrders.length} đơn hàng tổng cộng</p>
+        </div>
+      )}
 
       <div className="flex w-fit gap-1 rounded-xl bg-muted p-1">
         {tabs.map((t) => {

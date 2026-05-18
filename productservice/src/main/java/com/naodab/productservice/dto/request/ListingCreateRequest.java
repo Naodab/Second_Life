@@ -29,6 +29,9 @@ public class ListingCreateRequest {
   String productId;
 
   @NotBlank
+  String facilityId;
+
+  @NotBlank
   String title;
 
   @Size(max = 8096)

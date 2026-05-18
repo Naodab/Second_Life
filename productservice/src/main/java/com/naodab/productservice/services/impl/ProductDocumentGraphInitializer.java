@@ -16,17 +16,10 @@ final class ProductDocumentGraphInitializer {
     if (product == null) {
       return;
     }
-    initializeFacility(product);
     initializePrimarySubCategory(product);
     initializeProductSubCategories(product);
     initializeMedias(product);
     initializeVariants(product);
-  }
-
-  private static void initializeFacility(Product product) {
-    if (product.getFacility() != null) {
-      Hibernate.initialize(product.getFacility());
-    }
   }
 
   private static void initializePrimarySubCategory(Product product) {

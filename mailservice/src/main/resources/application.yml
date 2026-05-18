@@ -43,6 +43,9 @@ spring:
       email-verification: "mail.email-verification"
       forgot-password: "mail.forgot-password"
 
+external:
+  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}
+
 app:
   mail:
     from: ${MAIL_FROM:noreply@gmail.com}

@@ -75,7 +75,6 @@ public class MailService {
     sendHtml(event.getToEmail(), subject, htmlContent);
   }
 
-  @SuppressWarnings("null")
   private void sendHtml(String to, String subject, String htmlContent) {
     try {
       MimeMessage message = mailSender.createMimeMessage();
