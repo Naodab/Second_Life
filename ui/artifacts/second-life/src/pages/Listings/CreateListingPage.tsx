@@ -46,7 +46,6 @@ const PRODUCT_PICK_PAGE_SIZE = 200;
 const RENT_UNIT_OPTIONS: { value: RentUnit; label: string }[] = [
   { value: "HOUR", label: "Mỗi giờ" },
   { value: "DAY", label: "Mỗi ngày" },
-  { value: "WEEK", label: "Mỗi tuần" },
   { value: "MONTH", label: "Mỗi tháng" },
 ];
 

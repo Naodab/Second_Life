@@ -39,6 +39,7 @@ import com.naodab.productservice.repositories.ListingVariantRepository;
 import com.naodab.productservice.repositories.ProductRepository;
 import com.naodab.productservice.repositories.ProductVariantRepository;
 import com.naodab.productservice.elasticsearch.ElasticsearchNativeQueryHelper;
+import com.naodab.productservice.kafka.CreateInventoryItemsEventProducer;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
 
@@ -67,6 +68,7 @@ public class ListingServiceImpl implements ListingService {
   ListingMapper listingMapper;
   ProductMapper productMapper;
   FacilityMapper facilityMapper;
+  CreateInventoryItemsEventProducer createInventoryItemsEventProducer;
 
   @Override
   @Transactional(readOnly = true)
@@ -267,13 +269,14 @@ public class ListingServiceImpl implements ListingService {
 
     Listing saved = listingRepository.save(listing);
 
+    List<ListingVariant> persistedVariants = new ArrayList<>();
     if (request.getVariants() != null && !request.getVariants().isEmpty()) {
       for (ListingVariantCreateRequest variantReq : request.getVariants()) {
         ProductVariant pv = productVariantRepository
             .findByIdAndProduct_IdAndDeletedAtIsNull(
                 variantReq.getProductVariantId().trim(), product.getId())
             .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
-        listingVariantRepository.save(ListingVariant.builder()
+        ListingVariant persisted = listingVariantRepository.save(ListingVariant.builder()
             .listing(saved)
             .productVariant(pv)
             .quantity(variantReq.getQuantity())
@@ -283,12 +286,15 @@ public class ListingServiceImpl implements ListingService {
                 : ListingVariant.RentUnit.DAY)
             .isActive(variantReq.getIsActive() != null ? variantReq.getIsActive() : Boolean.TRUE)
             .build());
+        persistedVariants.add(persisted);
       }
     }
 
     listingRepository.flush();
     Listing indexed = listingRepository.findWithProductGraphById(saved.getId()).orElse(saved);
     listingSearchService.sync(indexed);
+
+    createInventoryItemsEventProducer.publishForNewListing(saved.getId(), listingType, persistedVariants);
 
     List<ListingVariant> variantEntities = listingVariantRepository.findByListing_Id(saved.getId());
     return listingMapper.toListingResponse(indexed, variantEntities);

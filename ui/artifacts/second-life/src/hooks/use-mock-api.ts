@@ -181,7 +181,6 @@ export function useCart() {
   return { cartItems, addToCart, removeFromCart, clearCart };
 }
 
-/* ── Checkout selection store ── */
 export interface CheckoutSelection {
   cartItemId: string;
   productId: string;

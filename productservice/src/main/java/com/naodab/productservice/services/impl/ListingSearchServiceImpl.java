@@ -120,6 +120,29 @@ public class ListingSearchServiceImpl implements ListingSearchService {
   }
 
   @Override
+  public long removeAllListingDocumentsFromIndex() {
+    long removed = 0L;
+    Pageable pageable = PageRequest.of(0, 500);
+    Page<String> idPage;
+    do {
+      idPage = listingRepository.findAllListingIds(pageable);
+      for (String id : idPage.getContent()) {
+        if (StringUtils.hasText(id)) {
+          try {
+            elasticsearchOperations.delete(id.trim(), LISTING_INDEX);
+            removed++;
+          } catch (Exception e) {
+            log.warn("Elasticsearch delete listing id={} failed: {}", id, e.getMessage());
+          }
+        }
+      }
+      pageable = idPage.nextPageable();
+    } while (idPage.hasNext());
+    log.info("Removed {} listing document(s) from Elasticsearch index", removed);
+    return removed;
+  }
+
+  @Override
   public ListingDocumentPage searchListingsPaged(ListingSearchRequest request) {
     ListingSearchRequest safeRequest = request == null ? ListingSearchRequest.builder().build() : request;
     int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(safeRequest.getPage());

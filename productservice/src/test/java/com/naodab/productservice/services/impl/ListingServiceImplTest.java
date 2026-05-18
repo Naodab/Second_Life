@@ -3,6 +3,8 @@ package com.naodab.productservice.services.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,6 +46,7 @@ import com.naodab.productservice.repositories.ListingVariantRepository;
 import com.naodab.productservice.repositories.ProductRepository;
 import com.naodab.productservice.repositories.ProductVariantRepository;
 import com.naodab.productservice.elasticsearch.ElasticsearchSortBy;
+import com.naodab.productservice.kafka.CreateInventoryItemsEventProducer;
 import com.naodab.productservice.services.ListingSearchService;
 
 @ExtendWith(MockitoExtension.class)
@@ -75,6 +78,9 @@ class ListingServiceImplTest {
 
   @Mock
   FacilityMapper facilityMapper;
+
+  @Mock
+  CreateInventoryItemsEventProducer createInventoryItemsEventProducer;
 
   @InjectMocks
   ListingServiceImpl listingService;
@@ -192,6 +198,7 @@ class ListingServiceImplTest {
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.UNAUTHORIZED);
     verify(listingRepository, never()).save(any());
+    verify(createInventoryItemsEventProducer, never()).publishForNewListing(any(), any(), anyList());
   }
 
   @Test
@@ -230,6 +237,13 @@ class ListingServiceImplTest {
     when(listingRepository.save(any(Listing.class))).thenReturn(savedListing);
     when(listingRepository.findWithProductGraphById("listing-1")).thenReturn(Optional.of(savedListing));
     when(listingVariantRepository.findByListing_Id("listing-1")).thenReturn(List.of());
+    when(listingVariantRepository.save(any(ListingVariant.class)))
+        .thenAnswer(
+            invocation -> {
+              ListingVariant lv = invocation.getArgument(0);
+              lv.setId("lv-created-1");
+              return lv;
+            });
     when(listingMapper.toListingResponse(savedListing, List.of())).thenReturn(mappedResponse);
 
     ListingResponse out = listingService.createListing("me", req);
@@ -238,6 +252,8 @@ class ListingServiceImplTest {
     verify(listingVariantRepository).save(variantCaptor.capture());
     assertThat(variantCaptor.getValue().getQuantity()).isEqualTo(7L);
     assertThat(out).isSameAs(mappedResponse);
+    verify(createInventoryItemsEventProducer)
+        .publishForNewListing(eq("listing-1"), eq(Listing.ListingType.BUY), anyList());
   }
 
   @Test

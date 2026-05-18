@@ -20,6 +20,8 @@ public interface ListingSearchService {
 
   void delete(String listingId);
 
+  long removeAllListingDocumentsFromIndex();
+
   ListingDocumentPage searchListingsPaged(ListingSearchRequest request);
 
   List<ListingDocument> searchListings(ListingSearchRequest request);

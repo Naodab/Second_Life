@@ -56,10 +56,10 @@ export function LocationPickerCombobox({
   const selected =
     valueKey.length > 0
       ? items.find(
-          (i) =>
-            String(i.code ?? "").trim() === valueKey ||
-            String(i.id ?? "").trim() === valueKey,
-        )
+        (i) =>
+          String(i.code ?? "").trim() === valueKey ||
+          String(i.id ?? "").trim() === valueKey,
+      )
       : undefined
 
   const handleOpenChange = (next: boolean) => {
@@ -75,10 +75,6 @@ export function LocationPickerCombobox({
 
   return (
     <Popover open={disabled ? false : open} onOpenChange={handleOpenChange} modal={false}>
-      {/*
-       * Use PopoverTrigger as the actual <button>: avoid Trigger asChild + <Button/>
-       * (Slot + composeRefs stacking with React 19 has been crashing with Maximum update depth).
-       */}
       <PopoverTrigger
         ref={triggerRef}
         type="button"

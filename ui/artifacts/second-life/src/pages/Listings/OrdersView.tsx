@@ -11,7 +11,6 @@ export function OrdersView({
   embedded,
 }: {
   facilityId: string;
-  /** Khi true, ẩn tiêu đề trang (dùng trong tab cơ sở). */
   embedded?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<OrderStatus>("pending_approval");

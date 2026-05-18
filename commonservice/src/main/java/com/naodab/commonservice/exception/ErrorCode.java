@@ -67,7 +67,19 @@ public enum ErrorCode {
       1052,
       "Cannot remove variants that appear on marketplace listings.",
       HttpStatus.BAD_REQUEST),
-  ;
+  INVENTORY_ITEM_ALREADY_EXISTS(1053, "Inventory item already exists", HttpStatus.BAD_REQUEST),
+  INVENTORY_ITEM_NOT_FOUND(1054, "Inventory item not found", HttpStatus.NOT_FOUND),
+  INVENTORY_ITEM_NOT_LINKED_TO_LISTING_VARIANT(1055, "Inventory item is not linked to listing variant",
+      HttpStatus.BAD_REQUEST),
+  INVENTORY_ITEM_NOT_LINKED_TO_LISTING(1056, "Inventory item is not linked to listing", HttpStatus.BAD_REQUEST),
+  INVENTORY_ITEM_NOT_LINKED_TO_PRODUCT(1057, "Inventory item is not linked to product", HttpStatus.BAD_REQUEST),
+  INVENTORY_ITEM_NOT_LINKED_TO_PRODUCT_VARIANT(1058, "Inventory item is not linked to product variant",
+      HttpStatus.BAD_REQUEST),
+  INVENTORY_ITEM_NOT_LINKED_TO_PRODUCT_VARIANT_ATTRIBUTE(1059,
+      "Inventory item is not linked to product variant attribute", HttpStatus.BAD_REQUEST),
+  INVENTORY_ITEM_NOT_LINKED_TO_PRODUCT_VARIANT_ATTRIBUTE_VALUE(1060,
+      "Inventory item is not linked to product variant attribute value", HttpStatus.BAD_REQUEST),
+  INSUFFICIENT_INVENTORY(1061, "Insufficient inventory for requested quantity", HttpStatus.CONFLICT);
 
   private int code;
   private String message;

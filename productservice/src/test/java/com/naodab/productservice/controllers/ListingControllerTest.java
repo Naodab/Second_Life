@@ -30,6 +30,7 @@ import com.naodab.commonservice.exception.GlobalExceptionHandler;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
+import com.naodab.productservice.dto.response.AdminListingPurgeResponse;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
@@ -38,6 +39,7 @@ import com.naodab.productservice.dto.response.ProductResponse;
 import com.naodab.productservice.models.Listing.ListingStatus;
 import com.naodab.productservice.models.Listing.ListingType;
 import com.naodab.productservice.models.Product.ProductStatus;
+import com.naodab.productservice.services.ListingAdminPurgeService;
 import com.naodab.productservice.services.ListingRecommendationService;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
@@ -65,6 +67,9 @@ class ListingControllerTest {
 
   @MockitoBean
   ListingRecommendationService listingRecommendationService;
+
+  @MockitoBean
+  ListingAdminPurgeService listingAdminPurgeService;
 
   @Test
   void getPublicListingById_delegates() throws Exception {
@@ -219,6 +224,36 @@ class ListingControllerTest {
         .andExpect(status().isBadRequest());
 
     verify(listingService, never()).createListing(any(), any());
+  }
+
+  @Test
+  void purgeAllListings_requiresAdmin() throws Exception {
+    mockMvc.perform(post("/listings/admin/purge-all")
+        .header(AppConstants.JWT_CLAIM_ROLE, "USER"))
+        .andExpect(status().isForbidden());
+    verify(listingAdminPurgeService, never()).purgeAllListingsAndSearchIndexAndRemoteInventory(any());
+  }
+
+  @Test
+  void purgeAllListings_adminOk() throws Exception {
+    when(listingAdminPurgeService.purgeAllListingsAndSearchIndexAndRemoteInventory(AppConstants.ROLE_ADMIN))
+        .thenReturn(
+            AdminListingPurgeResponse.builder()
+                .listingRowsRemoved(2)
+                .listingVariantRowsRemoved(3)
+                .listingSearchDocumentsRemoved(2)
+                .inventoryReservationsRemoved(1L)
+                .inventoryItemsRemoved(2L)
+                .inventoryServiceInvoked(true)
+                .build());
+
+    mockMvc.perform(post("/listings/admin/purge-all")
+        .header(AppConstants.JWT_CLAIM_ROLE, AppConstants.ROLE_ADMIN))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.listingRowsRemoved").value(2))
+        .andExpect(jsonPath("$.data.inventoryServiceInvoked").value(true));
+
+    verify(listingAdminPurgeService).purgeAllListingsAndSearchIndexAndRemoteInventory(AppConstants.ROLE_ADMIN);
   }
 
   @Test

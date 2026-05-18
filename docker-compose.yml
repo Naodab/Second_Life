@@ -11,6 +11,13 @@ services:
       - "9200:9200"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -sf http://127.0.0.1:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
     networks:
       - second_life_network
 
@@ -23,7 +30,8 @@ services:
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - second_life_network
 
@@ -109,6 +117,8 @@ services:
         condition: service_healthy
       product-service:
         condition: service_healthy
+      inventory-service:
+        condition: service_healthy
     networks:
       - second_life_network
 
@@ -124,6 +134,7 @@ services:
       - "${SERVER_PORT_AUTH_SERVICE:-8081}:8081"
     environment:
       SERVER_PORT_AUTH_SERVICE: "8081"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     env_file:
       - .env
     depends_on:
@@ -157,6 +168,7 @@ services:
       - "${SERVER_PORT_MAIL_SERVICE:-8083}:8083"
     environment:
       SERVER_PORT_MAIL_SERVICE: "8083"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     env_file:
       - .env
     depends_on:
@@ -187,6 +199,7 @@ services:
       - "${SERVER_PORT_PROFILE_SERVICE:-8082}:8082"
     environment:
       SERVER_PORT_PROFILE_SERVICE: "8082"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     env_file:
       - .env
     depends_on:
@@ -249,18 +262,50 @@ services:
     environment:
       SERVER_PORT_PRODUCT_SERVICE: "8086"
       ELASTICSEARCH_URIS: "http://elasticsearch:9200"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     env_file:
       - .env
     depends_on:
       kafka:
         condition: service_healthy
       elasticsearch:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test:
         [
           "CMD-SHELL",
           "curl -sf http://127.0.0.1:8086/api/v1/v3/api-docs -o /dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    networks:
+      - second_life_network
+    labels:
+      - "traefik.enable=true"
+
+  inventory-service:
+    image: inventory-service:latest
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: inventoryservice/Dockerfile
+    ports:
+      - "${SERVER_PORT_INVENTORY_SERVICE:-8087}:8087"
+    environment:
+      SERVER_PORT_INVENTORY_SERVICE: "8087"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    env_file:
+      - .env
+    depends_on:
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://127.0.0.1:8087/api/v1/v3/api-docs -o /dev/null || exit 1",
         ]
       interval: 10s
       timeout: 5s
