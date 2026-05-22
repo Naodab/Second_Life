@@ -72,11 +72,10 @@ function Router() {
     location === "/email-verified" ||
     location === "/profile/setup" ||
     location.startsWith("/oauth2/callback/");
-
   return (
     <div className="min-h-screen flex flex-col">
       {!isAuthPage && !isSellerHub && <Header />}
-      <main className="flex-1">
+      <main className="flex flex-1 flex-col">
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/search" component={Search} />

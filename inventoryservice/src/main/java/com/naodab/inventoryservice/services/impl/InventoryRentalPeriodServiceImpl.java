@@ -1,5 +1,6 @@
 package com.naodab.inventoryservice.services.impl;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -36,7 +37,7 @@ public class InventoryRentalPeriodServiceImpl implements InventoryRentalPeriodSe
 
     return inventoryReservationRepository
         .findRentalPeriodsByListingVariant(
-            listingVariantId, InventoryItem.InventoryMode.RENT, BOOKED_STATUSES)
+            listingVariantId, InventoryItem.InventoryMode.RENT, BOOKED_STATUSES, LocalDateTime.now())
         .stream()
         .map(this::toResponse)
         .toList();

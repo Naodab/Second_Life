@@ -19,6 +19,8 @@ public interface ListingService {
 
   ListingPublicDetailResponse getPublicListingById(String listingId);
 
+  void assertListingVariantOnListing(String listingId, String listingVariantId);
+
   PagedItemsResponse<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request);
 
   List<ListingSuggestionResponse> suggestSearch(String keyword, Integer limit);

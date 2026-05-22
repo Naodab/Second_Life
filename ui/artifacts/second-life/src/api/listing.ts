@@ -294,9 +294,16 @@ export type ListingPublicDetailResponse = {
   facility?: FacilityOverviewDto | null;
 };
 
-export async function fetchListingPublicDetail(listingId: string): Promise<ListingPublicDetailResponse> {
+export async function fetchListingPublicDetail(
+  listingId: string,
+  options?: { listingVariantId?: string },
+): Promise<ListingPublicDetailResponse> {
+  const q = new URLSearchParams();
+  const variantId = options?.listingVariantId?.trim();
+  if (variantId) q.set("listingVariantId", variantId);
+  const qs = q.toString();
   const raw = await customFetch<ApiResponseEnvelope<ListingPublicDetailResponse>>(
-    `/api/v1/listings/${encodeURIComponent(listingId.trim())}`,
+    `/api/v1/listings/${encodeURIComponent(listingId.trim())}${qs ? `?${qs}` : ""}`,
     {
       method: "GET",
       headers: { "Content-Type": "application/json" },

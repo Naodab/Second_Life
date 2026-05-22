@@ -88,27 +88,27 @@ services:
   #         ignore:
   #           - "**/target/**"
 
-  product-service:
-    environment:
-      SPRING_PROFILES_ACTIVE: dev
-    develop:
-      watch:
-        - action: rebuild
-          path: ./pom.xml
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./commonjpa
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./commonservice
-          ignore:
-            - "**/target/**"
-        - action: rebuild
-          path: ./productservice
-          ignore:
-            - "**/target/**"
+  # product-service:
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: dev
+  #   develop:
+  #     watch:
+  #       - action: rebuild
+  #         path: ./pom.xml
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./commonjpa
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./commonservice
+  #         ignore:
+  #           - "**/target/**"
+  #       - action: rebuild
+  #         path: ./productservice
+  #         ignore:
+  #           - "**/target/**"
 
   inventory-service:
     environment:
@@ -121,6 +121,28 @@ services:
             - "**/target/**"
         - action: rebuild
           path: ./commonservice
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./inventoryservice
+          ignore:
+            - "**/target/**"
+
+  booking-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    develop:
+      watch:
+        - action: rebuild
+          path: ./pom.xml
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./commonservice
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./bookingservice
           ignore:
             - "**/target/**"
         - action: rebuild

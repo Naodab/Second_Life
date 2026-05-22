@@ -104,6 +104,18 @@ public class ListingServiceImpl implements ListingService {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public void assertListingVariantOnListing(String listingId, String listingVariantId) {
+    if (!StringUtils.hasText(listingId) || !StringUtils.hasText(listingVariantId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    if (!listingVariantRepository.existsByIdAndListing_Id(
+        listingVariantId.trim(), listingId.trim())) {
+      throw new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND);
+    }
+  }
+
+  @Override
   public PagedItemsResponse<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request) {
     ListingSearchRequest r = request == null ? ListingSearchRequest.builder().build() : request;
     if (!StringUtils.hasText(r.getKeyword())) {

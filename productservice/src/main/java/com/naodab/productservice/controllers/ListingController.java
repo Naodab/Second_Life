@@ -123,7 +123,12 @@ public class ListingController {
   }
 
   @GetMapping("/{id}")
-  public ResponseEntity<ApiResponse<ListingPublicDetailResponse>> getPublicListingById(@PathVariable String id) {
+  public ResponseEntity<ApiResponse<ListingPublicDetailResponse>> getPublicListingById(
+      @PathVariable String id,
+      @RequestParam(name = "listingVariantId", required = false) String listingVariantId) {
+    if (listingVariantId != null && !listingVariantId.isBlank()) {
+      listingService.assertListingVariantOnListing(id, listingVariantId);
+    }
     return ResponseEntity.ok(ApiResponse.<ListingPublicDetailResponse>builder()
         .data(listingService.getPublicListingById(id))
         .build());

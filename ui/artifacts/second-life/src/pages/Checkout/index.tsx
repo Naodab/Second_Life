@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   ShieldCheck,
@@ -18,44 +18,33 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, cn } from "@/lib/utils";
-import { useCart, getPendingCheckout, clearPendingCheckout, type CheckoutSelection } from "@/hooks/use-mock-api";
-import { MOCK_FACILITIES } from "@/lib/mock-data";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { PayOSScreen } from "./PayOSScreen";
 import { SuccessScreen } from "./SuccessScreen";
-import { groupByFacility, itemTotal, itemDays } from "./checkout-utils";
+import { ApiErrorState } from "@/components/errors";
+import { useCheckoutPage } from "./useCheckoutPage";
+import {
+  groupByFacility,
+  itemTotal,
+  itemDays,
+  facilityDisplayName,
+  checkoutSectionClass,
+  checkoutSectionShellClass,
+  checkoutHighlightClass,
+  checkoutAlertClass,
+  checkoutDepositTextClass,
+  checkoutRentAccentClass,
+  checkoutPrimaryTextClass,
+} from "./checkout-utils";
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
-  const { cartItems, clearCart } = useCart();
+  const { items, isLoading, isError, errorView, clearSession, refetch } = useCheckoutPage();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPayOS, setShowPayOS] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [expandedFacilities, setExpandedFacilities] = useState<Record<string, boolean>>({});
-
-  const [items, setItems] = useState<CheckoutSelection[]>(() => {
-    const pending = getPendingCheckout();
-    if (pending.length > 0) return pending;
-    return cartItems.map((ci) => ({
-      cartItemId: ci.cartItemId,
-      productId: ci.productId,
-      name: ci.name,
-      images: ci.images,
-      facilityId: ci.facilityId,
-      buyPrice: ci.buyPrice,
-      rentPrice: ci.rentPrice,
-      mode: (ci.rentalDates ? "rent" : "buy") as "buy" | "rent",
-      quantity: ci.quantity,
-      rentalDates: ci.rentalDates,
-    }));
-  });
-
-  useEffect(() => {
-    if (items.length === 0 && !isSuccess && !showPayOS) {
-      setLocation("/cart");
-    }
-  }, [items, isSuccess, showPayOS, setLocation]);
 
   const facilityGroups = groupByFacility(items);
   const subOrderCount = facilityGroups.size;
@@ -76,11 +65,17 @@ export default function Checkout() {
   };
 
   const handlePayOSSuccess = () => {
-    clearCart();
-    clearPendingCheckout();
-    setItems([]);
+    clearSession();
     setShowPayOS(false);
     setIsSuccess(true);
+  };
+
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    setLocation("/");
   };
 
   if (isSuccess) return <SuccessScreen subOrderCount={subOrderCount} />;
@@ -89,25 +84,48 @@ export default function Checkout() {
   const toggleFacility = (facilityId: string) =>
     setExpandedFacilities((prev) => ({ ...prev, [facilityId]: prev[facilityId] === false ? true : false }));
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30 pt-6 pb-24 dark:to-muted/15">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[50vh] gap-4 text-muted-foreground">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm">Đang tải thông tin đơn hàng...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError && errorView) {
+    return (
+      <ApiErrorState
+        variant="fullscreen"
+        model={errorView}
+        onBack={handleGoBack}
+        onRetry={refetch}
+        homeHref="/"
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50/40 pt-6 pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30 pt-6 pb-24 dark:to-muted/15">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <button
           type="button"
-          onClick={() => setLocation("/cart")}
+          onClick={handleGoBack}
           className="flex items-center gap-2 text-muted-foreground hover:text-primary mb-6 transition-colors text-sm"
         >
-          <ArrowLeft className="w-4 h-4" /> Quay lại giỏ hàng
+          <ArrowLeft className="w-4 h-4" /> Trở lại
         </button>
 
         <h1 className="text-3xl font-display font-bold mb-8">Thanh toán</h1>
 
         {subOrderCount > 1 && (
-          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-sm">
-            <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className={cn(checkoutAlertClass, "flex items-start gap-3 p-4 mb-6")}>
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-amber-800">Đơn từ nhiều cơ sở</p>
-              <p className="text-amber-700 mt-0.5">
+              <p className="font-semibold">Đơn từ nhiều cơ sở</p>
+              <p className="mt-0.5 opacity-90">
                 Sản phẩm từ <strong>{subOrderCount} cơ sở</strong> khác nhau — hệ thống sẽ tách thành{" "}
                 <strong>{subOrderCount} đơn hàng riêng</strong>.
               </p>
@@ -117,47 +135,51 @@ export default function Checkout() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-3xl border p-6 shadow-sm">
+            <div className={checkoutSectionClass}>
               <div className="flex items-center gap-2 mb-4">
                 <MapPin className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-lg">Địa chỉ giao hàng</h3>
+                <h3 className="font-bold text-lg text-foreground">Địa chỉ giao hàng</h3>
               </div>
-              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
-                <p className="font-semibold">Nguyễn Văn A</p>
+              <div className={checkoutHighlightClass}>
+                <p className="font-semibold text-foreground">Nguyễn Văn A</p>
                 <p className="text-sm text-muted-foreground mt-1">+84 90 123 4567</p>
                 <p className="text-sm text-muted-foreground mt-0.5">123 Đường ABC, Phường 1, Quận 1, TP. Hồ Chí Minh</p>
               </div>
             </div>
 
             {Array.from(facilityGroups.entries()).map(([facilityId, facilityItems], idx) => {
-              const facility = MOCK_FACILITIES.find((f) => f.id === facilityId);
               const facilitySubtotal = facilityItems.reduce((s, i) => s + itemTotal(i), 0);
               const isExpanded = expandedFacilities[facilityId] !== false;
 
               return (
-                <div key={facilityId} className="bg-white rounded-3xl border shadow-sm overflow-hidden">
+                <div key={facilityId} className={checkoutSectionShellClass}>
                   <div
                     role="button"
                     tabIndex={0}
-                    className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50/60 transition-colors"
+                    className="flex items-center justify-between p-5 cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => toggleFacility(facilityId)}
                     onKeyDown={(e) => e.key === "Enter" && toggleFacility(facilityId)}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center flex-shrink-0">
                         <Store className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-bold text-sm">{facility?.name ?? facilityId}</p>
+                        <p className="font-bold text-sm text-foreground">{facilityDisplayName(facilityItems[0])}</p>
                         {subOrderCount > 1 && (
-                          <Badge variant="outline" className="text-[10px] px-2 py-0 mt-0.5 font-medium text-primary border-primary/30">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-2 py-0 mt-0.5 font-medium text-primary border-primary/30 dark:border-primary/50 dark:bg-primary/10"
+                          >
                             Đơn #{idx + 1}
                           </Badge>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-primary">{formatCurrency(facilitySubtotal)}</span>
+                      <span className={cn("text-sm font-semibold", checkoutPrimaryTextClass)}>
+                        {formatCurrency(facilitySubtotal)}
+                      </span>
                       {isExpanded ? (
                         <ChevronUp className="w-4 h-4 text-muted-foreground" />
                       ) : (
@@ -167,19 +189,19 @@ export default function Checkout() {
                   </div>
 
                   {isExpanded && (
-                    <div className="px-5 pb-5 border-t divide-y">
+                    <div className="px-5 pb-5 border-t border-border divide-y divide-border">
                       {facilityItems.map((item) => {
                         const days = itemDays(item);
                         const price = itemTotal(item);
                         return (
-                          <div key={item.cartItemId} className="py-4 flex gap-4">
-                            <img src={item.images[0]} className="w-16 h-16 rounded-xl object-cover border flex-shrink-0" alt={item.name} />
+                          <div key={item.lineId} className="py-4 flex gap-4">
+                            <img src={item.images[0]} className="w-16 h-16 rounded-xl object-cover border border-border flex-shrink-0" alt={item.name} />
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-sm line-clamp-1">{item.name}</h4>
+                              <h4 className="font-semibold text-sm text-foreground line-clamp-1">{item.name}</h4>
                               {item.mode === "rent" && item.rentalDates ? (
                                 <div className="flex items-center gap-1 mt-1">
-                                  <Clock className="w-3 h-3 text-secondary flex-shrink-0" />
-                                  <p className="text-xs text-secondary font-medium">
+                                  <Clock className={cn("w-3 h-3 flex-shrink-0", checkoutRentAccentClass)} />
+                                  <p className={cn("text-xs font-medium", checkoutRentAccentClass)}>
                                     Thuê {days} ngày ({format(item.rentalDates.start, "dd/MM", { locale: vi })} –{" "}
                                     {format(item.rentalDates.end, "dd/MM/yyyy", { locale: vi })})
                                   </p>
@@ -187,10 +209,15 @@ export default function Checkout() {
                               ) : (
                                 <div className="flex items-center gap-1 mt-1">
                                   <Tag className="w-3 h-3 text-primary flex-shrink-0" />
-                                  <p className="text-xs text-primary font-medium">Mua đứt</p>
+                                  <p className={cn("text-xs font-medium", checkoutPrimaryTextClass)}>Mua đứt</p>
                                 </div>
                               )}
                               <p className="text-xs text-muted-foreground mt-0.5">Số lượng: {item.quantity}</p>
+                              {item.mode === "buy" && item.unitPrice > 0 && (
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  {formatCurrency(item.unitPrice)} × {item.quantity} sp
+                                </p>
+                              )}
                               {item.mode === "rent" && days > 0 && (
                                 <p className="text-[11px] text-muted-foreground mt-0.5">
                                   {formatCurrency(item.rentPrice)}/ngày × {days} ngày × {item.quantity} sp
@@ -198,7 +225,7 @@ export default function Checkout() {
                               )}
                             </div>
                             <div className="text-right flex-shrink-0">
-                              <p className="font-semibold text-sm">{formatCurrency(price)}</p>
+                              <p className="font-semibold text-sm text-foreground">{formatCurrency(price)}</p>
                               {item.mode === "rent" && <p className="text-[10px] text-muted-foreground mt-1">+cọc 30%</p>}
                             </div>
                           </div>
@@ -211,12 +238,12 @@ export default function Checkout() {
             })}
 
             {hasRentals && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+              <div className={cn(checkoutAlertClass, "p-5")}>
                 <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-bold text-amber-800 mb-1">Chính sách đặt cọc thuê đồ</p>
-                    <ul className="text-sm text-amber-700 space-y-1 leading-relaxed">
+                    <p className="font-bold mb-1">Chính sách đặt cọc thuê đồ</p>
+                    <ul className="text-sm space-y-1 leading-relaxed opacity-90">
                       <li>• Khi thuê đồ, bạn cần <strong>đặt cọc trước 30%</strong> tổng giá trị thuê.</li>
                       <li>• Phần còn lại (<strong>70%</strong>) được thanh toán khi nhận hàng.</li>
                       <li>• Tiền cọc được hoàn trả sau khi trả đồ trong tình trạng tốt.</li>
@@ -227,19 +254,19 @@ export default function Checkout() {
               </div>
             )}
 
-            <div className="bg-white rounded-3xl border p-6 shadow-sm">
+            <div className={checkoutSectionClass}>
               <div className="flex items-center gap-2 mb-4">
                 <CreditCard className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-lg">Phương thức thanh toán</h3>
+                <h3 className="font-bold text-lg text-foreground">Phương thức thanh toán</h3>
               </div>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-primary bg-primary/5">
+                <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-primary bg-primary/5 dark:border-primary/50 dark:bg-primary/20">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-[#0e3a6c] rounded-xl flex items-center justify-center flex-shrink-0">
                       <span className="text-white font-bold text-[9px] tracking-wider">PayOS</span>
                     </div>
                     <div>
-                      <p className="font-semibold text-primary text-sm">PayOS — Chuyển khoản / QR Code</p>
+                      <p className={cn("font-semibold text-sm", checkoutPrimaryTextClass)}>PayOS — Chuyển khoản / QR Code</p>
                       <p className="text-xs text-muted-foreground">Hỗ trợ tất cả ngân hàng nội địa</p>
                     </div>
                   </div>
@@ -247,49 +274,49 @@ export default function Checkout() {
                 </div>
                 <div
                   className={cn(
-                    "flex items-center justify-between p-4 rounded-2xl border cursor-not-allowed opacity-50",
+                    "flex items-center justify-between p-4 rounded-2xl border border-border bg-muted/30 cursor-not-allowed opacity-50 dark:bg-muted/40",
                     hasRentals && "opacity-30"
                   )}
                 >
                   <div className="flex items-center gap-3">
                     <ShieldCheck className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="font-medium text-sm">Thanh toán khi nhận hàng (COD)</p>
+                      <p className="font-medium text-sm text-foreground">Thanh toán khi nhận hàng (COD)</p>
                       {hasRentals && <p className="text-xs text-destructive">Không áp dụng cho đơn thuê đồ</p>}
                     </div>
                   </div>
-                  <div className="w-5 h-5 rounded-full border border-gray-300 flex-shrink-0" />
+                  <div className="w-5 h-5 rounded-full border border-border flex-shrink-0" />
                 </div>
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl border p-6 shadow-sm sticky top-28">
-              <h3 className="font-bold text-lg mb-5">Tóm tắt</h3>
+            <div className={cn(checkoutSectionClass, "sticky top-28")}>
+              <h3 className="font-bold text-lg text-foreground mb-5">Tóm tắt</h3>
 
-              <div className="space-y-3 text-sm mb-5 pb-5 border-b">
+              <div className="space-y-3 text-sm mb-5 pb-5 border-b border-border">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tạm tính ({items.length} lượt)</span>
-                  <span className="font-medium">{formatCurrency(subtotal)}</span>
+                  <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
                     Phí vận chuyển{subOrderCount > 1 ? ` (×${subOrderCount})` : ""}
                   </span>
-                  <span className="font-medium">{formatCurrency(shipping)}</span>
+                  <span className="font-medium text-foreground">{formatCurrency(shipping)}</span>
                 </div>
                 {hasRentals && (
-                  <div className="flex justify-between pt-2 border-t border-dashed border-amber-200">
-                    <span className="text-amber-700 font-medium">Đặt cọc thuê (30%)</span>
-                    <span className="font-semibold text-amber-700">{formatCurrency(deposit)}</span>
+                  <div className="flex justify-between pt-2 border-t border-dashed border-amber-200 dark:border-amber-500/35">
+                    <span className={checkoutDepositTextClass}>Đặt cọc thuê (30%)</span>
+                    <span className={cn(checkoutDepositTextClass, "font-semibold")}>{formatCurrency(deposit)}</span>
                   </div>
                 )}
               </div>
 
               <div className="flex justify-between items-baseline mb-1">
-                <span className="font-bold text-base">Tổng cộng</span>
-                <span className="font-bold text-2xl text-primary">{formatCurrency(grandTotal)}</span>
+                <span className="font-bold text-base text-foreground">Tổng cộng</span>
+                <span className={cn("font-bold text-2xl", checkoutPrimaryTextClass)}>{formatCurrency(grandTotal)}</span>
               </div>
               {hasRentals && (
                 <p className="text-[11px] text-muted-foreground mb-5 text-right">Gồm {formatCurrency(deposit)} tiền cọc</p>
@@ -298,7 +325,7 @@ export default function Checkout() {
 
               <Button
                 size="lg"
-                className="w-full rounded-full h-12 text-base font-semibold shadow-lg shadow-primary/20"
+                className="w-full rounded-full h-12 text-base font-semibold shadow-lg shadow-primary/20 dark:shadow-primary/10"
                 onClick={handlePayOSRedirect}
                 disabled={isProcessing}
               >
@@ -316,7 +343,7 @@ export default function Checkout() {
               </p>
 
               {subOrderCount > 1 && (
-                <p className="text-xs text-muted-foreground text-center mt-4 pt-4 border-t">
+                <p className="text-xs text-muted-foreground text-center mt-4 pt-4 border-t border-border">
                   Tách thành <strong>{subOrderCount} đơn hàng</strong> riêng
                 </p>
               )}

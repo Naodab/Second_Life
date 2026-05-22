@@ -14,7 +14,6 @@ type Props = {
 type AxisRow = {
   key: string;
   name: string;
-  /** Cố định độ dài = maxCols; ô thừa là null */
   slots: ({ id: string; display: string } | null)[];
 };
 

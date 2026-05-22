@@ -11,4 +11,6 @@ public interface ListingVariantRepository extends JpaRepository<ListingVariant, 
   List<ListingVariant> findByListing_Id(String listingId);
 
   boolean existsByProductVariantId(String productVariantId);
+
+  boolean existsByIdAndListing_Id(String id, String listingId);
 }
