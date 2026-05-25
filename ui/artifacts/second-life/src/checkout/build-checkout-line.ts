@@ -1,3 +1,4 @@
+import type { FacilityResponse } from "@/api/facility";
 import type { ListingPublicDetailResponse } from "@/api/listing";
 import { collectImageUrls } from "@/pages/ListingDetail/listing-detail-utils";
 import { lineBuyUnitPrice, lineRentUnitPrice, productVariantStock } from "@/pages/ListingDetail/listing-variant-selection";
@@ -11,11 +12,17 @@ export type CheckoutLineItem = {
   name: string;
   images: string[];
   facilityId: string;
+  facilityOwnerId: string;
+  ownerDisplayName: string;
+  ownerEmail: string;
+  ownerPhone: string;
   facilityName: string;
   facilityImageUrl: string;
-  facilityOwnerId: string;
-  facilityOwnerName: string;
-  facilityOwnerAvatarUrl: string | null;
+  facilityAddress: string;
+  facilityProvinceCode: string;
+  facilityWardCode: string;
+  facilityProvinceName: string;
+  facilityWardName: string;
   mode: "buy" | "rent";
   quantity: number;
   unitPrice: number;
@@ -27,15 +34,28 @@ export type CheckoutLineItem = {
   inventoryTracked: boolean;
 };
 
+function resolveFacility(
+  detail: ListingPublicDetailResponse,
+  facilityOverride?: FacilityResponse | null,
+): FacilityResponse | null {
+  const fromListing = detail.facility as FacilityResponse | null | undefined;
+  const base = facilityOverride ?? fromListing;
+  if (!base?.id?.trim()) return null;
+  const ownerId = base.ownerId?.trim() || detail.product?.ownerId?.trim() || "";
+  return { ...base, ownerId };
+}
+
 export function buildCheckoutLineItem(
   input: CheckoutLineInput,
   detail: ListingPublicDetailResponse,
   availability: { tracked: boolean; availableQuantity: number | null },
+  facilityOverride?: FacilityResponse | null,
 ): CheckoutLineItem | null {
   const row = findListingVariantRow(detail, input.listingVariantId);
   if (!row) return null;
 
-  const { listing, product, facility } = detail;
+  const { listing, product } = detail;
+  const facility = resolveFacility(detail, facilityOverride);
   const label = row.pv?.label?.trim();
   const baseTitle = listing.title?.trim() || product.name?.trim() || "Sản phẩm";
   const name = label ? `${baseTitle} (${label})` : baseTitle;
@@ -61,11 +81,17 @@ export function buildCheckoutLineItem(
     name,
     images: images.length > 0 ? images : ["https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop"],
     facilityId: facility?.id?.trim() ?? "",
+    facilityOwnerId: facility?.ownerId?.trim() ?? "",
+    ownerDisplayName: "",
+    ownerEmail: facility?.email?.trim() ?? "",
+    ownerPhone: facility?.phoneNumber?.trim() ?? "",
     facilityName: facility?.name?.trim() ?? "",
     facilityImageUrl: facility?.imageUrl?.trim() ?? "",
-    facilityOwnerId: facility?.ownerId?.trim() ?? "",
-    facilityOwnerName: "",
-    facilityOwnerAvatarUrl: null,
+    facilityAddress: facility?.address?.trim() ?? "",
+    facilityProvinceCode: facility?.provinceCode?.trim() ?? "",
+    facilityWardCode: facility?.wardCode?.trim() ?? "",
+    facilityProvinceName: "",
+    facilityWardName: "",
     mode: input.mode,
     quantity: input.quantity,
     unitPrice,

@@ -11,6 +11,7 @@ import { VisitorLocationProvider } from "@/context/VisitorLocationContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { SellerHubProfileGate } from "@/components/SellerHubProfileGate";
 import { setBaseUrl } from "@workspace/api-client-react";
 
 import Home from "@/pages/Home";
@@ -112,6 +113,7 @@ function App() {
             <AuthProvider>
               <VisitorLocationProvider>
                 <ProfileSetupRedirect />
+                <SellerHubProfileGate />
                 <Router />
                 <Toaster />
               </VisitorLocationProvider>

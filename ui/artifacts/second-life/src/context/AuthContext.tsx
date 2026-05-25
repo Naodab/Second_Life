@@ -8,6 +8,7 @@ import {
   refreshToken as apiRefreshToken,
   getCurrentProfile,
   getProfileById,
+  profileIsCompleteForSellerHub,
   profileNeedsSetup,
   type ProfilePayload,
 } from "@/api";
@@ -66,6 +67,7 @@ interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
   needsProfileSetup: boolean;
+  sellerHubProfileComplete: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   loginWithGoogle: (accessToken: string, refreshToken: string) => Promise<boolean>;
   logout: () => void;
@@ -107,6 +109,7 @@ async function loadProfileForAccessToken(accessToken: string): Promise<ProfilePa
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+  const [sellerHubProfileComplete, setSellerHubProfileComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -116,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const applyProfile = useCallback((profile: ProfilePayload) => {
     setUser(userFromProfile(profile));
     setNeedsProfileSetup(profileNeedsSetup(profile));
+    setSellerHubProfileComplete(profileIsCompleteForSellerHub(profile));
   }, []);
 
   const refreshTokenAndFetchUser = async () => {
@@ -133,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         Cookies.remove("refreshToken", authCookieBase);
         setUser(null);
         setNeedsProfileSetup(false);
+        setSellerHubProfileComplete(false);
       }
     }
   };
@@ -214,6 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     setNeedsProfileSetup(false);
+    setSellerHubProfileComplete(false);
     Cookies.remove("accessToken", authCookieBase);
     Cookies.remove("refreshToken", authCookieBase);
   };
@@ -224,6 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoggedIn: !!user,
         needsProfileSetup,
+        sellerHubProfileComplete,
         login,
         loginWithGoogle,
         logout,

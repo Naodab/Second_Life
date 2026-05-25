@@ -7,7 +7,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
+import com.naodab.commonservice.constant.AppRegexp;
 
 @Getter
 @Setter
@@ -36,4 +40,11 @@ public class FacilityUpdateRequest {
 
   @Size(max = 255, message = "WARD_CODE_INVALID")
   String wardCode;
+
+  @Email(message = "INVALID_EMAIL")
+  @Size(max = 255, message = "EMAIL_INVALID")
+  String email;
+
+  @Pattern(regexp = AppRegexp.PHONE_NUMBER_REGEX, message = "INVALID_PHONE_NUMBER")
+  String phoneNumber;
 }

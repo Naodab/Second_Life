@@ -1,4 +1,5 @@
 import { customFetch } from "@workspace/api-client-react";
+import { normalizeFacilityResponse } from "@/api/facility";
 import { unwrapApiData, type ApiResponseEnvelope, type PagedItemsResponse } from "./types";
 
 export type ListingType = "BUY" | "RENT";
@@ -253,14 +254,19 @@ export type CategoryRefDto = {
   name?: string | null;
 };
 
+/** Facility snapshot on listing public detail (matches productservice FacilityResponse). */
 export type FacilityOverviewDto = {
   id: string;
   name?: string | null;
   ownerId?: string | null;
+  description?: string | null;
   imageUrl?: string | null;
+  linkGoogleMap?: string | null;
   address?: string | null;
   provinceCode?: string | null;
   wardCode?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
   averageRating?: number | null;
   orderCount?: number | null;
 };
@@ -310,7 +316,12 @@ export async function fetchListingPublicDetail(
       headers: { "Content-Type": "application/json" },
     },
   );
-  return unwrapApiData(raw);
+  const data = unwrapApiData<ListingPublicDetailResponse>(raw);
+  const facility = data.facility ? normalizeFacilityResponse(data.facility) : null;
+  return {
+    ...data,
+    facility: facility ?? data.facility,
+  };
 }
 
 export async function createListing(body: ListingCreateBody): Promise<ListingCreateResponse> {

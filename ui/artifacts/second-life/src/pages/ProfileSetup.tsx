@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -6,41 +6,75 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { updateCurrentProfile } from "@/api";
+import { getCurrentProfile, updateCurrentProfile } from "@/api";
+import { sanitizeReturnTo } from "@/hooks/use-require-auth";
+import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { toast } from "@/hooks/use-toast";
 import { ApiError } from "@workspace/api-client-react";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
 
 const schema = z.object({
-  firstName: z
-    .string()
-    .min(1, "Bắt buộc"),
-  lastName: z
-    .string()
-    .min(1, "Bắt buộc"),
+  firstName: z.string().trim().min(1, "Bắt buộc"),
+  lastName: z.string().trim().min(1, "Bắt buộc"),
   phoneNumber: z
     .string()
-    .optional()
-    .transform((s) => s?.trim() ?? "")
-    .refine((s) => s === "" || /^(\+84|0)\d{9}$/.test(s), {
+    .trim()
+    .min(1, "Bắt buộc")
+    .refine((s) => /^(\+84|0)\d{9}$/.test(s), {
       message: "Số điện thoại Việt Nam: +84 hoặc 0 và 9 chữ số",
     }),
 });
 
 type FormValues = z.infer<typeof schema>;
 
+function readReturnToFromSearch(): string {
+  const params = new URLSearchParams(window.location.search);
+  return sanitizeReturnTo(params.get("returnTo"));
+}
+
 export default function ProfileSetup() {
   const [, setLocation] = useLocation();
-  const { isLoggedIn, isLoading, needsProfileSetup, refreshSessionProfile } = useAuth();
+  const { isLoggedIn, isLoading, needsProfileSetup, sellerHubProfileComplete, user, refreshSessionProfile } =
+    useAuth();
+  const returnTo = useMemo(() => readReturnToFromSearch(), []);
+  const forSellerHub = returnTo.startsWith("/manage");
+
+  const mustCompleteForm = needsProfileSetup || (forSellerHub && !sellerHubProfileComplete);
+
   const [submitting, setSubmitting] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { firstName: "", lastName: "", phoneNumber: "" },
   });
+
+  useEffect(() => {
+    if (isLoading || !isLoggedIn || prefilled) {
+      return;
+    }
+    void (async () => {
+      try {
+        const profile = await getCurrentProfile();
+        form.reset({
+          firstName: profile.firstName?.trim() ?? user?.firstName?.trim() ?? "",
+          lastName: profile.lastName?.trim() ?? user?.lastName?.trim() ?? "",
+          phoneNumber: profile.phoneNumber?.trim() ?? "",
+        });
+      } catch {
+        form.reset({
+          firstName: user?.firstName?.trim() ?? "",
+          lastName: user?.lastName?.trim() ?? "",
+          phoneNumber: "",
+        });
+      } finally {
+        setPrefilled(true);
+      }
+    })();
+  }, [isLoading, isLoggedIn, prefilled, form, user]);
 
   useEffect(() => {
     if (isLoading) {
@@ -50,10 +84,10 @@ export default function ProfileSetup() {
       setLocation("/login");
       return;
     }
-    if (!needsProfileSetup) {
-      setLocation("/");
+    if (!mustCompleteForm) {
+      setLocation(returnTo || "/");
     }
-  }, [isLoading, isLoggedIn, needsProfileSetup, setLocation]);
+  }, [isLoading, isLoggedIn, mustCompleteForm, returnTo, setLocation]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitting(true);
@@ -66,12 +100,17 @@ export default function ProfileSetup() {
       await updateCurrentProfile({
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
-        ...(values.phoneNumber ? { phoneNumber: values.phoneNumber.trim() } : {}),
+        phoneNumber: values.phoneNumber.trim(),
         ...(avatarUrl ? { avatarUrl } : {}),
       });
       await refreshSessionProfile();
-      toast({ title: "Đã lưu hồ sơ", description: "Bạn có thể tiếp tục sử dụng ứng dụng." });
-      setLocation("/");
+      toast({
+        title: "Đã lưu hồ sơ",
+        description: forSellerHub
+          ? "Bạn có thể vào khu vực quản lý bán hàng."
+          : "Bạn có thể tiếp tục sử dụng ứng dụng.",
+      });
+      setLocation(returnTo || (forSellerHub ? SELLER_HUB_HOME : "/"));
     } catch (e) {
       const msg =
         e instanceof ApiError
@@ -86,7 +125,7 @@ export default function ProfileSetup() {
     }
   });
 
-  if (isLoading || !isLoggedIn || !needsProfileSetup) {
+  if (isLoading || !isLoggedIn || !mustCompleteForm) {
     return (
       <div className="min-h-screen flex relative overflow-hidden">
         <div className="absolute inset-0 z-0">
@@ -133,7 +172,14 @@ export default function ProfileSetup() {
 
           <h1 className="text-3xl font-display font-bold text-center mb-2">Hoàn tất hồ sơ</h1>
           <p className="text-center text-muted-foreground mb-8">
-            Vui lòng nhập họ và tên để tiếp tục. Thông tin này dùng hiển thị trên tài khoản của bạn.
+            {forSellerHub ? (
+              <>
+                Để vào <strong>khu vực quản lý</strong>, vui lòng điền đầy đủ <strong>họ, tên</strong> và{" "}
+                <strong>số điện thoại</strong>. Email dùng tài khoản đăng nhập{user?.email ? `: ${user.email}` : ""}.
+              </>
+            ) : (
+              <>Vui lòng nhập đầy đủ họ, tên và số điện thoại để tiếp tục.</>
+            )}
           </p>
 
           <form onSubmit={onSubmit} className="space-y-5">
@@ -157,23 +203,15 @@ export default function ProfileSetup() {
               )}
               {uploadingAvatar && <p className="text-xs text-muted-foreground mt-1.5">Đang upload ảnh avatar...</p>}
             </div>
-            <div>
-              <label htmlFor="firstName" className="text-sm font-semibold mb-1.5 block">
-                Tên
-              </label>
-              <Input
-                id="firstName"
-                autoComplete="given-name"
-                className="h-12 rounded-xl bg-white/50"
-                {...form.register("firstName")}
-              />
-              {form.formState.errors.firstName && (
-                <p className="text-sm text-destructive mt-1.5">{form.formState.errors.firstName.message}</p>
-              )}
-            </div>
+            {user?.email ? (
+              <div>
+                <label className="text-sm font-semibold mb-1.5 block text-muted-foreground">Email (tài khoản)</label>
+                <Input disabled className="h-12 rounded-xl bg-muted/40" value={user.email} readOnly />
+              </div>
+            ) : null}
             <div>
               <label htmlFor="lastName" className="text-sm font-semibold mb-1.5 block">
-                Họ
+                Họ <span className="text-destructive">*</span>
               </label>
               <Input
                 id="lastName"
@@ -186,8 +224,22 @@ export default function ProfileSetup() {
               )}
             </div>
             <div>
+              <label htmlFor="firstName" className="text-sm font-semibold mb-1.5 block">
+                Tên <span className="text-destructive">*</span>
+              </label>
+              <Input
+                id="firstName"
+                autoComplete="given-name"
+                className="h-12 rounded-xl bg-white/50"
+                {...form.register("firstName")}
+              />
+              {form.formState.errors.firstName && (
+                <p className="text-sm text-destructive mt-1.5">{form.formState.errors.firstName.message}</p>
+              )}
+            </div>
+            <div>
               <label htmlFor="phoneNumber" className="text-sm font-semibold mb-1.5 block">
-                Số điện thoại (tùy chọn)
+                Số điện thoại <span className="text-destructive">*</span>
               </label>
               <Input
                 id="phoneNumber"
@@ -207,7 +259,7 @@ export default function ProfileSetup() {
               className="w-full h-12 rounded-xl text-lg shadow-lg shadow-primary/20 mt-4"
               disabled={submitting || uploadingAvatar}
             >
-              {submitting || uploadingAvatar ? "Đang lưu…" : "Lưu và tiếp tục"}
+              {submitting || uploadingAvatar ? "Đang lưu…" : forSellerHub ? "Lưu và vào quản lý" : "Lưu và tiếp tục"}
             </Button>
           </form>
         </div>

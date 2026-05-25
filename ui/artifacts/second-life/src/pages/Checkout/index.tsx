@@ -20,7 +20,7 @@ import { vi } from "date-fns/locale";
 import { PayOSScreen } from "./PayOSScreen";
 import { SuccessScreen } from "./SuccessScreen";
 import { CheckoutOrderInfoForm, type CheckoutOrderInfoFormRef } from "./CheckoutOrderInfoForm";
-import { CheckoutFacilityHeader } from "./CheckoutFacilityHeader";
+import { CheckoutFacilityCollapseHeader, CheckoutSellerInfoPanel } from "./CheckoutFacilityHeader";
 import { ApiErrorState } from "@/components/errors";
 import { useCheckoutPage } from "./useCheckoutPage";
 import {
@@ -37,7 +37,7 @@ import {
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
-  const { items, isLoading, isError, errorView, facilityOwnerLoading, clearSession, refetch } =
+  const { items, isLoading, isError, errorView, ownerNameLoading, placeNamesLoading, clearSession, refetch } =
     useCheckoutPage();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPayOS, setShowPayOS] = useState(false);
@@ -147,17 +147,17 @@ export default function Checkout() {
                   <div
                     role="button"
                     tabIndex={0}
-                    className="flex items-center justify-between p-5 cursor-pointer hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer hover:bg-muted/40 transition-colors"
                     onClick={() => toggleFacility(facilityId)}
                     onKeyDown={(e) => e.key === "Enter" && toggleFacility(facilityId)}
                   >
-                    <CheckoutFacilityHeader
+                    <CheckoutFacilityCollapseHeader
                       item={facilityItems[0]}
                       subOrderIndex={idx}
                       showSubOrderBadge={subOrderCount > 1}
-                      ownerLoading={facilityOwnerLoading}
+                      ownerNameLoading={ownerNameLoading}
                     />
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0">
                       <span className={cn("text-sm font-semibold", checkoutPrimaryTextClass)}>
                         {formatCurrency(facilitySubtotal)}
                       </span>
@@ -170,7 +170,13 @@ export default function Checkout() {
                   </div>
 
                   {isExpanded && (
-                    <div className="px-5 pb-5 border-t border-border divide-y divide-border">
+                    <div className="border-t border-border">
+                      <CheckoutSellerInfoPanel
+                        item={facilityItems[0]}
+                        ownerNameLoading={ownerNameLoading}
+                        placeNamesLoading={placeNamesLoading}
+                      />
+                      <div className="px-5 pb-5 divide-y divide-border border-t border-border/60">
                       {facilityItems.map((item) => {
                         const days = itemDays(item);
                         const price = itemTotal(item);
@@ -212,6 +218,7 @@ export default function Checkout() {
                           </div>
                         );
                       })}
+                      </div>
                     </div>
                   )}
                 </div>

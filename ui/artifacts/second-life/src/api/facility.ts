@@ -29,6 +29,8 @@ export type FacilityCreateBody = {
   address: string;
   provinceCode: string;
   wardCode: string;
+  email: string;
+  phoneNumber: string;
 };
 
 export type FacilityResponse = {
@@ -41,6 +43,8 @@ export type FacilityResponse = {
   address: string;
   provinceCode: string;
   wardCode: string;
+  email?: string | null;
+  phoneNumber?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   viewCount?: number | null;
@@ -58,6 +62,46 @@ export type FacilityWithPlaceNames = FacilityResponse & {
 
 export function facilityAvatarUrl(f: Pick<FacilityResponse, "imageUrl">): string {
   return f.imageUrl?.trim() || DEFAULT_FACILITY_AVATAR;
+}
+
+/** Chuẩn hóa facility từ listing/detail (camelCase hoặc snake_case). */
+export function normalizeFacilityResponse(raw: unknown): FacilityResponse | null {
+  if (!raw || typeof raw !== "object") return null;
+  const f = raw as Record<string, unknown>;
+  const id = String(f.id ?? "").trim();
+  if (!id) return null;
+  const phone = String(f.phoneNumber ?? f.phone_number ?? "").trim();
+  const email = String(f.email ?? "").trim();
+  return {
+    id,
+    name: String(f.name ?? "").trim(),
+    ownerId: String(f.ownerId ?? f.owner_id ?? "").trim(),
+    description: (f.description as string | null) ?? null,
+    imageUrl: (f.imageUrl ?? f.image_url ?? null) as string | null,
+    linkGoogleMap: String(f.linkGoogleMap ?? f.link_google_map ?? "").trim(),
+    address: String(f.address ?? "").trim(),
+    provinceCode: String(f.provinceCode ?? f.province_code ?? "").trim(),
+    wardCode: String(f.wardCode ?? f.ward_code ?? "").trim(),
+    email: email || null,
+    phoneNumber: phone || null,
+    latitude: (f.latitude as number | null) ?? null,
+    longitude: (f.longitude as number | null) ?? null,
+    viewCount: (f.viewCount ?? f.view_count ?? null) as number | null,
+    orderCount: (f.orderCount ?? f.order_count ?? null) as number | null,
+    averageRating: (f.averageRating ?? f.average_rating ?? null) as number | null,
+  };
+}
+
+export async function getFacilityById(id: string): Promise<FacilityResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<unknown>>(
+    `/api/v1/facilities/${encodeURIComponent(id.trim())}`,
+    { method: "GET" },
+  );
+  const data = normalizeFacilityResponse(unwrapApiData(raw));
+  if (!data) {
+    throw new Error("Không đọc được thông tin cơ sở.");
+  }
+  return data;
 }
 
 export async function createFacility(body: FacilityCreateBody): Promise<FacilityResponse> {

@@ -10,19 +10,43 @@ export type ProfilePayload = {
   avatarUrl?: string | null;
 };
 
+export function normalizeProfilePayload(raw: unknown): ProfilePayload | null {
+  if (!raw || typeof raw !== "object") return null;
+  const p = raw as Record<string, unknown>;
+  const id = String(p.id ?? "").trim();
+  const email = String(p.email ?? "").trim();
+  if (!id || !email) return null;
+  return {
+    id,
+    email,
+    firstName: (p.firstName ?? p.first_name ?? null) as string | null,
+    lastName: (p.lastName ?? p.last_name ?? null) as string | null,
+    phoneNumber: (p.phoneNumber ?? p.phone_number ?? null) as string | null,
+    avatarUrl: (p.avatarUrl ?? p.avatar_url ?? null) as string | null,
+  };
+}
+
 export async function getProfileById(id: string): Promise<ProfilePayload> {
-  const raw = await customFetch<ApiResponseEnvelope<ProfilePayload>>(
+  const raw = await customFetch<ApiResponseEnvelope<unknown>>(
     `/api/v1/profiles/${encodeURIComponent(id)}`,
     { method: "GET" },
   );
-  return unwrapApiData(raw);
+  const data = normalizeProfilePayload(unwrapApiData(raw));
+  if (!data) {
+    throw new Error("Không đọc được hồ sơ chủ sản phẩm.");
+  }
+  return data;
 }
 
 export async function getCurrentProfile(): Promise<ProfilePayload> {
-  const raw = await customFetch<ApiResponseEnvelope<ProfilePayload>>(`/api/v1/profiles/me`, {
+  const raw = await customFetch<ApiResponseEnvelope<unknown>>(`/api/v1/profiles/me`, {
     method: "GET",
   });
-  return unwrapApiData(raw);
+  const data = normalizeProfilePayload(unwrapApiData(raw));
+  if (!data) {
+    throw new Error("Không đọc được hồ sơ.");
+  }
+  return data;
 }
 
 export type ProfileUpdateBody = {
@@ -53,12 +77,32 @@ export async function updateCurrentProfile(body: ProfileUpdateBody): Promise<Pro
   return unwrapApiData(raw);
 }
 
+const vnPhoneRegex = /^(\+84|0)\d{9}$/;
+
 export function profileNeedsSetup(profile: Pick<ProfilePayload, "firstName">): boolean {
   const fn = profile.firstName?.trim();
   return !fn;
 }
 
+/** Họ, tên, email, SĐT hợp lệ — bắt buộc trước khi vào khu vực quản lý. */
+export function profileIsCompleteForSellerHub(
+  profile: Pick<ProfilePayload, "firstName" | "lastName" | "phoneNumber" | "email">,
+): boolean {
+  const first = profile.firstName?.trim();
+  const last = profile.lastName?.trim();
+  const phone = profile.phoneNumber?.trim();
+  const email = profile.email?.trim();
+  return Boolean(first && last && email && phone && vnPhoneRegex.test(phone));
+}
+
 export function profileDisplayName(profile: Pick<ProfilePayload, "firstName" | "lastName" | "email">): string {
-  const display = [profile.firstName?.trim(), profile.lastName?.trim()].filter(Boolean).join(" ");
+  const display = [profile.lastName?.trim(), profile.firstName?.trim()].filter(Boolean).join(" ");
   return display || profile.email.split("@")[0] || profile.email;
+}
+
+export function profileFullNameParts(profile: Pick<ProfilePayload, "firstName" | "lastName">) {
+  return {
+    lastName: profile.lastName?.trim() ?? "",
+    firstName: profile.firstName?.trim() ?? "",
+  };
 }

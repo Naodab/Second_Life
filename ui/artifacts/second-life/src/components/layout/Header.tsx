@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { buildFreshSearchPath, buildSearchPath } from "@/lib/search-url";
 import { pathnameEndsWithSegment, rawQueryFromBrowserSearch } from "@/lib/wouter-location";
 import { fetchListingSuggestions, type ListingSuggestionResponse } from "@/api/listing";
+import { guardSellerHubNavigation } from "@/components/SellerHubProfileGate";
 import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { formatDistanceToNow } from "date-fns";
@@ -192,7 +193,11 @@ function SearchSuggestionPanel({
 export function Header() {
   const [pathname, setLocation] = useLocation();
   const search = useSearch();
-  const { user, isLoggedIn, logout } = useAuth();
+  const { user, isLoggedIn, logout, sellerHubProfileComplete } = useAuth();
+
+  const openSellerHub = () => {
+    guardSellerHubNavigation(SELLER_HUB_HOME, { isLoggedIn, sellerHubProfileComplete }, setLocation);
+  };
   const { cartItems } = useCart();
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -391,11 +396,12 @@ export function Header() {
                         <Package className="mr-2 h-4 w-4 text-primary" /> Đơn hàng của tôi
                       </DropdownMenuItem>
                     </Link>
-                    <Link href={SELLER_HUB_HOME}>
-                      <DropdownMenuItem className="cursor-pointer py-3 rounded-xl font-medium">
-                        <Store className="mr-2 h-4 w-4 text-secondary" /> Quản lý bán hàng
-                      </DropdownMenuItem>
-                    </Link>
+                    <DropdownMenuItem
+                      className="cursor-pointer py-3 rounded-xl font-medium"
+                      onSelect={() => openSellerHub()}
+                    >
+                      <Store className="mr-2 h-4 w-4 text-secondary" /> Quản lý bán hàng
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="cursor-pointer py-3 rounded-xl text-destructive focus:bg-destructive/10 font-medium" onClick={logout}>
                       <LogOut className="mr-2 h-4 w-4" /> Đăng xuất
