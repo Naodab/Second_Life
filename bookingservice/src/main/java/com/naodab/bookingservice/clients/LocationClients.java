@@ -86,7 +86,7 @@ public class LocationClients {
   }
 
   private LocationProvinceDto fetchProvince(String provinceCode) {
-    String uri = UriComponentsBuilder.fromHttpUrl(stripTrailingSlashes(locationServiceUrl))
+    String uri = UriComponentsBuilder.fromUriString(stripTrailingSlashes(locationServiceUrl))
         .path("/provinces/{code}")
         .buildAndExpand(provinceCode)
         .encode()
@@ -111,7 +111,7 @@ public class LocationClients {
   }
 
   private LocationWardDto fetchWard(String wardCode) {
-    String uri = UriComponentsBuilder.fromHttpUrl(stripTrailingSlashes(locationServiceUrl))
+    String uri = UriComponentsBuilder.fromUriString(stripTrailingSlashes(locationServiceUrl))
         .path("/wards/{code}")
         .buildAndExpand(wardCode)
         .encode()
@@ -158,10 +158,14 @@ public class LocationClients {
   }
 
   private static <T> T bodyData(ResponseEntity<ApiResponse<T>> response) {
-    if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+    if (response.getStatusCode() != HttpStatus.OK) {
       return null;
     }
-    return response.getBody().getData();
+    ApiResponse<T> body = response.getBody();
+    if (body == null) {
+      return null;
+    }
+    return body.getData();
   }
 
   private static String label(String fullName, String name, String fallback) {
