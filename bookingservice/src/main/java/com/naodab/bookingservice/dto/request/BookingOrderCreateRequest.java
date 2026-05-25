@@ -32,4 +32,7 @@ public class BookingOrderCreateRequest {
   @Future(message = "PICKUP_TIME_FUTURE")
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
   LocalDateTime pickupTime;
+
+  @NotBlank(message = "REQUIRED_FIELD")
+  String customerId;
 }

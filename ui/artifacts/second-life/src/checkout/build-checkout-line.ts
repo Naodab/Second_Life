@@ -12,6 +12,10 @@ export type CheckoutLineItem = {
   images: string[];
   facilityId: string;
   facilityName: string;
+  facilityImageUrl: string;
+  facilityOwnerId: string;
+  facilityOwnerName: string;
+  facilityOwnerAvatarUrl: string | null;
   mode: "buy" | "rent";
   quantity: number;
   unitPrice: number;
@@ -58,6 +62,10 @@ export function buildCheckoutLineItem(
     images: images.length > 0 ? images : ["https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop"],
     facilityId: facility?.id?.trim() ?? "",
     facilityName: facility?.name?.trim() ?? "",
+    facilityImageUrl: facility?.imageUrl?.trim() ?? "",
+    facilityOwnerId: facility?.ownerId?.trim() ?? "",
+    facilityOwnerName: "",
+    facilityOwnerAvatarUrl: null,
     mode: input.mode,
     quantity: input.quantity,
     unitPrice,

@@ -1,12 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import {
   ShieldCheck,
   CreditCard,
   ArrowLeft,
-  Store,
   AlertCircle,
-  MapPin,
   Clock,
   Package,
   Info,
@@ -16,22 +14,21 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { PayOSScreen } from "./PayOSScreen";
 import { SuccessScreen } from "./SuccessScreen";
+import { CheckoutOrderInfoForm, type CheckoutOrderInfoFormRef } from "./CheckoutOrderInfoForm";
+import { CheckoutFacilityHeader } from "./CheckoutFacilityHeader";
 import { ApiErrorState } from "@/components/errors";
 import { useCheckoutPage } from "./useCheckoutPage";
 import {
   groupByFacility,
   itemTotal,
   itemDays,
-  facilityDisplayName,
   checkoutSectionClass,
   checkoutSectionShellClass,
-  checkoutHighlightClass,
   checkoutAlertClass,
   checkoutDepositTextClass,
   checkoutRentAccentClass,
@@ -40,11 +37,13 @@ import {
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
-  const { items, isLoading, isError, errorView, clearSession, refetch } = useCheckoutPage();
+  const { items, isLoading, isError, errorView, facilityOwnerLoading, clearSession, refetch } =
+    useCheckoutPage();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPayOS, setShowPayOS] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [expandedFacilities, setExpandedFacilities] = useState<Record<string, boolean>>({});
+  const orderInfoFormRef = useRef<CheckoutOrderInfoFormRef>(null);
 
   const facilityGroups = groupByFacility(items);
   const subOrderCount = facilityGroups.size;
@@ -56,7 +55,9 @@ export default function Checkout() {
   const deposit = hasRentals ? Math.round(rentalSubtotal * 0.3) : 0;
   const grandTotal = subtotal + shipping + deposit;
 
-  const handlePayOSRedirect = () => {
+  const handlePayOSRedirect = async () => {
+    if (!(await orderInfoFormRef.current?.validate())) return;
+
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);
@@ -135,17 +136,7 @@ export default function Checkout() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <div className={checkoutSectionClass}>
-              <div className="flex items-center gap-2 mb-4">
-                <MapPin className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-lg text-foreground">Địa chỉ giao hàng</h3>
-              </div>
-              <div className={checkoutHighlightClass}>
-                <p className="font-semibold text-foreground">Nguyễn Văn A</p>
-                <p className="text-sm text-muted-foreground mt-1">+84 90 123 4567</p>
-                <p className="text-sm text-muted-foreground mt-0.5">123 Đường ABC, Phường 1, Quận 1, TP. Hồ Chí Minh</p>
-              </div>
-            </div>
+            <CheckoutOrderInfoForm ref={orderInfoFormRef} />
 
             {Array.from(facilityGroups.entries()).map(([facilityId, facilityItems], idx) => {
               const facilitySubtotal = facilityItems.reduce((s, i) => s + itemTotal(i), 0);
@@ -160,22 +151,12 @@ export default function Checkout() {
                     onClick={() => toggleFacility(facilityId)}
                     onKeyDown={(e) => e.key === "Enter" && toggleFacility(facilityId)}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center flex-shrink-0">
-                        <Store className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm text-foreground">{facilityDisplayName(facilityItems[0])}</p>
-                        {subOrderCount > 1 && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] px-2 py-0 mt-0.5 font-medium text-primary border-primary/30 dark:border-primary/50 dark:bg-primary/10"
-                          >
-                            Đơn #{idx + 1}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+                    <CheckoutFacilityHeader
+                      item={facilityItems[0]}
+                      subOrderIndex={idx}
+                      showSubOrderBadge={subOrderCount > 1}
+                      ownerLoading={facilityOwnerLoading}
+                    />
                     <div className="flex items-center gap-3">
                       <span className={cn("text-sm font-semibold", checkoutPrimaryTextClass)}>
                         {formatCurrency(facilitySubtotal)}

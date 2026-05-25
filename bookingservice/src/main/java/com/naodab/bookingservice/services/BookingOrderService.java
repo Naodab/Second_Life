@@ -5,7 +5,7 @@ import com.naodab.bookingservice.dto.response.BookingOrderResponse;
 
 public interface BookingOrderService {
 
-  BookingOrderResponse createBookingOrder(String customerId, BookingOrderCreateRequest request);
+  BookingOrderResponse createBookingOrder(String profileId, BookingOrderCreateRequest request);
 
   void deleteBookingOrder(String id);
 

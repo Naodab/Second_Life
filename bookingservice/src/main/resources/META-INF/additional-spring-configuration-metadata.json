@@ -24,6 +24,11 @@
       "name": "spring.kafka.topics.create-inventory-reservation",
       "type": "java.lang.String",
       "description": "Create inventory reservation topic"
+    },
+    {
+      "name": "external.location-service.url",
+      "type": "java.lang.String",
+      "description": "Location service URL"
     }
   ]
 }

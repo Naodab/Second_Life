@@ -3,12 +3,16 @@ package com.naodab.bookingservice.models;
 import com.naodab.commonjpa.entity.BaseEntity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+
 import com.naodab.bookingservice.models.enums.BookingOrderStatus;
 
 import java.time.LocalDateTime;
@@ -36,7 +40,9 @@ public class BookingOrder extends BaseEntity {
   @GeneratedValue(strategy = GenerationType.UUID)
   String id;
 
-  String customerId;
+  @ManyToOne(optional = false, fetch = FetchType.LAZY)
+  @JoinColumn(name = "customer_id", nullable = false)
+  Customer customer;
 
   String listingVariantId;
 

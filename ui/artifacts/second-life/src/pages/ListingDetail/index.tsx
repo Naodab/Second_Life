@@ -9,6 +9,7 @@ import {
   fetchListingVariantAvailabilityInRange,
 } from "@/api/inventory";
 import { useCart } from "@/hooks/use-mock-api";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { buildCheckoutHref, setPendingCheckoutLine } from "@/checkout/checkout-session";
 import { useToast } from "@/hooks/use-toast";
 import { ImageSlider } from "./ImageSlider";
@@ -66,6 +67,7 @@ export default function ListingDetail() {
   const [variantSelection, setVariantSelection] = useState<Record<string, string>>({});
 
   const { addToCart } = useCart();
+  const { requireAuth } = useRequireAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -220,6 +222,7 @@ export default function ListingDetail() {
   };
 
   const handleCheckoutNow = (mode: "buy" | "rent") => {
+    if (!requireAuth()) return;
     if (!data || !listingVariantId) return;
     if (mode === "buy" && (effectiveBuyStock <= 0 || dialogBuyUnitPrice <= 0)) return;
     if (
@@ -256,6 +259,7 @@ export default function ListingDetail() {
   };
 
   const handleQuickAddToCart = () => {
+    if (!requireAuth()) return;
     if (!cartBridge) return;
     addToCart(cartBridge, 1);
     toast({ title: "Đã thêm vào giỏ hàng!", description: `${cartBridge.name} đã được thêm vào giỏ.` });
@@ -329,8 +333,12 @@ export default function ListingDetail() {
               totalStock={totalStock}
               locationLine={locationLine}
               outOfStock={outOfStock}
-              onOpenBuy={() => setIsBuyModalOpen(true)}
+              onOpenBuy={() => {
+                if (!requireAuth()) return;
+                setIsBuyModalOpen(true);
+              }}
               onOpenRent={() => {
+                if (!requireAuth()) return;
                 setIsRentModalOpen(true);
                 setRentWindow(null);
                 setRentValidity({ ok: false, billUnits: 0 });

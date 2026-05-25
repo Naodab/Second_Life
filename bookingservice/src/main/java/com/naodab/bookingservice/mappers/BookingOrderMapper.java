@@ -5,26 +5,33 @@ import org.springframework.stereotype.Component;
 import com.naodab.bookingservice.dto.request.BookingOrderCreateRequest;
 import com.naodab.bookingservice.dto.response.BookingOrderResponse;
 import com.naodab.bookingservice.models.BookingOrder;
+import com.naodab.bookingservice.models.Customer;
 import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 @Component
+@RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class BookingOrderMapper {
 
-  public BookingOrder toBookingOrder(String customerId, BookingOrderCreateRequest request) {
+  CustomerMapper customerMapper;
+
+  public BookingOrder toBookingOrder(Customer customer, BookingOrderCreateRequest request) {
     return BookingOrder.builder()
-        .customerId(customerId)
+        .customer(customer)
         .listingVariantId(request.getListingVariantId())
         .quantity(request.getQuantity())
         .pickupTime(request.getPickupTime())
         .build();
   }
 
-  public BookingOrderResponse toBookingOrderResponse(BookingOrder bookingOrder) {
+  public BookingOrderResponse toBookingOrderResponse(BookingOrder bookingOrder, Customer customer) {
+    Customer resolved = customer != null ? customer : bookingOrder.getCustomer();
     return BookingOrderResponse.builder()
         .id(bookingOrder.getId())
-        .customerId(bookingOrder.getCustomerId())
+        .customerId(resolved != null ? resolved.getId() : null)
+        .customer(resolved == null ? null : customerMapper.toResponse(resolved))
         .listingVariantId(bookingOrder.getListingVariantId())
         .quantity(bookingOrder.getQuantity())
         .pickupTime(bookingOrder.getPickupTime())

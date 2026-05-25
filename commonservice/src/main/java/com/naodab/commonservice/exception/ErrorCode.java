@@ -87,7 +87,8 @@ public enum ErrorCode {
 	LISTING_VARIANT_NOT_FOUND(1065, "Listing variant not found", HttpStatus.NOT_FOUND),
 	REQUIRED_FIELD(1062, "Required field", HttpStatus.BAD_REQUEST),
 	QUANTITY_MIN(1063, "Quantity must be greater than 0", HttpStatus.BAD_REQUEST),
-	PICKUP_TIME_FUTURE(1064, "Pickup time must be in the future", HttpStatus.BAD_REQUEST);
+	PICKUP_TIME_FUTURE(1064, "Pickup time must be in the future", HttpStatus.BAD_REQUEST),
+	CUSTOMER_NOT_FOUND(1066, "Customer not found", HttpStatus.NOT_FOUND);
 
 	private int code;
 	private String message;

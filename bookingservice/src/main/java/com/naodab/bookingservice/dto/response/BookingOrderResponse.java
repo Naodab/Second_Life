@@ -20,6 +20,7 @@ import lombok.experimental.FieldDefaults;
 public class BookingOrderResponse {
   String id;
   String customerId;
+  BookingOrderCustomerResponse customer;
   String listingVariantId;
   Long price;
   Integer quantity;

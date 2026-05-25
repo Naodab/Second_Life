@@ -256,6 +256,7 @@ export type CategoryRefDto = {
 export type FacilityOverviewDto = {
   id: string;
   name?: string | null;
+  ownerId?: string | null;
   imageUrl?: string | null;
   address?: string | null;
   provinceCode?: string | null;

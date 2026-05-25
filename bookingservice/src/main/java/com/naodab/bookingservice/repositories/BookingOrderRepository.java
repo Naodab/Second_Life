@@ -10,7 +10,7 @@ import com.naodab.bookingservice.models.BookingOrder;
 import com.naodab.bookingservice.models.enums.BookingOrderStatus;
 
 public interface BookingOrderRepository extends JpaRepository<BookingOrder, String> {
-  List<BookingOrder> findByCustomerId(String customerId);
+  List<BookingOrder> findByCustomer_Id(String customerId);
 
   List<BookingOrder> findByListingVariantId(String listingVariantId);
 
@@ -26,7 +26,7 @@ public interface BookingOrderRepository extends JpaRepository<BookingOrder, Stri
 
   List<BookingOrder> findByDeletedAtIsNotNull(Pageable pageable);
 
-  List<BookingOrder> findByCustomerIdAndDeletedAtIsNull(String customerId, Pageable pageable);
+  List<BookingOrder> findByCustomer_IdAndDeletedAtIsNull(String customerId, Pageable pageable);
 
   List<BookingOrder> findByListingVariantIdAndDeletedAtIsNull(String listingVariantId, Pageable pageable);
 

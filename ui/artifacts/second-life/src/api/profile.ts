@@ -57,3 +57,8 @@ export function profileNeedsSetup(profile: Pick<ProfilePayload, "firstName">): b
   const fn = profile.firstName?.trim();
   return !fn;
 }
+
+export function profileDisplayName(profile: Pick<ProfilePayload, "firstName" | "lastName" | "email">): string {
+  const display = [profile.firstName?.trim(), profile.lastName?.trim()].filter(Boolean).join(" ");
+  return display || profile.email.split("@")[0] || profile.email;
+}

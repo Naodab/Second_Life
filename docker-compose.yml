@@ -326,10 +326,14 @@ services:
       - "${SERVER_PORT_BOOKING_SERVICE:-8088}:8088"
     environment:
       SERVER_PORT_BOOKING_SERVICE: "8088"
+      LOCATION_SERVICE_URL: http://location-service:8085/api/v1
+      INVENTORY_SERVICE_URL: http://inventory-service:8087/api/v1
     env_file:
       - .env
     depends_on:
       kafka:
+        condition: service_healthy
+      location-service:
         condition: service_healthy
     healthcheck:
       test:

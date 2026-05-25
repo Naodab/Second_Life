@@ -4,6 +4,7 @@ import { useSearch } from "wouter";
 
 import { fetchListingPublicDetail } from "@/api/listing";
 import { fetchListingVariantAvailability, fetchListingVariantAvailabilityInRange } from "@/api/inventory";
+import { getProfileById, profileDisplayName } from "@/api/profile";
 import { buildCheckoutLineItem, type CheckoutLineItem } from "@/checkout/build-checkout-line";
 import {
   clearPendingCheckoutLine,
@@ -47,6 +48,16 @@ export function useCheckoutPage() {
     retry: false,
   });
 
+  const facilityOwnerId = listingQuery.data?.facility?.ownerId?.trim() ?? "";
+
+  const ownerProfileQuery = useQuery({
+    queryKey: ["checkoutFacilityOwner", facilityOwnerId] as const,
+    queryFn: () => getProfileById(facilityOwnerId),
+    enabled: Boolean(facilityOwnerId),
+    staleTime: 60_000,
+    retry: false,
+  });
+
   const availabilityQuery = useQuery({
     queryKey: [
       "checkoutVariantAvailability",
@@ -64,11 +75,22 @@ export function useCheckoutPage() {
 
   const line: CheckoutLineItem | null = useMemo(() => {
     if (!input || !listingQuery.data || !availabilityQuery.data) return null;
-    return buildCheckoutLineItem(input, listingQuery.data, availabilityQuery.data);
-  }, [input, listingQuery.data, availabilityQuery.data]);
+    const base = buildCheckoutLineItem(input, listingQuery.data, availabilityQuery.data);
+    if (!base) return null;
+    const owner = ownerProfileQuery.data;
+    if (!owner) return base;
+    return {
+      ...base,
+      facilityOwnerName: profileDisplayName(owner),
+      facilityOwnerAvatarUrl: owner.avatarUrl?.trim() || null,
+    };
+  }, [input, listingQuery.data, availabilityQuery.data, ownerProfileQuery.data]);
 
   const isLoading =
-    Boolean(input) && (listingQuery.isLoading || availabilityQuery.isFetching);
+    Boolean(input) &&
+    (listingQuery.isLoading ||
+      availabilityQuery.isFetching ||
+      (Boolean(facilityOwnerId) && ownerProfileQuery.isLoading));
 
   const apiError = listingQuery.error ?? availabilityQuery.error;
 
@@ -102,6 +124,9 @@ export function useCheckoutPage() {
     clearPendingCheckoutLine();
   };
 
+  const facilityOwnerLoading =
+    Boolean(facilityOwnerId) && ownerProfileQuery.isLoading && !ownerProfileQuery.data;
+
   return {
     input,
     line,
@@ -109,10 +134,12 @@ export function useCheckoutPage() {
     isLoading,
     isError,
     errorView,
+    facilityOwnerLoading,
     clearSession,
     refetch: () => {
       void listingQuery.refetch();
       void availabilityQuery.refetch();
+      if (facilityOwnerId) void ownerProfileQuery.refetch();
     },
   };
 }

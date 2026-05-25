@@ -11,8 +11,10 @@ import com.naodab.bookingservice.dto.request.BookingOrderCreateRequest;
 import com.naodab.bookingservice.dto.response.BookingOrderResponse;
 import com.naodab.bookingservice.mappers.BookingOrderMapper;
 import com.naodab.bookingservice.models.BookingOrder;
+import com.naodab.bookingservice.models.Customer;
 import com.naodab.bookingservice.repositories.BookingOrderRepository;
 import com.naodab.bookingservice.services.BookingOrderService;
+import com.naodab.bookingservice.services.CustomerService;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 
@@ -27,19 +29,22 @@ public class BookingOrderServiceImpl implements BookingOrderService {
 
   BookingOrderMapper bookingOrderMapper;
   BookingOrderRepository bookingOrderRepository;
+  CustomerService customerService;
   InventoryClients inventoryClients;
 
   @Override
   @Transactional
-  public BookingOrderResponse createBookingOrder(String customerId, BookingOrderCreateRequest request) {
-    BookingOrder bookingOrder = bookingOrderMapper.toBookingOrder(customerId, request);
+  public BookingOrderResponse createBookingOrder(String profileId, BookingOrderCreateRequest request) {
+    Customer customer = customerService.getOwnedCustomerEntity(profileId, request.getCustomerId());
+
+    BookingOrder bookingOrder = bookingOrderMapper.toBookingOrder(customer, request);
     bookingOrder.setId(UUID.randomUUID().toString());
 
     if (!validBuyInventory(bookingOrder.getListingVariantId(), bookingOrder.getQuantity())) {
       throw new AppException(ErrorCode.INSUFFICIENT_INVENTORY);
     }
 
-    InventoryReservationCreateEvent reservationEvent = toReservationCreateEvent(bookingOrder);
+    InventoryReservationCreateEvent reservationEvent = toReservationCreateEvent(bookingOrder, profileId);
     inventoryClients.createBuyReservation(reservationEvent);
 
     try {
@@ -49,14 +54,14 @@ public class BookingOrderServiceImpl implements BookingOrderService {
       throw e;
     }
 
-    return bookingOrderMapper.toBookingOrderResponse(bookingOrder);
+    return bookingOrderMapper.toBookingOrderResponse(bookingOrder, customer);
   }
 
-  private static InventoryReservationCreateEvent toReservationCreateEvent(BookingOrder order) {
+  private static InventoryReservationCreateEvent toReservationCreateEvent(BookingOrder order, String profileId) {
     return InventoryReservationCreateEvent.builder()
         .inventoryReservationId(order.getId())
         .listingVariantId(order.getListingVariantId())
-        .customerId(order.getCustomerId())
+        .customerId(profileId)
         .referenceId(order.getId())
         .quantity(order.getQuantity())
         .mode("BUY")

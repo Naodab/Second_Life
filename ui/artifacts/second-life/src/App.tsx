@@ -82,8 +82,8 @@ function Router() {
           <Route path="/listing/:id" component={ListingDetail} />
           <Route path="/facility/:id" component={FacilityPage} />
           <Route path="/shop/:id" component={FacilityPage} />
-          <Route path="/cart" component={Cart} />
-          <Route path="/checkout" component={Checkout} />
+          <ProtectedRoute path="/cart" component={Cart} />
+          <ProtectedRoute path="/checkout" component={Checkout} />
           <ProtectedRoute path="/orders" component={Orders} />
           <ProtectedRoute path="/messages" component={Messages} />
           <ProtectedRoute path="/listings" component={SellerHubLegacyRedirect} />
