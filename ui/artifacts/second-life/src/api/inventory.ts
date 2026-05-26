@@ -23,8 +23,12 @@ export type RentalPeriodDto = {
 export async function fetchListingVariantAvailability(
   listingVariantId: string,
   mode: InventoryModeApi,
+  options?: { quantity?: number },
 ): Promise<ListingVariantAvailabilityDto> {
   const q = new URLSearchParams({ mode });
+  if (options?.quantity != null && Number.isFinite(options.quantity) && options.quantity >= 1) {
+    q.set("quantity", String(Math.floor(options.quantity)));
+  }
   const path = `/api/v1/listing-variants/${encodeURIComponent(listingVariantId.trim())}/availability?${q.toString()}`;
   const raw = await customFetch<ApiResponseEnvelope<ListingVariantAvailabilityDto>>(path, {
     method: "GET",
@@ -52,13 +56,16 @@ export type ListingVariantIntervalAvailabilityDto = {
 
 export async function fetchListingVariantAvailabilityInRange(
   listingVariantId: string,
-  params: { from: string; to: string; mode?: InventoryModeApi },
+  params: { from: string; to: string; mode?: InventoryModeApi; quantity?: number },
 ): Promise<ListingVariantIntervalAvailabilityDto> {
   const q = new URLSearchParams({
     from: params.from,
     to: params.to,
     mode: params.mode ?? "RENT",
   });
+  if (params.quantity != null && Number.isFinite(params.quantity) && params.quantity >= 1) {
+    q.set("quantity", String(Math.floor(params.quantity)));
+  }
   const path = `/api/v1/listing-variants/${encodeURIComponent(listingVariantId.trim())}/availability-in-range?${q.toString()}`;
   const raw = await customFetch<ApiResponseEnvelope<ListingVariantIntervalAvailabilityDto>>(path, {
     method: "GET",

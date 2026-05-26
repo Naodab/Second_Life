@@ -7,17 +7,27 @@ import com.naodab.inventoryservice.models.InventoryItem;
 
 public interface InventoryAvailabilityService {
 
-  Optional<Long> findAvailableQuantityIfTracked(String listingVariantId, InventoryItem.InventoryMode mode);
+	Optional<Long> findAvailableQuantityIfTracked(String listingVariantId, InventoryItem.InventoryMode mode);
 
-  Optional<Long> findMinAvailableQuantityInOpenInterval(
-      String listingVariantId,
-      InventoryItem.InventoryMode mode,
-      Instant intervalStart,
-      Instant intervalEnd);
+	Optional<Long> findMinAvailableQuantityInOpenInterval(
+			String listingVariantId,
+			InventoryItem.InventoryMode mode,
+			Instant intervalStart,
+			Instant intervalEnd);
 
-  long getPhysicalStock(String listingVariantId, InventoryItem.InventoryMode mode);
+	long getPhysicalStock(String listingVariantId, InventoryItem.InventoryMode mode);
 
-  long getReservedQuantity(String listingVariantId, InventoryItem.InventoryMode mode);
+	long getReservedQuantity(String listingVariantId, InventoryItem.InventoryMode mode);
 
-  long getAvailableQuantity(String listingVariantId, InventoryItem.InventoryMode mode);
+	long getAvailableQuantity(String listingVariantId, InventoryItem.InventoryMode mode);
+
+	long requireAvailableQuantity(
+			String listingVariantId, InventoryItem.InventoryMode mode, long requestedQuantity);
+
+	long requireAvailableQuantityInOpenInterval(
+			String listingVariantId,
+			InventoryItem.InventoryMode mode,
+			Instant intervalStart,
+			Instant intervalEnd,
+			long requestedQuantity);
 }

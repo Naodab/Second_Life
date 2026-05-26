@@ -29,9 +29,9 @@ import { facilityAvatarUrl, type FacilityWithPlaceNames } from "@/api/facility";
 import { getFacilityListingPage, type ListingItemResponse } from "@/api/listing";
 import { getFacilityProductPage, type ProductItemResponse } from "@/api/product";
 import { formatCurrency, cn } from "@/lib/utils";
-import { MOCK_ORDERS } from "@/lib/mock-data";
 import { ListingPaginationBar } from "@/components/ListingPaginationBar";
 import { OrdersView } from "./OrdersView";
+import { useFacilityOrdersCount } from "./useFacilityOrdersPage";
 
 const DEFAULT_PRODUCT_THUMB =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop";
@@ -119,10 +119,7 @@ export function FacilityView({
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  const ordersTabCount = useMemo(
-    () => MOCK_ORDERS.filter((o) => o.facilityId === facility.id).length,
-    [facility.id],
-  );
+  const ordersTabCount = useFacilityOrdersCount(facility.id);
 
   useEffect(() => {
     setListingPage(0);
@@ -618,7 +615,9 @@ export function FacilityView({
             </TabsContent>
 
             <TabsContent value="orders" className="space-y-4 mt-0 focus-visible:outline-none">
-              {hubTab === "orders" && <OrdersView facilityId={facility.id} embedded />}
+              {hubTab === "orders" && (
+                <OrdersView facilities={[facility]} embedded lockedFacilityId={facility.id} />
+              )}
             </TabsContent>
           </div>
         </div>

@@ -316,6 +316,41 @@ services:
     labels:
       - "traefik.enable=true"
 
+  booking-service:
+    image: booking-service:latest
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: bookingservice/Dockerfile
+    ports:
+      - "${SERVER_PORT_BOOKING_SERVICE:-8088}:8088"
+    environment:
+      SERVER_PORT_BOOKING_SERVICE: "8088"
+      LOCATION_SERVICE_URL: http://location-service:8085/api/v1
+      INVENTORY_SERVICE_URL: http://inventory-service:8087/api/v1
+      PRODUCT_SERVICE_URL: http://product-service:8086/api/v1
+    env_file:
+      - .env
+    depends_on:
+      kafka:
+        condition: service_healthy
+      location-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://127.0.0.1:8088/api/v1/v3/api-docs -o /dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    networks:
+      - second_life_network
+    labels:
+      - "traefik.enable=true"
+
 volumes:
   elasticsearch-data:
   kafka-data:

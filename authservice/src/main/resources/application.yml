@@ -87,6 +87,8 @@ protected_paths:
     - /api/v1/listings
     - /api/v1/attributes
     - /api/v1/profiles
+    - /api/v1/customers
+    - /api/v1/orders
   PUT:
     - /api/v1/facilities
     - /api/v1/categories
@@ -94,6 +96,8 @@ protected_paths:
     - /api/v1/products
     - /api/v1/attributes
     - /api/v1/profiles
+    - /api/v1/customers
+    - /api/v1/orders
   DELETE:
     - /api/v1/facilities
     - /api/v1/categories

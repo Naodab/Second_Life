@@ -1,0 +1,39 @@
+{
+  "properties": [
+    {
+      "name": "server.servlet.multipart.max-file-size",
+      "type": "java.lang.String",
+      "description": "Max file size"
+    },
+    {
+      "name": "server.servlet.multipart.max-request-size",
+      "type": "java.lang.String",
+      "description": "Max request size"
+    },
+    {
+      "name": "external.cors_allowed_origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated; CORS for SPA (Vite 5173) + optional gateway/static host"
+    },
+    {
+      "name": "external.inventory-service.url",
+      "type": "java.lang.String",
+      "description": "Inventory service URL"
+    },
+    {
+      "name": "spring.kafka.topics.create-inventory-reservation",
+      "type": "java.lang.String",
+      "description": "Create inventory reservation topic"
+    },
+    {
+      "name": "external.location-service.url",
+      "type": "java.lang.String",
+      "description": "Location service URL"
+    },
+    {
+      "name": "external.product-service.url",
+      "type": "java.lang.String",
+      "description": "Product service URL"
+    }
+  ]
+}

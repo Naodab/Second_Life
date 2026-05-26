@@ -1,11 +1,20 @@
 import type { Product } from "@/lib/mock-data";
 import type { ListingPublicDetailResponse } from "@/api/listing";
 
-function mergeListingVariantPairs(detail: ListingPublicDetailResponse) {
+export function mergeListingVariantPairs(detail: ListingPublicDetailResponse) {
   const variantById = new Map((detail.product.variants ?? []).map((v) => [v.id, v]));
   return (detail.listing.variants ?? [])
     .filter((lv) => lv.isActive !== false)
     .map((lv) => ({ lv, pv: variantById.get(lv.productVariantId) }));
+}
+
+export function findListingVariantRow(
+  detail: ListingPublicDetailResponse,
+  listingVariantId: string,
+) {
+  const id = listingVariantId.trim();
+  if (!id) return null;
+  return mergeListingVariantPairs(detail).find(({ lv }) => lv.id === id) ?? null;
 }
 
 export function deriveListingCartPrices(detail: ListingPublicDetailResponse): {

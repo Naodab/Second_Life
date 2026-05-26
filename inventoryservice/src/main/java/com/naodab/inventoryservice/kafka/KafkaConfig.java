@@ -14,6 +14,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 
 import com.naodab.inventoryservice.dto.event.CreateInventoryItemsBatchEvent;
+import com.naodab.inventoryservice.dto.event.InventoryReservationCreateEvent;
 
 @Configuration
 public class KafkaConfig {
@@ -52,6 +53,11 @@ public class KafkaConfig {
   @Bean
   public ConcurrentKafkaListenerContainerFactory<String, CreateInventoryItemsBatchEvent> createInventoryItemsBatchKafkaListenerContainerFactory() {
     return kafkaListenerContainerFactory(CreateInventoryItemsBatchEvent.class, consumerGroupId);
+  }
+
+  @Bean
+  public ConcurrentKafkaListenerContainerFactory<String, InventoryReservationCreateEvent> inventoryReservationCreateKafkaListenerContainerFactory() {
+    return kafkaListenerContainerFactory(InventoryReservationCreateEvent.class, consumerGroupId);
   }
 
 }

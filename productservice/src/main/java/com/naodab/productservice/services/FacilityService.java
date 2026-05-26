@@ -21,4 +21,8 @@ public interface FacilityService {
   void deleteFacility(String id);
 
   void uploadMainImageFacility(String id, String ownerId, String imageUrl);
+
+  List<String> listListingVariantIdsForFacility(String profileId, String facilityId);
+
+  List<String> listListingVariantIdsForOwner(String profileId);
 }

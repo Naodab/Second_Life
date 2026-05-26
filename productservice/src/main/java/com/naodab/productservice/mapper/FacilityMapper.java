@@ -40,6 +40,7 @@ public class FacilityMapper {
     return FacilityResponse.builder()
         .id(facility.getId())
         .name(facility.getName())
+        .ownerId(facility.getOwnerId())
         .description(facility.getDescription())
         .imageUrl(facility.getImageUrl())
         .linkGoogleMap(facility.getLinkGoogleMap())

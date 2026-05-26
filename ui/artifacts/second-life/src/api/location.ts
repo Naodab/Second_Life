@@ -34,8 +34,17 @@ export type WardLonLatResponse = WardResponse & {
   province?: { code?: string; id?: number | string; name?: string } | null;
 };
 
+function parseLocationList<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === "object" && "data" in raw) {
+    const data = (raw as ApiResponseEnvelope<unknown>).data;
+    return Array.isArray(data) ? (data as T[]) : [];
+  }
+  return [];
+}
+
 export async function getProvinces(request: ProvinceSearchRequest): Promise<ProvinceResponse[]> {
-  const raw = await customFetch<ApiResponseEnvelope<ProvinceResponse[]>>(`/api/v1/provinces`, {
+  const raw = await customFetch<unknown>(`/api/v1/provinces`, {
     method: "GET",
     query: {
       page: request.page,
@@ -43,11 +52,11 @@ export async function getProvinces(request: ProvinceSearchRequest): Promise<Prov
       name: request.name,
     },
   });
-  return unwrapApiData<ProvinceResponse[]>(raw);
+  return parseLocationList<ProvinceResponse>(raw);
 }
 
 export async function getWards(request: WardSearchRequest): Promise<WardResponse[]> {
-  const raw = await customFetch<ApiResponseEnvelope<WardResponse[]>>(`/api/v1/wards`, {
+  const raw = await customFetch<unknown>(`/api/v1/wards`, {
     method: "GET",
     query: {
       page: request.page,
@@ -56,7 +65,7 @@ export async function getWards(request: WardSearchRequest): Promise<WardResponse
       provinceCode: request.provinceCode,
     },
   });
-  return unwrapApiData<WardResponse[]>(raw);
+  return parseLocationList<WardResponse>(raw);
 }
 
 export async function getWardsByLonLat(lon: number, lat: number): Promise<WardLonLatResponse[]> {

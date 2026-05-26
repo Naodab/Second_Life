@@ -5,6 +5,15 @@ import type { RentalPeriodDto } from "@/api/inventory";
 
 export type BookingInterval = { startMs: number; endMs: number; qty: number };
 
+const HOURLY_SLOT_TURNOVER_MS = 3600000;
+const DAILY_RENTAL_TURNOVER_MS = 86400000;
+
+function blockedEndMs(slotStart: string | null | undefined, slotEnd: string | null | undefined, rentalEndMs: number): number {
+  const turnover =
+    slotStart?.trim() && slotEnd?.trim() ? HOURLY_SLOT_TURNOVER_MS : DAILY_RENTAL_TURNOVER_MS;
+  return rentalEndMs + turnover;
+}
+
 function parseFlexibleLocal(dateStr: string): Date | null {
   const s = dateStr.trim();
   if (!s) return null;
@@ -27,7 +36,7 @@ export function rentalPeriodsToBookings(rows: RentalPeriodDto[]): BookingInterva
       const a = start?.getTime();
       const b = end?.getTime();
       if (typeof a === "number" && typeof b === "number" && b > a) {
-        out.push({ startMs: a, endMs: b, qty });
+        out.push({ startMs: a, endMs: blockedEndMs(ss, se, b), qty });
       }
       continue;
     }
@@ -40,7 +49,7 @@ export function rentalPeriodsToBookings(rows: RentalPeriodDto[]): BookingInterva
     const startMs = startOfDay(sd).getTime();
     const endExclusive = addDays(startOfDay(ed), 1).getTime();
     if (endExclusive > startMs) {
-      out.push({ startMs, endMs: endExclusive, qty });
+      out.push({ startMs, endMs: blockedEndMs(null, null, endExclusive), qty });
     }
   }
   return out;

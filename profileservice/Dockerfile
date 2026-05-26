@@ -15,6 +15,7 @@ COPY mailservice/pom.xml mailservice/pom.xml
 COPY locationservice/pom.xml locationservice/pom.xml
 COPY productservice/pom.xml productservice/pom.xml
 COPY inventoryservice/pom.xml inventoryservice/pom.xml
+COPY bookingservice/pom.xml bookingservice/pom.xml
 
 # download dependencies (persist ~/.m2 across builds via BuildKit cache)
 RUN --mount=type=cache,target=/root/.m2 \

@@ -16,6 +16,7 @@ import com.naodab.productservice.dto.response.FacilityResponse;
 import com.naodab.productservice.services.FacilityService;
 import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.repositories.FacilityRepository;
+import com.naodab.productservice.repositories.ListingVariantRepository;
 import com.naodab.productservice.mapper.FacilityMapper;
 import com.naodab.productservice.client.LocationClient;
 import com.naodab.productservice.specification.FacilitySpecification;
@@ -36,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class FacilityServiceImpl implements FacilityService {
   FacilityRepository facilityRepository;
+  ListingVariantRepository listingVariantRepository;
   FacilitySpecification facilitySpecification;
   FacilityMapper facilityMapper;
   LocationClient locationClient;
@@ -161,6 +163,26 @@ public class FacilityServiceImpl implements FacilityService {
 
     facility.setImageUrl(imageUrl.trim());
     facilityRepository.save(facility);
+  }
+
+  @Override
+  @org.springframework.transaction.annotation.Transactional(readOnly = true)
+  public List<String> listListingVariantIdsForFacility(String profileId, String facilityId) {
+    if (!StringUtils.hasText(profileId) || !StringUtils.hasText(facilityId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    facilityRepository.findByOwnerIdAndIdAndDeletedAtIsNull(profileId.trim(), facilityId.trim())
+        .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
+    return listingVariantRepository.findIdsByFacilityId(facilityId.trim());
+  }
+
+  @Override
+  @org.springframework.transaction.annotation.Transactional(readOnly = true)
+  public List<String> listListingVariantIdsForOwner(String profileId) {
+    if (!StringUtils.hasText(profileId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    return listingVariantRepository.findIdsByOwnerId(profileId.trim());
   }
 
 }

@@ -39,4 +39,5 @@ public class FacilityCreateRequest {
   @NotBlank(message = "REQUIRED_FIELD")
   @Size(min = 3, max = 255, message = "WARD_CODE_INVALID")
   String wardCode;
+
 }

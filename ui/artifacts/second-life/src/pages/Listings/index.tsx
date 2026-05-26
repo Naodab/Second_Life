@@ -32,6 +32,7 @@ import {
   manageProductDetailPath,
   manageProductsPath,
   manageUnpublishedPath,
+  manageOrdersPath,
   parseManageRoute,
 } from "./manageRoutes";
 import type { AddProductSubmitPayload, PendingProduct } from "./types";
@@ -43,9 +44,8 @@ function hasFacilityScope(
   | { tag: "add-product"; facilityId: string }
   | { tag: "add-listing"; facilityId: string }
   | { tag: "product"; facilityId: string; productId: string }
-  | { tag: "unpublished"; facilityId: string }
-  | { tag: "orders"; facilityId: string } {
-  return !!r && !["dashboard", "products", "listings"].includes(r.tag);
+  | { tag: "unpublished"; facilityId: string } {
+  return !!r && !["dashboard", "products", "listings", "orders"].includes(r.tag);
 }
 
 async function attachPlaceNames(
@@ -153,6 +153,11 @@ export default function Listings() {
 
   useEffect(() => {
     if (!location.startsWith("/manage")) {
+      return;
+    }
+    const legacyOrders = location.match(/^\/manage\/facilities\/[^/]+\/orders\/?$/);
+    if (legacyOrders) {
+      setLocation(manageOrdersPath(), { replace: true });
       return;
     }
     const parsed = parseManageRoute(location);
@@ -406,9 +411,7 @@ export default function Listings() {
                 <UnpublishedView products={unpublishedProducts} onPublish={handlePublish} />
               )}
 
-              {route?.tag === "orders" && !!route.facilityId && (
-                <OrdersView facilityId={route.facilityId} />
-              )}
+              {route?.tag === "orders" && <OrdersView facilities={facilities} />}
             </>
           )}
         </div>

@@ -1,9 +1,12 @@
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/context/AuthContext";
+import { guardSellerHubNavigation } from "@/components/SellerHubProfileGate";
 import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { Facebook, Instagram } from "lucide-react";
 
 export function Footer() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { isLoggedIn, sellerHubProfileComplete } = useAuth();
   if (location.startsWith("/manage") || location.startsWith("/listings")) return null;
 
   return (
@@ -36,7 +39,21 @@ export function Footer() {
               <li><Link href="/search?type=buy" className="hover:text-primary">Tất cả sản phẩm</Link></li>
               <li><Link href="/search?type=rent" className="hover:text-primary">Cho thuê</Link></li>
               <li><Link href="/search" className="hover:text-primary">Danh mục</Link></li>
-              <li><Link href={SELLER_HUB_HOME} className="hover:text-primary">Đăng bán</Link></li>
+              <li>
+                <button
+                  type="button"
+                  className="hover:text-primary text-left"
+                  onClick={() =>
+                    guardSellerHubNavigation(
+                      SELLER_HUB_HOME,
+                      { isLoggedIn, sellerHubProfileComplete },
+                      setLocation,
+                    )
+                  }
+                >
+                  Đăng bán
+                </button>
+              </li>
             </ul>
           </div>
 

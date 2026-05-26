@@ -9,9 +9,9 @@ import {
   fetchListingVariantAvailabilityInRange,
 } from "@/api/inventory";
 import { useCart } from "@/hooks/use-mock-api";
+import { useRequireAuth } from "@/hooks/use-require-auth";
+import { buildCheckoutHref, setPendingCheckoutLine } from "@/checkout/checkout-session";
 import { useToast } from "@/hooks/use-toast";
-import type { Product } from "@/lib/mock-data";
-
 import { ImageSlider } from "./ImageSlider";
 import { ListingBuyDialog } from "./ListingBuyDialog";
 import { ListingDetailBreadcrumb } from "./ListingDetailBreadcrumb";
@@ -20,7 +20,7 @@ import { ListingDetailSkeleton } from "./ListingDetailSkeleton";
 import { ListingFacilitySection } from "./ListingFacilitySection";
 import { ListingProductSummary } from "./ListingProductSummary";
 import { ListingRentDialog } from "./ListingRentDialog";
-import { rentalWindowToCartDates, type RentScheduleValidityPayload, type RentScheduleWindow } from "./ListingRentScheduler";
+import { type RentScheduleValidityPayload, type RentScheduleWindow } from "./ListingRentScheduler";
 import { ListingReviewsSection } from "./ListingReviewsSection";
 import { ListingSimilarSection } from "./ListingSimilarSection";
 import { ReviewMediaLightbox } from "./ReviewMediaLightbox";
@@ -67,6 +67,7 @@ export default function ListingDetail() {
   const [variantSelection, setVariantSelection] = useState<Record<string, string>>({});
 
   const { addToCart } = useCart();
+  const { requireAuth } = useRequireAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -220,22 +221,9 @@ export default function ListingDetail() {
     setVariantSelection((prev) => ({ ...prev, [axisKey]: valueId }));
   };
 
-  const buildProductForCart = (mode: "buy" | "rent"): Product | null => {
-    if (!cartBridge || !data || !anchorVariantRow) return null;
-    const label = anchorVariantRow.pv?.label?.trim();
-    const name =
-      variantAxes.length > 0 && label ? `${cartBridge.name} (${label})` : cartBridge.name;
-    const liveStock = mode === "buy" ? effectiveBuyStock : effectiveRentStockCapped;
-    return {
-      ...cartBridge,
-      name,
-      stock: liveStock,
-    };
-  };
-
   const handleCheckoutNow = (mode: "buy" | "rent") => {
-    const base = buildProductForCart(mode);
-    if (!base) return;
+    if (!requireAuth()) return;
+    if (!data || !listingVariantId) return;
     if (mode === "buy" && (effectiveBuyStock <= 0 || dialogBuyUnitPrice <= 0)) return;
     if (
       mode === "rent" &&
@@ -244,26 +232,34 @@ export default function ListingDetail() {
       return;
     }
 
-    const product: Product =
+    const line =
       mode === "buy"
-        ? { ...base, buyPrice: dialogBuyUnitPrice, rentPrice: undefined }
-        : { ...base, rentPrice: dialogRentUnitPrice, buyPrice: undefined };
+        ? {
+            listingId: data.listing.id,
+            listingVariantId,
+            quantity: buyQty,
+            mode: "buy" as const,
+          }
+        : {
+            listingId: data.listing.id,
+            listingVariantId,
+            quantity: rentQty,
+            mode: "rent" as const,
+            rentalStart: new Date(rentWindow!.startMs).toISOString(),
+            rentalEnd: new Date(rentWindow!.endExclusiveMs).toISOString(),
+          };
 
-    const dates =
-      mode === "rent" && rentWindow
-        ? rentalWindowToCartDates(rentWindow)
-        : undefined;
-
-    addToCart(product, mode === "buy" ? buyQty : rentQty, dates ? { start: dates.start, end: dates.end } : undefined);
+    setPendingCheckoutLine(line);
 
     setIsBuyModalOpen(false);
     setIsRentModalOpen(false);
     setRentWindow(null);
     setRentValidity({ ok: false, billUnits: 0 });
-    navigate("/checkout");
+    navigate(buildCheckoutHref(line));
   };
 
   const handleQuickAddToCart = () => {
+    if (!requireAuth()) return;
     if (!cartBridge) return;
     addToCart(cartBridge, 1);
     toast({ title: "Đã thêm vào giỏ hàng!", description: `${cartBridge.name} đã được thêm vào giỏ.` });
@@ -337,8 +333,12 @@ export default function ListingDetail() {
               totalStock={totalStock}
               locationLine={locationLine}
               outOfStock={outOfStock}
-              onOpenBuy={() => setIsBuyModalOpen(true)}
+              onOpenBuy={() => {
+                if (!requireAuth()) return;
+                setIsBuyModalOpen(true);
+              }}
               onOpenRent={() => {
+                if (!requireAuth()) return;
                 setIsRentModalOpen(true);
                 setRentWindow(null);
                 setRentValidity({ ok: false, billUnits: 0 });

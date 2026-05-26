@@ -36,4 +36,5 @@ public class FacilityUpdateRequest {
 
   @Size(max = 255, message = "WARD_CODE_INVALID")
   String wardCode;
+
 }

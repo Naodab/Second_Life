@@ -46,6 +46,7 @@ public class Facility extends BaseEntity {
   String address;
   String provinceCode;
   String wardCode;
+
   Float latitude;
   Float longitude;
 

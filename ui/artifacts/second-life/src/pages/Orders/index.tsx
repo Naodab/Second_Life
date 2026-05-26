@@ -1,105 +1,220 @@
 import { useState } from "react";
-import { Package, MessageSquare, Star } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
+import { Clock, Loader2, MessageSquare, Package, ShoppingBag } from "lucide-react";
+
+import { ApiErrorState } from "@/components/errors";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/utils";
-import { MOCK_PRODUCTS } from "@/lib/mock-data";
-
-const mockOrders = [
-  { id: "ORD-1234", status: "completed", type: "buy", product: MOCK_PRODUCTS[0], date: "2024-05-10" },
-  { id: "ORD-1235", status: "shipping", type: "rent", product: MOCK_PRODUCTS[2], date: "2024-05-18" },
-  { id: "ORD-1236", status: "pending", type: "buy", product: MOCK_PRODUCTS[1], date: "2024-05-20" },
-];
-
-const STATUS_LABELS: Record<string, string> = {
-  completed: "Hoàn thành",
-  shipping: "Đang giao",
-  pending: "Chờ xác nhận",
-  processing: "Đang xử lý",
-};
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_TABS,
+  canCancelOrder,
+  formatOrderDate,
+  formatPickupTime,
+  orderDisplayTitle,
+  orderListingHref,
+  orderStatusBadgeClass,
+  orderThumbnail,
+  orderUnitPrice,
+  useMyOrdersPage,
+  type OrderTab,
+} from "./useMyOrdersPage";
+import { OrderCancelButton } from "./OrderCancelButton";
 
 export default function Orders() {
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState<OrderTab>("all");
+  const { filteredOrders, orders, isLoading, contextsLoading, isError, errorView, refetch } =
+    useMyOrdersPage(activeTab);
 
-  const filteredOrders = activeTab === "all" ? mockOrders : mockOrders.filter(o => o.status === activeTab);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30 pt-8 pb-20 dark:to-muted/15">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[40vh] gap-4 text-muted-foreground">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm">Đang tải đơn hàng...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError && errorView) {
+    return (
+      <ApiErrorState
+        variant="fullscreen"
+        model={errorView}
+        onRetry={refetch}
+        homeHref="/"
+      />
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50/30 pt-8 pb-20">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30 pt-8 pb-20 dark:to-muted/15">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <h1 className="text-3xl font-display font-bold mb-8 flex items-center gap-3">
-          <Package className="w-8 h-8 text-primary" /> Đơn hàng của tôi
-        </h1>
+        <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <h1 className="text-3xl font-display font-bold flex items-center gap-3">
+            <Package className="w-8 h-8 text-primary" /> Đơn hàng của tôi
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {orders.length} đơn hàng
+            {contextsLoading ? " · đang tải thông tin sản phẩm…" : null}
+          </p>
+        </div>
 
-        <div className="bg-white rounded-3xl border shadow-sm overflow-hidden p-6">
-          <Tabs defaultValue="all" onValueChange={setActiveTab}>
-            <TabsList className="bg-gray-100 rounded-xl p-1 mb-6 flex flex-wrap h-auto">
-              <TabsTrigger value="all" className="rounded-lg data-[state=active]:shadow-sm">Tất cả</TabsTrigger>
-              <TabsTrigger value="pending" className="rounded-lg data-[state=active]:shadow-sm">Chờ xác nhận</TabsTrigger>
-              <TabsTrigger value="processing" className="rounded-lg data-[state=active]:shadow-sm">Đang xử lý</TabsTrigger>
-              <TabsTrigger value="shipping" className="rounded-lg data-[state=active]:shadow-sm">Đang giao</TabsTrigger>
-              <TabsTrigger value="completed" className="rounded-lg data-[state=active]:shadow-sm">Hoàn thành</TabsTrigger>
+        <div className="rounded-3xl border border-border bg-card shadow-sm overflow-hidden p-6">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as OrderTab)}>
+            <TabsList className="bg-muted/60 rounded-xl p-1 mb-6 flex flex-wrap h-auto w-full justify-start">
+              {ORDER_TABS.map((tab) => {
+                const count =
+                  tab.value === "all"
+                    ? orders.length
+                    : orders.filter((o) => o.status === tab.value).length;
+                return (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className="rounded-lg data-[state=active]:shadow-sm"
+                  >
+                    {tab.label}
+                    {count > 0 ? (
+                      <span className="ml-1.5 text-xs opacity-70">({count})</span>
+                    ) : null}
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
-            
+
             <div className="space-y-6">
               {filteredOrders.length === 0 ? (
                 <div className="text-center py-12">
-                  <img src={`${import.meta.env.BASE_URL}images/empty-cart.png`} alt="Không có đơn hàng" className="w-32 h-32 mx-auto opacity-50 mb-4" />
+                  <img
+                    src={`${import.meta.env.BASE_URL}images/empty-cart.png`}
+                    alt="Không có đơn hàng"
+                    className="w-32 h-32 mx-auto opacity-50 mb-4"
+                  />
                   <h3 className="text-lg font-bold text-foreground">Không có đơn hàng nào</h3>
-                  <p className="text-muted-foreground text-sm">Bạn chưa có đơn hàng nào trong trạng thái này.</p>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    {activeTab === "all"
+                      ? "Bạn chưa có đơn hàng nào."
+                      : "Không có đơn hàng nào trong trạng thái này."}
+                  </p>
+                  <Link href="/search">
+                    <Button className="mt-6 rounded-full">Khám phá sản phẩm</Button>
+                  </Link>
                 </div>
               ) : (
-                filteredOrders.map(order => (
-                  <div key={order.id} className="border rounded-2xl p-5 hover:border-primary/30 transition-colors">
-                    <div className="flex justify-between items-center mb-4 pb-4 border-b border-dashed">
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold font-mono">{order.id}</span>
-                        <span className="text-xs text-muted-foreground">{order.date}</span>
-                      </div>
-                      <Badge variant="outline" className={
-                        order.status === 'completed' ? 'bg-primary/10 text-primary border-primary/20' :
-                        order.status === 'shipping' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                        'bg-amber-100 text-amber-700 border-amber-200'
-                      }>
-                        {STATUS_LABELS[order.status] || order.status.toUpperCase()}
-                      </Badge>
-                    </div>
+                filteredOrders.map((order) => {
+                  const listingHref = orderListingHref(order);
+                  const unitPrice = orderUnitPrice(order);
+                  const lineTotal =
+                    unitPrice != null ? unitPrice * order.quantity : null;
+                  const isRent = order.context?.listingType === "RENT";
 
-                    <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                      <img src={order.product.images[0]} className="w-20 h-20 rounded-xl object-cover" />
-                      <div className="flex-1">
-                        <h4 className="font-bold text-lg">{order.product.name}</h4>
-                        <div className="flex gap-2 mt-1">
-                          <Badge variant="secondary" className="text-[10px] uppercase">
-                            {order.type === 'buy' ? 'MUA' : 'THUÊ'}
-                          </Badge>
+                  return (
+                    <div
+                      key={order.id}
+                      className="border border-border rounded-2xl p-5 hover:border-primary/30 transition-colors bg-background/60"
+                    >
+                      <div className="flex flex-wrap justify-between items-center gap-3 mb-4 pb-4 border-b border-dashed border-border">
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                          <span className="text-xs text-muted-foreground">Mã đơn</span>
+                          <span className="font-mono text-xs sm:text-sm break-all text-foreground">
+                            {order.id}
+                          </span>
+                          <span className="text-xs text-muted-foreground mt-1">
+                            {formatOrderDate(order.createdAt)}
+                          </span>
+                        </div>
+                        <Badge variant="outline" className={orderStatusBadgeClass(order.status)}>
+                          {ORDER_STATUS_LABELS[order.status]}
+                        </Badge>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                        {listingHref ? (
+                          <Link href={listingHref}>
+                            <img
+                              src={orderThumbnail(order)}
+                              alt={orderDisplayTitle(order)}
+                              className="w-20 h-20 rounded-xl object-cover border border-border cursor-pointer"
+                            />
+                          </Link>
+                        ) : (
+                          <img
+                            src={orderThumbnail(order)}
+                            alt={orderDisplayTitle(order)}
+                            className="w-20 h-20 rounded-xl object-cover border border-border"
+                          />
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                          {listingHref ? (
+                            <Link href={listingHref}>
+                              <h4 className="font-bold text-lg line-clamp-2 hover:text-primary transition-colors">
+                                {orderDisplayTitle(order)}
+                              </h4>
+                            </Link>
+                          ) : (
+                            <h4 className="font-bold text-lg line-clamp-2">{orderDisplayTitle(order)}</h4>
+                          )}
+
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <Badge variant="secondary" className="text-[10px] uppercase">
+                              {isRent ? "Thuê" : "Mua"}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              Số lượng: {order.quantity}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+                            <Clock className="w-3.5 h-3.5 shrink-0" />
+                            <span>Nhận hàng dự kiến: {formatPickupTime(order.pickupTime)}</span>
+                          </div>
+
+                          {order.status === "PENDING" && (
+                            <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
+                              Đang chờ chủ sản phẩm xác nhận đơn.
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          {lineTotal != null ? (
+                            <>
+                              <p className="font-bold text-xl">{formatCurrency(lineTotal)}</p>
+                              {order.quantity > 1 && unitPrice != null && (
+                                <p className="text-[11px] text-muted-foreground mt-1">
+                                  {formatCurrency(unitPrice)} × {order.quantity}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Giá thỏa thuận</p>
+                          )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-xl">
-                          {formatCurrency(order.type === 'buy' ? (order.product.buyPrice || 0) : (order.product.rentPrice || 0) * 7)}
-                        </p>
+
+                      <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-border">
+                        {canCancelOrder(order.status) && <OrderCancelButton orderId={order.id} />}
+                        {listingHref && (
+                          <Link href={listingHref}>
+                            <Button variant="outline" size="sm" className="rounded-full">
+                              <ShoppingBag className="w-4 h-4 mr-2" /> Xem sản phẩm
+                            </Button>
+                          </Link>
+                        )}
+                        <Link href="/messages">
+                          <Button variant="outline" size="sm" className="rounded-full">
+                            <MessageSquare className="w-4 h-4 mr-2" /> Liên hệ người bán
+                          </Button>
+                        </Link>
                       </div>
                     </div>
-
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                      <Button variant="outline" size="sm" className="rounded-full">
-                        <MessageSquare className="w-4 h-4 mr-2" /> Liên hệ người bán
-                      </Button>
-                      {order.status === 'shipping' && (
-                        <Button size="sm" className="rounded-full bg-blue-600 hover:bg-blue-700 text-white">
-                          Xác nhận đã nhận hàng
-                        </Button>
-                      )}
-                      {order.status === 'completed' && (
-                        <Button size="sm" className="rounded-full bg-amber-500 hover:bg-amber-600 text-white">
-                          <Star className="w-4 h-4 mr-2 fill-current" /> Viết đánh giá
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </Tabs>

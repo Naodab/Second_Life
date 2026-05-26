@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { UnverifiedEmailError, useAuth } from "@/context/AuthContext";
 import { redirectToGoogleOAuth } from "@/api";
+import { sanitizeReturnTo } from "@/hooks/use-require-auth";
 import { toast } from "@/hooks/use-toast";
 import { ApiError } from "@workspace/api-client-react";
 
@@ -16,14 +17,25 @@ function readErrorCode(err: unknown): number | undefined {
   return typeof code === "number" ? code : undefined;
 }
 
+function readReturnToFromSearch(): string {
+  const params = new URLSearchParams(window.location.search);
+  return sanitizeReturnTo(params.get("returnTo"));
+}
+
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { login } = useAuth();
+  const { login, isLoggedIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      setLocation(readReturnToFromSearch());
+    }
+  }, [isLoggedIn, setLocation]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -56,7 +68,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       const needsSetup = await login(email, password);
-      setLocation(needsSetup ? "/profile/setup" : "/");
+      setLocation(needsSetup ? "/profile/setup" : readReturnToFromSearch());
     } catch (error) {
       if (error instanceof UnverifiedEmailError) {
         toast({

@@ -36,25 +36,35 @@ public class ListingVariantInventoryController {
   @GetMapping("/{listingVariantId}/availability")
   public ResponseEntity<ApiResponse<ListingVariantAvailabilityResponse>> getAvailability(
       @PathVariable String listingVariantId,
-      @RequestParam(name = "mode", defaultValue = "BUY") String modeRaw) {
+      @RequestParam(name = "mode", defaultValue = "BUY") String modeRaw,
+      @RequestParam(name = "quantity", required = false) Integer quantity) {
     InventoryItem.InventoryMode mode;
     try {
       mode = InventoryItem.InventoryMode.valueOf(modeRaw.trim().toUpperCase());
     } catch (IllegalArgumentException e) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
-    ListingVariantAvailabilityResponse body = inventoryAvailabilityService
-        .findAvailableQuantityIfTracked(listingVariantId, mode)
-        .map(
-            q -> ListingVariantAvailabilityResponse.builder()
-                .tracked(true)
-                .availableQuantity(q)
-                .build())
-        .orElse(
-            ListingVariantAvailabilityResponse.builder()
-                .tracked(false)
-                .availableQuantity(null)
-                .build());
+
+    Long availableQty = null;
+    boolean tracked = false;
+    if (quantity != null) {
+      long available = inventoryAvailabilityService.requireAvailableQuantity(
+          listingVariantId, mode, quantity.longValue());
+      tracked = true;
+      availableQty = available;
+    } else {
+      var opt = inventoryAvailabilityService.findAvailableQuantityIfTracked(listingVariantId, mode);
+      if (opt.isPresent()) {
+        tracked = true;
+        availableQty = opt.get();
+      }
+    }
+
+    ListingVariantAvailabilityResponse body =
+        ListingVariantAvailabilityResponse.builder()
+            .tracked(tracked)
+            .availableQuantity(availableQty)
+            .build();
 
     return ResponseEntity.ok(ApiResponse.<ListingVariantAvailabilityResponse>builder().data(body).build());
   }
@@ -64,7 +74,8 @@ public class ListingVariantInventoryController {
       @PathVariable String listingVariantId,
       @RequestParam(name = "from") String fromRaw,
       @RequestParam(name = "to") String toRaw,
-      @RequestParam(name = "mode", defaultValue = "RENT") String modeRaw) {
+      @RequestParam(name = "mode", defaultValue = "RENT") String modeRaw,
+      @RequestParam(name = "quantity", required = false) Integer quantity) {
     final Instant from;
     final Instant to;
     try {
@@ -80,22 +91,31 @@ public class ListingVariantInventoryController {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
-    ListingVariantIntervalAvailabilityResponse body = inventoryAvailabilityService
-        .findMinAvailableQuantityInOpenInterval(listingVariantId, mode, from, to)
-        .map(
-            q -> ListingVariantIntervalAvailabilityResponse.builder()
-                .tracked(true)
-                .availableQuantity(q)
-                .intervalStart(from)
-                .intervalEnd(to)
-                .build())
-        .orElse(
-            ListingVariantIntervalAvailabilityResponse.builder()
-                .tracked(false)
-                .availableQuantity(null)
-                .intervalStart(from)
-                .intervalEnd(to)
-                .build());
+    Long availableQty = null;
+    boolean tracked = false;
+    if (quantity != null) {
+      long available =
+          inventoryAvailabilityService.requireAvailableQuantityInOpenInterval(
+              listingVariantId, mode, from, to, quantity.longValue());
+      tracked = true;
+      availableQty = available;
+    } else {
+      var opt =
+          inventoryAvailabilityService.findMinAvailableQuantityInOpenInterval(
+              listingVariantId, mode, from, to);
+      if (opt.isPresent()) {
+        tracked = true;
+        availableQty = opt.get();
+      }
+    }
+
+    ListingVariantIntervalAvailabilityResponse body =
+        ListingVariantIntervalAvailabilityResponse.builder()
+            .tracked(tracked)
+            .availableQuantity(availableQty)
+            .intervalStart(from)
+            .intervalEnd(to)
+            .build();
 
     return ResponseEntity.ok(ApiResponse.<ListingVariantIntervalAvailabilityResponse>builder().data(body).build());
   }

@@ -24,6 +24,7 @@ import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.response.AdminListingPurgeResponse;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingVariantContextResponse;
 import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
@@ -122,8 +123,21 @@ public class ListingController {
         .build());
   }
 
+  @GetMapping("/variants/{listingVariantId}/context")
+  public ResponseEntity<ApiResponse<ListingVariantContextResponse>> getListingVariantContext(
+      @PathVariable String listingVariantId) {
+    return ResponseEntity.ok(ApiResponse.<ListingVariantContextResponse>builder()
+        .data(listingService.getListingVariantContext(listingVariantId))
+        .build());
+  }
+
   @GetMapping("/{id}")
-  public ResponseEntity<ApiResponse<ListingPublicDetailResponse>> getPublicListingById(@PathVariable String id) {
+  public ResponseEntity<ApiResponse<ListingPublicDetailResponse>> getPublicListingById(
+      @PathVariable String id,
+      @RequestParam(name = "listingVariantId", required = false) String listingVariantId) {
+    if (listingVariantId != null && !listingVariantId.isBlank()) {
+      listingService.assertListingVariantOnListing(id, listingVariantId);
+    }
     return ResponseEntity.ok(ApiResponse.<ListingPublicDetailResponse>builder()
         .data(listingService.getPublicListingById(id))
         .build());

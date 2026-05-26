@@ -29,7 +29,6 @@ type Props = {
   scheduleResourceLabel?: string;
   hourDay?: Date;
   onHourDayChange?: (day: Date) => void;
-  /** Khi true: không cho chỉnh khung thuê (vd. hết kho variant). */
   disabled?: boolean;
   bookings: BookingInterval[];
   concurrencyCap: number;
@@ -452,8 +451,8 @@ export function ListingRentScheduler({
                             "border-border/70 bg-muted/20 hover:bg-accent/70",
                             inDraft && "ring-2 ring-inset ring-orange-500 border-orange-500/50 bg-orange-500/10",
                             inConfirmed &&
-                              !inDraft &&
-                              "border-emerald-600/35 bg-emerald-400/20 dark:border-emerald-500/40 dark:bg-emerald-600/20",
+                            !inDraft &&
+                            "border-emerald-600/35 bg-emerald-400/20 dark:border-emerald-500/40 dark:bg-emerald-600/20",
                           )}
                         >
                           <span>{label}</span>

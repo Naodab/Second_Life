@@ -1,4 +1,5 @@
 import { customFetch } from "@workspace/api-client-react";
+import { normalizeFacilityResponse } from "@/api/facility";
 import { unwrapApiData, type ApiResponseEnvelope, type PagedItemsResponse } from "./types";
 
 export type ListingType = "BUY" | "RENT";
@@ -253,10 +254,14 @@ export type CategoryRefDto = {
   name?: string | null;
 };
 
+/** Facility snapshot on listing public detail (matches productservice FacilityResponse). */
 export type FacilityOverviewDto = {
   id: string;
   name?: string | null;
+  ownerId?: string | null;
+  description?: string | null;
   imageUrl?: string | null;
+  linkGoogleMap?: string | null;
   address?: string | null;
   provinceCode?: string | null;
   wardCode?: string | null;
@@ -294,15 +299,53 @@ export type ListingPublicDetailResponse = {
   facility?: FacilityOverviewDto | null;
 };
 
-export async function fetchListingPublicDetail(listingId: string): Promise<ListingPublicDetailResponse> {
-  const raw = await customFetch<ApiResponseEnvelope<ListingPublicDetailResponse>>(
-    `/api/v1/listings/${encodeURIComponent(listingId.trim())}`,
+export type ListingVariantContextResponse = {
+  listingId: string;
+  listingVariantId: string;
+  facilityId?: string | null;
+  title: string;
+  productName?: string | null;
+  variantLabel?: string | null;
+  thumbnailUrl?: string | null;
+  listingType: ListingType;
+  buyPrice?: number | null;
+  rentPrice?: number | null;
+};
+
+export async function fetchListingVariantContext(
+  listingVariantId: string,
+): Promise<ListingVariantContextResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<ListingVariantContextResponse>>(
+    `/api/v1/listings/variants/${encodeURIComponent(listingVariantId.trim())}/context`,
     {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     },
   );
   return unwrapApiData(raw);
+}
+
+export async function fetchListingPublicDetail(
+  listingId: string,
+  options?: { listingVariantId?: string },
+): Promise<ListingPublicDetailResponse> {
+  const q = new URLSearchParams();
+  const variantId = options?.listingVariantId?.trim();
+  if (variantId) q.set("listingVariantId", variantId);
+  const qs = q.toString();
+  const raw = await customFetch<ApiResponseEnvelope<ListingPublicDetailResponse>>(
+    `/api/v1/listings/${encodeURIComponent(listingId.trim())}${qs ? `?${qs}` : ""}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  const data = unwrapApiData<ListingPublicDetailResponse>(raw);
+  const facility = data.facility ? normalizeFacilityResponse(data.facility) : null;
+  return {
+    ...data,
+    facility: facility ?? data.facility,
+  };
 }
 
 export async function createListing(body: ListingCreateBody): Promise<ListingCreateResponse> {

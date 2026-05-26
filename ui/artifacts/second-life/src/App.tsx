@@ -11,6 +11,7 @@ import { VisitorLocationProvider } from "@/context/VisitorLocationContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { SellerHubProfileGate } from "@/components/SellerHubProfileGate";
 import { setBaseUrl } from "@workspace/api-client-react";
 
 import Home from "@/pages/Home";
@@ -19,7 +20,7 @@ import ListingDetail from "@/pages/ListingDetail";
 import FacilityPage from "@/pages/Facility";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
-import Orders from "@/pages/Orders";
+import Orders from "@/pages/Orders/index";
 import Messages from "@/pages/Messages";
 import Listings from "@/pages/Listings/index";
 
@@ -72,19 +73,18 @@ function Router() {
     location === "/email-verified" ||
     location === "/profile/setup" ||
     location.startsWith("/oauth2/callback/");
-
   return (
     <div className="min-h-screen flex flex-col">
       {!isAuthPage && !isSellerHub && <Header />}
-      <main className="flex-1">
+      <main className="flex flex-1 flex-col">
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/search" component={Search} />
           <Route path="/listing/:id" component={ListingDetail} />
           <Route path="/facility/:id" component={FacilityPage} />
           <Route path="/shop/:id" component={FacilityPage} />
-          <Route path="/cart" component={Cart} />
-          <Route path="/checkout" component={Checkout} />
+          <ProtectedRoute path="/cart" component={Cart} />
+          <ProtectedRoute path="/checkout" component={Checkout} />
           <ProtectedRoute path="/orders" component={Orders} />
           <ProtectedRoute path="/messages" component={Messages} />
           <ProtectedRoute path="/listings" component={SellerHubLegacyRedirect} />
@@ -113,6 +113,7 @@ function App() {
             <AuthProvider>
               <VisitorLocationProvider>
                 <ProfileSetupRedirect />
+                <SellerHubProfileGate />
                 <Router />
                 <Toaster />
               </VisitorLocationProvider>

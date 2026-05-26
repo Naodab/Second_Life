@@ -33,6 +33,7 @@ public interface InventoryReservationRepository extends JpaRepository<InventoryR
         AND r.mode = :mode
         AND r.deletedAt IS NULL
         AND r.status IN :statuses
+        AND (r.expiresAt IS NULL OR r.expiresAt > :now)
         AND (
           (r.rentalStart IS NOT NULL AND r.rentalEnd IS NOT NULL)
           OR (r.rentalSlotStart IS NOT NULL AND r.rentalSlotEnd IS NOT NULL)
@@ -42,5 +43,6 @@ public interface InventoryReservationRepository extends JpaRepository<InventoryR
   List<InventoryReservation> findRentalPeriodsByListingVariant(
       @Param("listingVariantId") String listingVariantId,
       @Param("mode") InventoryItem.InventoryMode mode,
-      @Param("statuses") List<InventoryReservation.ReservationStatus> statuses);
+      @Param("statuses") List<InventoryReservation.ReservationStatus> statuses,
+      @Param("now") LocalDateTime now);
 }

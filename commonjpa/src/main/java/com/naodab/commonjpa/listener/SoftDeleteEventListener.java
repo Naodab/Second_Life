@@ -29,7 +29,7 @@ public class SoftDeleteEventListener implements PreDeleteEventListener {
     baseEntity.setDeletedAt(LocalDateTime.now());
     baseEntity.setUpdatedAt(LocalDateTime.now());
 
-    session.update(baseEntity);
+    session.merge(baseEntity);
 
     return true;
   }

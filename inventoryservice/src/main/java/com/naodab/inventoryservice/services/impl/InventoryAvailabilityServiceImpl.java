@@ -1,5 +1,6 @@
 package com.naodab.inventoryservice.services.impl;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,6 +33,9 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
       InventoryReservation.ReservationStatus.PENDING,
       InventoryReservation.ReservationStatus.CONFIRMED);
 
+  static final long HOURLY_SLOT_TURNOVER_MILLIS = Duration.ofHours(1).toMillis();
+  static final long DAILY_RENTAL_TURNOVER_MILLIS = Duration.ofDays(1).toMillis();
+
   InventoryItemRepository inventoryItemRepository;
   InventoryReservationRepository inventoryReservationRepository;
 
@@ -45,12 +49,11 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
         .map(
             item -> {
               long physical = physicalQuantityForMode(item);
-              long reserved =
-                  inventoryReservationRepository.sumActiveReservedQuantity(
-                      listingVariantId,
-                      mode,
-                      ACTIVE_RESERVATION_STATUSES,
-                      LocalDateTime.now());
+              long reserved = inventoryReservationRepository.sumActiveReservedQuantity(
+                  listingVariantId,
+                  mode,
+                  ACTIVE_RESERVATION_STATUSES,
+                  LocalDateTime.now());
               return Math.max(0L, physical - reserved);
             });
   }
@@ -65,33 +68,30 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
     if (intervalStart == null || intervalEnd == null || !intervalEnd.isAfter(intervalStart)) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
-    Optional<InventoryItem> itemOpt =
-        inventoryItemRepository.findByListingVariantIdAndMode(listingVariantId, mode);
+    Optional<InventoryItem> itemOpt = inventoryItemRepository.findByListingVariantIdAndMode(listingVariantId, mode);
     if (itemOpt.isEmpty()) {
       return Optional.empty();
     }
     long physical = physicalQuantityForMode(itemOpt.get());
     if (mode != InventoryItem.InventoryMode.RENT) {
-      long reserved =
-          inventoryReservationRepository.sumActiveReservedQuantity(
-              listingVariantId,
-              mode,
-              ACTIVE_RESERVATION_STATUSES,
-              LocalDateTime.now());
+      long reserved = inventoryReservationRepository.sumActiveReservedQuantity(
+          listingVariantId,
+          mode,
+          ACTIVE_RESERVATION_STATUSES,
+          LocalDateTime.now());
       return Optional.of(Math.max(0L, physical - reserved));
     }
 
     long q0 = intervalStart.toEpochMilli();
     long q1 = intervalEnd.toEpochMilli();
 
-    List<InventoryReservation> rows =
-        inventoryReservationRepository.findRentalPeriodsByListingVariant(
-            listingVariantId, mode, ACTIVE_RESERVATION_STATUSES);
+    List<InventoryReservation> rows = inventoryReservationRepository.findRentalPeriodsByListingVariant(
+        listingVariantId, mode, ACTIVE_RESERVATION_STATUSES, LocalDateTime.now());
 
     List<long[]> clipped = new ArrayList<>();
     for (InventoryReservation r : rows) {
       long qty = r.getQuantity() == null ? 1L : Math.max(1L, r.getQuantity());
-      Optional<long[]> iv = reservationToEpochIntervalMillis(r);
+      Optional<long[]> iv = reservationToBlockedIntervalMillis(r);
       if (iv.isEmpty()) {
         continue;
       }
@@ -100,9 +100,14 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
       if (!(a < q1 && b > q0)) {
         continue;
       }
-      clipped.add(new long[] {Math.max(a, q0), Math.min(b, q1), qty});
+      clipped.add(new long[] { Math.max(a, q0), Math.min(b, q1), qty });
     }
 
+    return Optional.of(Math.max(0L, minAvailableQuantityInOpenInterval(physical, clipped, q0, q1)));
+  }
+
+  static long minAvailableQuantityInOpenInterval(
+      long physical, List<long[]> clipped, long q0, long q1) {
     TreeSet<Long> points = new TreeSet<>();
     points.add(q0);
     points.add(q1);
@@ -128,17 +133,30 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
       }
       minFree = Math.min(minFree, physical - used);
     }
-    return Optional.of(Math.max(0L, minFree));
+    return minFree;
   }
 
-  static Optional<long[]> reservationToEpochIntervalMillis(InventoryReservation r) {
+  static Optional<long[]> reservationToBlockedIntervalMillis(InventoryReservation r) {
+    Optional<long[]> rental = reservationToRentalEpochIntervalMillis(r);
+    if (rental.isEmpty()) {
+      return Optional.empty();
+    }
+    long a = rental.get()[0];
+    long b = rental.get()[1];
+    long turnover = r.getRentalSlotStart() != null && r.getRentalSlotEnd() != null
+        ? HOURLY_SLOT_TURNOVER_MILLIS
+        : DAILY_RENTAL_TURNOVER_MILLIS;
+    return Optional.of(new long[] { a, b + turnover });
+  }
+
+  static Optional<long[]> reservationToRentalEpochIntervalMillis(InventoryReservation r) {
     if (r.getRentalSlotStart() != null && r.getRentalSlotEnd() != null) {
       LocalDateTime s = r.getRentalSlotStart();
       LocalDateTime e = r.getRentalSlotEnd();
       long a = s.toInstant(ZoneOffset.UTC).toEpochMilli();
       long b = e.toInstant(ZoneOffset.UTC).toEpochMilli();
       if (b > a) {
-        return Optional.of(new long[] {a, b});
+        return Optional.of(new long[] { a, b });
       }
       return Optional.empty();
     }
@@ -148,7 +166,7 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
       long a = rs.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
       long b = re.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
       if (b > a) {
-        return Optional.of(new long[] {a, b});
+        return Optional.of(new long[] { a, b });
       }
     }
     return Optional.empty();
@@ -180,6 +198,48 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
     long physical = getPhysicalStock(listingVariantId, mode);
     long reserved = getReservedQuantity(listingVariantId, mode);
     return Math.max(0L, physical - reserved);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public long requireAvailableQuantity(
+      String listingVariantId,
+      InventoryItem.InventoryMode mode,
+      long requestedQuantity) {
+    if (requestedQuantity < 1L) {
+      throw new AppException(ErrorCode.QUANTITY_MIN);
+    }
+    if (!inventoryItemRepository.existsByListingVariantIdAndMode(listingVariantId, mode)) {
+      throw new AppException(ErrorCode.INVENTORY_ITEM_NOT_FOUND);
+    }
+    long available = getAvailableQuantity(listingVariantId, mode);
+    if (requestedQuantity > available) {
+      throw new AppException(ErrorCode.INSUFFICIENT_INVENTORY);
+    }
+    return available;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public long requireAvailableQuantityInOpenInterval(
+      String listingVariantId,
+      InventoryItem.InventoryMode mode,
+      Instant intervalStart,
+      Instant intervalEnd,
+      long requestedQuantity) {
+    if (requestedQuantity < 1L) {
+      throw new AppException(ErrorCode.QUANTITY_MIN);
+    }
+    Optional<Long> minOpt =
+        findMinAvailableQuantityInOpenInterval(listingVariantId, mode, intervalStart, intervalEnd);
+    if (minOpt.isEmpty()) {
+      throw new AppException(ErrorCode.INVENTORY_ITEM_NOT_FOUND);
+    }
+    long available = minOpt.get();
+    if (requestedQuantity > available) {
+      throw new AppException(ErrorCode.INSUFFICIENT_INVENTORY);
+    }
+    return available;
   }
 
   static long physicalQuantityForMode(InventoryItem item) {

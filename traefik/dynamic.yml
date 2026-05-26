@@ -95,6 +95,22 @@ http:
         - gateway-jwt
       priority: 50
 
+    booking-api-options:
+      rule: "(PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`)) && Method(`OPTIONS`)"
+      service: booking-service
+      entryPoints:
+        - web
+      priority: 100
+
+    booking-api:
+      rule: "PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`)"
+      service: booking-service
+      entryPoints:
+        - web
+      middlewares:
+        - gateway-jwt
+      priority: 50
+
   services:
     auth-service:
       loadBalancer:
@@ -121,3 +137,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://inventory-service:8087"
+
+    booking-service:
+      loadBalancer:
+        servers:
+          - url: "http://booking-service:8088"

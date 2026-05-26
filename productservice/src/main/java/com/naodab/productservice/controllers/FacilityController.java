@@ -128,6 +128,25 @@ public class FacilityController {
     return ResponseEntity.ok(ApiResponse.<Void>builder().build());
   }
 
+  @GetMapping("/{facilityId}/listing-variant-ids")
+  public ResponseEntity<ApiResponse<List<String>>> listListingVariantIdsForFacility(
+      @PathVariable String facilityId,
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
+    String profileId = validateProfileId(profileIdHeader);
+    return ResponseEntity.ok(ApiResponse.<List<String>>builder()
+        .data(facilityService.listListingVariantIdsForFacility(profileId, facilityId))
+        .build());
+  }
+
+  @GetMapping("/me/listing-variant-ids")
+  public ResponseEntity<ApiResponse<List<String>>> listListingVariantIdsForOwner(
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
+    String profileId = validateProfileId(profileIdHeader);
+    return ResponseEntity.ok(ApiResponse.<List<String>>builder()
+        .data(facilityService.listListingVariantIdsForOwner(profileId))
+        .build());
+  }
+
   private String validateProfileId(String profileIdHeader) {
     if (!StringUtils.hasText(profileIdHeader)) {
       throw new AppException(ErrorCode.UNAUTHORIZED);

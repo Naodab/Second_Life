@@ -19,6 +19,11 @@
       "name": "external.cors_allowed_origins",
       "type": "java.lang.String",
       "description": "Comma-separated CORS origins (Spring allowedOrigins), e.g. http://localhost:5173,http://localhost"
+    },
+    {
+      "name": "spring.kafka.topics.create-inventory-reservation",
+      "type": "java.lang.String",
+      "description": "Create inventory reservation topic"
     }
   ]
 }
