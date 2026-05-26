@@ -20,7 +20,7 @@ import ListingDetail from "@/pages/ListingDetail";
 import FacilityPage from "@/pages/Facility";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
-import Orders from "@/pages/Orders";
+import Orders from "@/pages/Orders/index";
 import Messages from "@/pages/Messages";
 import Listings from "@/pages/Listings/index";
 

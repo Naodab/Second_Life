@@ -1,59 +1,94 @@
-import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { CheckCircle2, Package } from "lucide-react";
+import { CheckCircle2, Clock, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { checkoutSectionClass, checkoutHighlightClass, checkoutPrimaryTextClass } from "./checkout-utils";
+import { ListingSimilarSection } from "@/pages/ListingDetail/ListingSimilarSection";
+import {
+  checkoutSectionClass,
+  checkoutHighlightClass,
+  checkoutPrimaryTextClass,
+} from "./checkout-utils";
+import type { CheckoutSuccessContext } from "./checkout-success-context";
+import { useCheckoutSuccessRecommendations } from "./useCheckoutSuccessRecommendations";
 
-export function SuccessScreen({ subOrderCount }: { subOrderCount: number }) {
+export function SuccessScreen({ context }: { context: CheckoutSuccessContext }) {
   const [, setLocation] = useLocation();
-  const [counter, setCounter] = useState(5);
+  const { subOrderCount, items } = context;
+  const anchor = items[0] ?? null;
+  const excludeListingIds = items.map((i) => i.listingId);
 
-  useEffect(() => {
-    const t = setInterval(
-      () =>
-        setCounter((c) => {
-          if (c <= 1) {
-            clearInterval(t);
-            setLocation("/");
-            return 0;
-          }
-          return c - 1;
-        }),
-      1000
-    );
-    return () => clearInterval(t);
-  }, [setLocation]);
+  const { listingType, similarInfinite, similarItems, showSimilarBlock } =
+    useCheckoutSuccessRecommendations(anchor, excludeListingIds);
+
+  const hasRentals = items.some((i) => i.mode === "rent");
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background p-4 dark:to-muted/15">
-      <div className={cn(checkoutSectionClass, "max-w-md w-full p-10 text-center shadow-xl animate-in zoom-in duration-500")}>
-        <div className="w-24 h-24 bg-green-100 text-green-600 dark:bg-green-950/50 dark:text-green-400 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="w-14 h-14" />
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 via-background to-muted/30 pb-24 dark:to-muted/15">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
+        <div className="max-w-2xl mx-auto">
+          <div
+            className={cn(
+              checkoutSectionClass,
+              "p-8 sm:p-10 text-center shadow-xl animate-in zoom-in duration-500",
+            )}
+          >
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-green-100 text-green-600 dark:bg-green-950/50 dark:text-green-400 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-12 h-12 sm:w-14 sm:h-14" />
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-display font-bold mb-3 text-green-700 dark:text-green-400">
+              Đặt hàng thành công!
+            </h1>
+
+            <p className="text-muted-foreground leading-relaxed mb-2">
+              Đơn hàng của bạn đã được ghi nhận. Vui lòng chờ{" "}
+              <strong className="text-foreground">chủ sản phẩm xác nhận</strong> — bạn sẽ được thông báo
+              khi đơn được chấp nhận.
+            </p>
+
+            <p className={cn("text-sm font-medium mb-4 flex items-center justify-center gap-2", checkoutPrimaryTextClass)}>
+              <Clock className="w-4 h-4 shrink-0" />
+              Sau khi được duyệt, hai bên sẽ liên hệ để thỏa thuận thanh toán và thời gian nhận hàng.
+            </p>
+
+            {subOrderCount > 1 && (
+              <p className="text-xs text-muted-foreground mb-4">
+                Đơn đã được tách thành <strong>{subOrderCount} đơn nhỏ</strong> theo từng cơ sở.
+              </p>
+            )}
+
+            {hasRentals && (
+              <p className="text-xs text-muted-foreground mb-4">
+                Đơn thuê sẽ được xử lý riêng theo chính sách đặt cọc của từng cơ sở.
+              </p>
+            )}
+
+            <div className={cn(checkoutHighlightClass, "mb-6 text-sm text-muted-foreground")}>
+              <Package className={cn("w-5 h-5 mx-auto mb-1", checkoutPrimaryTextClass)} />
+              Theo dõi trạng thái đơn trong mục <strong>Đơn hàng của tôi</strong>.
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button size="lg" className="rounded-full" onClick={() => setLocation("/orders")}>
+                Xem đơn hàng
+              </Button>
+              <Button variant="outline" size="lg" className="rounded-full" onClick={() => setLocation("/")}>
+                Về trang chủ
+              </Button>
+            </div>
+          </div>
         </div>
-        <h2 className="text-3xl font-display font-bold mb-2 text-green-700 dark:text-green-400">Thanh toán thành công!</h2>
-        <p className="text-muted-foreground leading-relaxed mb-1">Đơn hàng đã được ghi nhận.</p>
-        <p className={cn("text-sm font-semibold mb-4", checkoutPrimaryTextClass)}>Hãy chờ cơ sở duyệt đơn hàng.</p>
-        {subOrderCount > 1 && (
-          <p className="text-xs text-muted-foreground mb-4">
-            Đơn đã được tách thành <strong>{subOrderCount} đơn nhỏ</strong> theo từng cơ sở.
-          </p>
+
+        {showSimilarBlock && (
+          <div className="mt-12 sm:mt-16 max-w-7xl">
+            <ListingSimilarSection
+              show
+              listingType={listingType}
+              similarInfinite={similarInfinite}
+              similarItems={similarItems}
+            />
+          </div>
         )}
-        <div className={cn(checkoutHighlightClass, "mb-5 text-sm text-muted-foreground")}>
-          <Package className={cn("w-5 h-5 mx-auto mb-1", checkoutPrimaryTextClass)} />
-          Theo dõi đơn hàng trong mục <strong>Đơn hàng của tôi</strong>.
-        </div>
-        <p className="text-xs text-muted-foreground mb-4">
-          Tự động về trang chủ sau <strong>{counter}s</strong>
-        </p>
-        <div className="flex flex-col gap-3">
-          <Button size="lg" className="rounded-full" onClick={() => setLocation("/orders")}>
-            Xem đơn hàng
-          </Button>
-          <Button variant="outline" size="lg" className="rounded-full" onClick={() => setLocation("/")}>
-            Về trang chủ
-          </Button>
-        </div>
       </div>
     </div>
   );

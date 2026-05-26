@@ -42,5 +42,6 @@ export function guardSellerHubNavigation(
     setLocation(`/profile/setup?returnTo=${encodeURIComponent(sanitizeReturnTo(targetPath))}`);
     return false;
   }
+  setLocation(sanitizeReturnTo(targetPath));
   return true;
 }

@@ -299,6 +299,32 @@ export type ListingPublicDetailResponse = {
   facility?: FacilityOverviewDto | null;
 };
 
+export type ListingVariantContextResponse = {
+  listingId: string;
+  listingVariantId: string;
+  facilityId?: string | null;
+  title: string;
+  productName?: string | null;
+  variantLabel?: string | null;
+  thumbnailUrl?: string | null;
+  listingType: ListingType;
+  buyPrice?: number | null;
+  rentPrice?: number | null;
+};
+
+export async function fetchListingVariantContext(
+  listingVariantId: string,
+): Promise<ListingVariantContextResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<ListingVariantContextResponse>>(
+    `/api/v1/listings/variants/${encodeURIComponent(listingVariantId.trim())}/context`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  return unwrapApiData(raw);
+}
+
 export async function fetchListingPublicDetail(
   listingId: string,
   options?: { listingVariantId?: string },

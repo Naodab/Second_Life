@@ -11,6 +11,9 @@ export const ApiErrorCodes = {
   INSUFFICIENT_INVENTORY: 1061,
   LISTING_VARIANT_NOT_FOUND: 1065,
   QUANTITY_MIN: 1063,
+  ORDER_NOT_FOUND: 1067,
+  ORDER_CANCEL_NOT_ALLOWED: 1068,
+  ORDER_STATUS_TRANSITION_NOT_ALLOWED: 1069,
 } as const;
 
 export type ApiErrorKind = "not_found" | "bad_request" | "insufficient_stock" | "server_error" | "generic";
@@ -56,7 +59,8 @@ export function isNotFoundError(err: unknown): boolean {
     code === ApiErrorCodes.CATEGORY_NOT_FOUND ||
     code === ApiErrorCodes.FACILITY_NOT_FOUND ||
     code === ApiErrorCodes.INVENTORY_ITEM_NOT_FOUND ||
-    code === ApiErrorCodes.LISTING_VARIANT_NOT_FOUND
+    code === ApiErrorCodes.LISTING_VARIANT_NOT_FOUND ||
+    code === ApiErrorCodes.ORDER_NOT_FOUND
   );
 }
 
@@ -76,6 +80,16 @@ export function mapApiError(err: unknown, options: MapApiErrorOptions = {}): Api
   const status = err instanceof ApiError ? err.status : undefined;
   const code = readApiErrorCode(err);
   const apiMessage = readApiErrorMessage(err);
+
+  if (code === ApiErrorCodes.ORDER_CANCEL_NOT_ALLOWED) {
+    return {
+      kind: "bad_request",
+      title: "Không thể hủy đơn",
+      message: "Chỉ có thể hủy đơn khi đang ở trạng thái chờ xác nhận.",
+      status,
+      code,
+    };
+  }
 
   if (isInsufficientStockError(err)) {
     return {

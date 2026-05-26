@@ -1,12 +1,10 @@
 import { useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
 import {
-  ShieldCheck,
-  CreditCard,
   ArrowLeft,
   AlertCircle,
   Clock,
-  Package,
   Info,
   Loader2,
   Tag,
@@ -17,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { PayOSScreen } from "./PayOSScreen";
+import { createBookingOrder, buildDefaultPickupTime } from "@/api/booking";
+import { buildCheckoutSuccessContext, type CheckoutSuccessContext } from "./checkout-success-context";
 import { SuccessScreen } from "./SuccessScreen";
 import { CheckoutOrderInfoForm, type CheckoutOrderInfoFormRef } from "./CheckoutOrderInfoForm";
 import { CheckoutFacilityCollapseHeader, CheckoutSellerInfoPanel } from "./CheckoutFacilityHeader";
@@ -30,7 +29,6 @@ import {
   checkoutSectionClass,
   checkoutSectionShellClass,
   checkoutAlertClass,
-  checkoutDepositTextClass,
   checkoutRentAccentClass,
   checkoutPrimaryTextClass,
 } from "./checkout-utils";
@@ -39,9 +37,7 @@ export default function Checkout() {
   const [, setLocation] = useLocation();
   const { items, isLoading, isError, errorView, ownerNameLoading, placeNamesLoading, clearSession, refetch } =
     useCheckoutPage();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showPayOS, setShowPayOS] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [successContext, setSuccessContext] = useState<CheckoutSuccessContext | null>(null);
   const [expandedFacilities, setExpandedFacilities] = useState<Record<string, boolean>>({});
   const orderInfoFormRef = useRef<CheckoutOrderInfoFormRef>(null);
 
@@ -49,26 +45,33 @@ export default function Checkout() {
   const subOrderCount = facilityGroups.size;
 
   const subtotal = items.reduce((s, i) => s + itemTotal(i), 0);
-  const shipping = 30000 * subOrderCount;
   const hasRentals = items.some((i) => i.mode === "rent");
-  const rentalSubtotal = items.filter((i) => i.mode === "rent").reduce((s, i) => s + itemTotal(i), 0);
-  const deposit = hasRentals ? Math.round(rentalSubtotal * 0.3) : 0;
-  const grandTotal = subtotal + shipping + deposit;
 
-  const handlePayOSRedirect = async () => {
-    if (!(await orderInfoFormRef.current?.validate())) return;
+  const placeOrderMutation = useMutation({
+    mutationFn: async (payload: { customerId: string; orderItems: typeof items; orderSubCount: number }) => {
+      const pickupTime = buildDefaultPickupTime();
+      const orders = await Promise.all(
+        payload.orderItems.map((item) =>
+          createBookingOrder({
+            listingVariantId: item.listingVariantId,
+            quantity: item.quantity,
+            pickupTime,
+            customerId: payload.customerId,
+          }),
+        ),
+      );
+      return { orders, orderItems: payload.orderItems, orderSubCount: payload.orderSubCount };
+    },
+    onSuccess: (result) => {
+      setSuccessContext(buildCheckoutSuccessContext(result.orderItems, result.orderSubCount));
+      clearSession();
+    },
+  });
 
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setShowPayOS(true);
-    }, 1500);
-  };
-
-  const handlePayOSSuccess = () => {
-    clearSession();
-    setShowPayOS(false);
-    setIsSuccess(true);
+  const handlePlaceOrder = async () => {
+    const result = await orderInfoFormRef.current?.validate();
+    if (!result) return;
+    placeOrderMutation.mutate({ customerId: result.customerId, orderItems: items, orderSubCount: subOrderCount });
   };
 
   const handleGoBack = () => {
@@ -79,8 +82,7 @@ export default function Checkout() {
     setLocation("/");
   };
 
-  if (isSuccess) return <SuccessScreen subOrderCount={subOrderCount} />;
-  if (showPayOS) return <PayOSScreen amount={grandTotal} onSuccess={handlePayOSSuccess} />;
+  if (successContext) return <SuccessScreen context={successContext} />;
 
   const toggleFacility = (facilityId: string) =>
     setExpandedFacilities((prev) => ({ ...prev, [facilityId]: prev[facilityId] === false ? true : false }));
@@ -242,38 +244,14 @@ export default function Checkout() {
               </div>
             )}
 
-            <div className={checkoutSectionClass}>
-              <div className="flex items-center gap-2 mb-4">
-                <CreditCard className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-lg text-foreground">Phương thức thanh toán</h3>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-primary bg-primary/5 dark:border-primary/50 dark:bg-primary/20">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-[#0e3a6c] rounded-xl flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-[9px] tracking-wider">PayOS</span>
-                    </div>
-                    <div>
-                      <p className={cn("font-semibold text-sm", checkoutPrimaryTextClass)}>PayOS — Chuyển khoản / QR Code</p>
-                      <p className="text-xs text-muted-foreground">Hỗ trợ tất cả ngân hàng nội địa</p>
-                    </div>
-                  </div>
-                  <div className="w-5 h-5 rounded-full border-4 border-primary flex-shrink-0" />
-                </div>
-                <div
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-2xl border border-border bg-muted/30 cursor-not-allowed opacity-50 dark:bg-muted/40",
-                    hasRentals && "opacity-30"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <ShieldCheck className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-sm text-foreground">Thanh toán khi nhận hàng (COD)</p>
-                      {hasRentals && <p className="text-xs text-destructive">Không áp dụng cho đơn thuê đồ</p>}
-                    </div>
-                  </div>
-                  <div className="w-5 h-5 rounded-full border border-border flex-shrink-0" />
+            <div className={cn(checkoutAlertClass, "p-5")}>
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold mb-1">Thanh toán trực tiếp giữa hai bên</p>
+                  <p className="text-sm leading-relaxed opacity-90">
+                    Second Life chỉ đóng vai trò kết nối. Sau khi đặt hàng thành công, bạn và chủ sản phẩm sẽ tự thỏa thuận về hình thức thanh toán và thời gian nhận hàng.
+                  </p>
                 </div>
               </div>
             </div>
@@ -288,47 +266,36 @@ export default function Checkout() {
                   <span className="text-muted-foreground">Tạm tính ({items.length} lượt)</span>
                   <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Phí vận chuyển{subOrderCount > 1 ? ` (×${subOrderCount})` : ""}
-                  </span>
-                  <span className="font-medium text-foreground">{formatCurrency(shipping)}</span>
-                </div>
-                {hasRentals && (
-                  <div className="flex justify-between pt-2 border-t border-dashed border-amber-200 dark:border-amber-500/35">
-                    <span className={checkoutDepositTextClass}>Đặt cọc thuê (30%)</span>
-                    <span className={cn(checkoutDepositTextClass, "font-semibold")}>{formatCurrency(deposit)}</span>
-                  </div>
-                )}
               </div>
 
-              <div className="flex justify-between items-baseline mb-1">
-                <span className="font-bold text-base text-foreground">Tổng cộng</span>
-                <span className={cn("font-bold text-2xl", checkoutPrimaryTextClass)}>{formatCurrency(grandTotal)}</span>
+              <div className="flex justify-between items-baseline mb-5">
+                <span className="font-bold text-base text-foreground">Tổng tham khảo</span>
+                <span className={cn("font-bold text-2xl", checkoutPrimaryTextClass)}>{formatCurrency(subtotal)}</span>
               </div>
-              {hasRentals && (
-                <p className="text-[11px] text-muted-foreground mb-5 text-right">Gồm {formatCurrency(deposit)} tiền cọc</p>
+              <p className="text-[11px] text-muted-foreground mb-4 -mt-3">
+                Giá thực tế do hai bên thỏa thuận
+              </p>
+
+              {placeOrderMutation.isError && (
+                <p className="text-sm text-destructive mb-3 text-center">
+                  Đặt hàng thất bại, vui lòng thử lại.
+                </p>
               )}
-              {!hasRentals && <div className="mb-5" />}
 
               <Button
                 size="lg"
                 className="w-full rounded-full h-12 text-base font-semibold shadow-lg shadow-primary/20 dark:shadow-primary/10"
-                onClick={handlePayOSRedirect}
-                disabled={isProcessing}
+                onClick={() => void handlePlaceOrder()}
+                disabled={placeOrderMutation.isPending}
               >
-                {isProcessing ? (
+                {placeOrderMutation.isPending ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang kết nối...
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Đang đặt hàng...
                   </>
                 ) : (
-                  <>Đặt hàng qua PayOS</>
+                  <>Đặt hàng</>
                 )}
               </Button>
-
-              <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1">
-                <ShieldCheck className="w-3 h-3" /> Thanh toán bảo mật SSL 256-bit
-              </p>
 
               {subOrderCount > 1 && (
                 <p className="text-xs text-muted-foreground text-center mt-4 pt-4 border-t border-border">

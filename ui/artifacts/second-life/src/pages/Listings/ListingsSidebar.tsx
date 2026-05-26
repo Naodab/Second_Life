@@ -54,8 +54,7 @@ export function ListingsSidebar({
     (s) => !facilitySearch || s.name.toLowerCase().includes(facilitySearch.toLowerCase()),
   );
 
-  const ordersHref =
-    contextFacilityId.length > 0 ? manageOrdersPath(contextFacilityId) : manageDashboardPath();
+  const ordersHref = manageOrdersPath();
 
   function navLink(label: string, icon: ReactNode, href: string, active: boolean) {
     return (

@@ -70,7 +70,14 @@ export type CheckoutOrderInfoFormRef = {
   getSelectedCustomerId: () => string | null;
 };
 
-const inputClassName = "h-11 rounded-xl bg-background/80";
+const inputClassName = cn(
+  "h-11 rounded-xl bg-muted/40 text-foreground",
+  "disabled:bg-muted/25 disabled:text-foreground disabled:opacity-100",
+);
+const textareaClassName = cn(
+  "rounded-xl bg-muted/40 resize-y min-h-[88px] text-foreground",
+  "disabled:bg-muted/25 disabled:text-foreground disabled:opacity-100",
+);
 const emptyOrderInfo: CheckoutOrderInfo = {
   firstName: "",
   lastName: "",
@@ -197,7 +204,7 @@ function OrderInfoFields({
           disabled={disabled}
           placeholder={disabled ? undefined : "Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"}
           rows={3}
-          className="rounded-xl bg-background/80 resize-y min-h-[88px]"
+          className={textareaClassName}
           {...form.register("address")}
         />
         <FieldError message={errors.address?.message} />

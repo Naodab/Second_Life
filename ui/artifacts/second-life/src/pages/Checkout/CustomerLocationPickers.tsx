@@ -103,7 +103,7 @@ export function CustomerLocationPickers({
           <label className="text-sm font-medium mb-1.5 block text-foreground">Tỉnh / Thành phố</label>
           <Input
             disabled
-            className="h-11 rounded-xl bg-background/80"
+            className="h-11 rounded-xl bg-muted/25 text-foreground disabled:opacity-100"
             value={provinceLabel?.trim() || province}
             readOnly
           />
@@ -112,7 +112,7 @@ export function CustomerLocationPickers({
           <label className="text-sm font-medium mb-1.5 block text-foreground">Phường / Xã</label>
           <Input
             disabled
-            className="h-11 rounded-xl bg-background/80"
+            className="h-11 rounded-xl bg-muted/25 text-foreground disabled:opacity-100"
             value={wardLabel?.trim() || ward}
             readOnly
           />
@@ -136,7 +136,7 @@ export function CustomerLocationPickers({
             }}
             disabled={disabled || loadProvinces || Boolean(provincesError)}
           >
-            <SelectTrigger id={`${idPrefix}-province`} className="h-11 rounded-xl w-full">
+            <SelectTrigger id={`${idPrefix}-province`} className="h-11 rounded-xl w-full bg-muted/40">
               <SelectValue placeholder={loadProvinces ? "Đang tải…" : "Chọn tỉnh/thành"} />
             </SelectTrigger>
             <SelectContent>
@@ -158,7 +158,7 @@ export function CustomerLocationPickers({
             onValueChange={onWardChange}
             disabled={disabled || !province || loadWards || Boolean(wardsError)}
           >
-            <SelectTrigger id={`${idPrefix}-ward`} className="h-11 rounded-xl w-full">
+            <SelectTrigger id={`${idPrefix}-ward`} className="h-11 rounded-xl w-full bg-muted/40">
               <SelectValue placeholder={loadWards ? "Đang tải…" : "Chọn phường/xã"} />
             </SelectTrigger>
             <SelectContent>

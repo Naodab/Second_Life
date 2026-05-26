@@ -40,4 +40,6 @@ external:
     url: ${INVENTORY_SERVICE_URL:http://localhost:8087/api/v1}
   location-service:
     url: ${LOCATION_SERVICE_URL:http://localhost:8085/api/v1}
+  product-service:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8086/api/v1}
   cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}

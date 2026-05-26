@@ -228,7 +228,7 @@ export function AddFacilityModal({
             <div className="sm:col-span-2">
               <label className="text-sm font-semibold mb-1.5 block">Mô tả</label>
               <textarea
-                className="w-full border rounded-xl p-3 text-sm min-h-[80px] resize-none"
+                className="w-full rounded-xl border border-input bg-muted/50 p-3 text-sm min-h-[80px] resize-none text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 placeholder="Giới thiệu ngắn về cơ sở…"
                 value={form.description}
                 onChange={(e) => setField("description", e.target.value)}

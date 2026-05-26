@@ -1,9 +1,8 @@
-package com.naodab.bookingservice.dto.response;
-
-import java.time.LocalDateTime;
+package com.naodab.bookingservice.dto.request;
 
 import com.naodab.bookingservice.models.enums.BookingOrderStatus;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,14 +16,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class BookingOrderResponse {
-  String id;
-  String customerId;
-  BookingOrderCustomerResponse customer;
-  String listingVariantId;
-  Long price;
-  Integer quantity;
-  LocalDateTime pickupTime;
+public class BookingOrderStatusUpdateRequest {
+  @NotNull
   BookingOrderStatus status;
-  LocalDateTime createdAt;
 }

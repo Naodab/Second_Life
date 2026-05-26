@@ -10,6 +10,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
+import java.util.Optional;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -24,13 +26,16 @@ import org.springframework.dao.DataIntegrityViolationException;
 import com.naodab.bookingservice.clients.InventoryClients;
 import com.naodab.bookingservice.clients.LocationClients;
 import com.naodab.bookingservice.clients.LocationClients.LocationLabels;
+import com.naodab.bookingservice.clients.ProductClients;
 import com.naodab.bookingservice.dto.events.InventoryReservationCreateEvent;
 import com.naodab.bookingservice.dto.request.BookingOrderCreateRequest;
+import com.naodab.bookingservice.dto.request.BookingOrderStatusUpdateRequest;
 import com.naodab.bookingservice.dto.response.BookingOrderResponse;
 import com.naodab.bookingservice.mappers.BookingOrderMapper;
 import com.naodab.bookingservice.mappers.CustomerMapper;
 import com.naodab.bookingservice.models.BookingOrder;
 import com.naodab.bookingservice.models.Customer;
+import com.naodab.bookingservice.models.enums.BookingOrderStatus;
 import com.naodab.bookingservice.repositories.BookingOrderRepository;
 import com.naodab.bookingservice.services.CustomerService;
 import com.naodab.commonservice.exception.AppException;
@@ -42,6 +47,7 @@ class BookingOrderServiceImplTest {
   private static final String PROFILE_ID = "profile-1";
   private static final String CUSTOMER_ID = "customer-1";
   private static final String LISTING_VARIANT_ID = "variant-1";
+  private static final String ORDER_ID = "order-1";
   private static final LocalDateTime PICKUP = LocalDateTime.of(2026, 6, 1, 10, 0, 0);
 
   @Mock
@@ -52,6 +58,9 @@ class BookingOrderServiceImplTest {
 
   @Mock
   InventoryClients inventoryClients;
+
+  @Mock
+  ProductClients productClients;
 
   @Mock
   LocationClients locationClients;
@@ -69,7 +78,8 @@ class BookingOrderServiceImplTest {
         bookingOrderMapper,
         bookingOrderRepository,
         customerService,
-        inventoryClients);
+        inventoryClients,
+        productClients);
   }
 
   @Test
@@ -141,6 +151,123 @@ class BookingOrderServiceImplTest {
 
     verify(inventoryClients, never()).createBuyReservation(any());
     verify(bookingOrderRepository, never()).save(any());
+  }
+
+  @Test
+  void cancelBookingOrder_pending_cancelsAndReleasesInventory() {
+    BookingOrder order = samplePendingOrder();
+    when(bookingOrderRepository.findActiveByIdAndProfileId(ORDER_ID, PROFILE_ID))
+        .thenReturn(Optional.of(order));
+    when(bookingOrderRepository.save(order)).thenReturn(order);
+
+    bookingOrderService.cancelBookingOrder(PROFILE_ID, ORDER_ID);
+
+    assertThat(order.getStatus()).isEqualTo(BookingOrderStatus.CANCELLED);
+    verify(bookingOrderRepository).save(order);
+    verify(inventoryClients).releaseBuyReservation(ORDER_ID);
+  }
+
+  @Test
+  void cancelBookingOrder_confirmed_throwsAndDoesNotRelease() {
+    BookingOrder order = samplePendingOrder();
+    order.setStatus(BookingOrderStatus.CONFIRMED);
+    when(bookingOrderRepository.findActiveByIdAndProfileId(ORDER_ID, PROFILE_ID))
+        .thenReturn(Optional.of(order));
+
+    assertThatThrownBy(() -> bookingOrderService.cancelBookingOrder(PROFILE_ID, ORDER_ID))
+        .isInstanceOf(AppException.class)
+        .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_CANCEL_NOT_ALLOWED);
+
+    verify(bookingOrderRepository, never()).save(any());
+    verify(inventoryClients, never()).releaseBuyReservation(any());
+  }
+
+  @Test
+  void cancelBookingOrder_notFound_throws() {
+    when(bookingOrderRepository.findActiveByIdAndProfileId(ORDER_ID, PROFILE_ID))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> bookingOrderService.cancelBookingOrder(PROFILE_ID, ORDER_ID))
+        .isInstanceOf(AppException.class)
+        .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_NOT_FOUND);
+
+    verify(bookingOrderRepository, never()).save(any());
+    verify(inventoryClients, never()).releaseBuyReservation(any());
+  }
+
+  @Test
+  void listFacilityOrders_returnsOrdersForFacilityVariants() {
+    when(productClients.listListingVariantIdsForFacility(PROFILE_ID, "facility-1"))
+        .thenReturn(List.of(LISTING_VARIANT_ID));
+    BookingOrder order = samplePendingOrder();
+    when(bookingOrderRepository.findActiveByListingVariantIdIn(List.of(LISTING_VARIANT_ID)))
+        .thenReturn(List.of(order));
+
+    List<BookingOrderResponse> responses = bookingOrderService.listFacilityOrders(PROFILE_ID, "facility-1");
+
+    assertThat(responses).hasSize(1);
+    assertThat(responses.get(0).getId()).isEqualTo(ORDER_ID);
+  }
+
+  @Test
+  void updateBookingOrderStatus_pendingToConfirmed_updatesStatus() {
+    BookingOrder order = samplePendingOrder();
+    when(bookingOrderRepository.findActiveById(ORDER_ID)).thenReturn(Optional.of(order));
+    when(productClients.listListingVariantIdsForOwner(PROFILE_ID)).thenReturn(List.of(LISTING_VARIANT_ID));
+    when(bookingOrderRepository.save(order)).thenReturn(order);
+
+    BookingOrderResponse response = bookingOrderService.updateBookingOrderStatus(
+        PROFILE_ID,
+        ORDER_ID,
+        BookingOrderStatusUpdateRequest.builder().status(BookingOrderStatus.CONFIRMED).build());
+
+    assertThat(order.getStatus()).isEqualTo(BookingOrderStatus.CONFIRMED);
+    assertThat(response.getStatus()).isEqualTo(BookingOrderStatus.CONFIRMED);
+    verify(inventoryClients, never()).releaseBuyReservation(any());
+  }
+
+  @Test
+  void updateBookingOrderStatus_pendingToCancelled_releasesInventory() {
+    BookingOrder order = samplePendingOrder();
+    when(bookingOrderRepository.findActiveById(ORDER_ID)).thenReturn(Optional.of(order));
+    when(productClients.listListingVariantIdsForOwner(PROFILE_ID)).thenReturn(List.of(LISTING_VARIANT_ID));
+    when(bookingOrderRepository.save(order)).thenReturn(order);
+
+    bookingOrderService.updateBookingOrderStatus(
+        PROFILE_ID,
+        ORDER_ID,
+        BookingOrderStatusUpdateRequest.builder().status(BookingOrderStatus.CANCELLED).build());
+
+    assertThat(order.getStatus()).isEqualTo(BookingOrderStatus.CANCELLED);
+    verify(inventoryClients).releaseBuyReservation(ORDER_ID);
+  }
+
+  @Test
+  void updateBookingOrderStatus_invalidTransition_throws() {
+    BookingOrder order = samplePendingOrder();
+    order.setStatus(BookingOrderStatus.CONFIRMED);
+    when(bookingOrderRepository.findActiveById(ORDER_ID)).thenReturn(Optional.of(order));
+    when(productClients.listListingVariantIdsForOwner(PROFILE_ID)).thenReturn(List.of(LISTING_VARIANT_ID));
+
+    assertThatThrownBy(() -> bookingOrderService.updateBookingOrderStatus(
+        PROFILE_ID,
+        ORDER_ID,
+        BookingOrderStatusUpdateRequest.builder().status(BookingOrderStatus.CANCELLED).build()))
+        .isInstanceOf(AppException.class)
+        .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_STATUS_TRANSITION_NOT_ALLOWED);
+
+    verify(bookingOrderRepository, never()).save(any());
+  }
+
+  private static BookingOrder samplePendingOrder() {
+    return BookingOrder.builder()
+        .id(ORDER_ID)
+        .customer(sampleCustomer())
+        .listingVariantId(LISTING_VARIANT_ID)
+        .quantity(1)
+        .pickupTime(PICKUP)
+        .status(BookingOrderStatus.PENDING)
+        .build();
   }
 
   private static Customer sampleCustomer() {

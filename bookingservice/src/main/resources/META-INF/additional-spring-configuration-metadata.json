@@ -29,6 +29,11 @@
       "name": "external.location-service.url",
       "type": "java.lang.String",
       "description": "Location service URL"
+    },
+    {
+      "name": "external.product-service.url",
+      "type": "java.lang.String",
+      "description": "Product service URL"
     }
   ]
 }

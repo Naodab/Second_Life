@@ -2,9 +2,12 @@ package com.naodab.bookingservice.repositories;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.naodab.bookingservice.models.BookingOrder;
 import com.naodab.bookingservice.models.enums.BookingOrderStatus;
@@ -37,5 +40,35 @@ public interface BookingOrderRepository extends JpaRepository<BookingOrder, Stri
 
   List<BookingOrder> findByUpdatedAtBetweenAndDeletedAtIsNull(LocalDateTime startDate, LocalDateTime endDate,
       Pageable pageable);
+
+  @Query("""
+      SELECT o FROM BookingOrder o
+      JOIN FETCH o.customer c
+      WHERE c.profileId = :profileId AND o.deletedAt IS NULL
+      ORDER BY o.createdAt DESC
+      """)
+  List<BookingOrder> findActiveByProfileId(@Param("profileId") String profileId);
+
+  @Query("""
+      SELECT o FROM BookingOrder o
+      JOIN FETCH o.customer c
+      WHERE o.id = :id AND c.profileId = :profileId AND o.deletedAt IS NULL
+      """)
+  Optional<BookingOrder> findActiveByIdAndProfileId(@Param("id") String id, @Param("profileId") String profileId);
+
+  @Query("""
+      SELECT o FROM BookingOrder o
+      JOIN FETCH o.customer c
+      WHERE o.id = :id AND o.deletedAt IS NULL
+      """)
+  Optional<BookingOrder> findActiveById(@Param("id") String id);
+
+  @Query("""
+      SELECT o FROM BookingOrder o
+      JOIN FETCH o.customer c
+      WHERE o.listingVariantId IN :variantIds AND o.deletedAt IS NULL
+      ORDER BY o.createdAt DESC
+      """)
+  List<BookingOrder> findActiveByListingVariantIdIn(@Param("variantIds") List<String> variantIds);
 
 }

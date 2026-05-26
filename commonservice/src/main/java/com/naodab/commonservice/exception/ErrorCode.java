@@ -88,7 +88,10 @@ public enum ErrorCode {
 	REQUIRED_FIELD(1062, "Required field", HttpStatus.BAD_REQUEST),
 	QUANTITY_MIN(1063, "Quantity must be greater than 0", HttpStatus.BAD_REQUEST),
 	PICKUP_TIME_FUTURE(1064, "Pickup time must be in the future", HttpStatus.BAD_REQUEST),
-	CUSTOMER_NOT_FOUND(1066, "Customer not found", HttpStatus.NOT_FOUND);
+	CUSTOMER_NOT_FOUND(1066, "Customer not found", HttpStatus.NOT_FOUND),
+	ORDER_NOT_FOUND(1067, "Order not found", HttpStatus.NOT_FOUND),
+	ORDER_CANCEL_NOT_ALLOWED(1068, "Order can only be cancelled while pending", HttpStatus.BAD_REQUEST),
+	ORDER_STATUS_TRANSITION_NOT_ALLOWED(1069, "Order status transition is not allowed", HttpStatus.BAD_REQUEST);
 
 	private int code;
 	private String message;

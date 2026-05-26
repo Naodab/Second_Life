@@ -110,23 +110,23 @@ services:
   #         ignore:
   #           - "**/target/**"
 
-  # inventory-service:
-  #   environment:
-  #     SPRING_PROFILES_ACTIVE: dev
-  #   develop:
-  #     watch:
-  #       - action: rebuild
-  #         path: ./pom.xml
-  #         ignore:
-  #           - "**/target/**"
-  #       - action: rebuild
-  #         path: ./commonservice
-  #         ignore:
-  #           - "**/target/**"
-  #       - action: rebuild
-  #         path: ./inventoryservice
-  #         ignore:
-  #           - "**/target/**"
+  inventory-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    develop:
+      watch:
+        - action: rebuild
+          path: ./pom.xml
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./commonservice
+          ignore:
+            - "**/target/**"
+        - action: rebuild
+          path: ./inventoryservice
+          ignore:
+            - "**/target/**"
 
   booking-service:
     environment:

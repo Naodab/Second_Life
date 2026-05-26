@@ -18,6 +18,7 @@ import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingVariantContextResponse;
 import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
@@ -113,6 +114,56 @@ public class ListingServiceImpl implements ListingService {
         listingVariantId.trim(), listingId.trim())) {
       throw new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND);
     }
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public ListingVariantContextResponse getListingVariantContext(String listingVariantId) {
+    if (!StringUtils.hasText(listingVariantId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    ListingVariant variant = listingVariantRepository.findById(listingVariantId.trim())
+        .orElseThrow(() -> new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND));
+    Listing listing = variant.getListing();
+    if (listing == null) {
+      throw new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND);
+    }
+    Hibernate.initialize(listing);
+    Product product = listing.getProduct();
+    if (product != null) {
+      ProductDocumentGraphInitializer.initialize(product);
+    }
+    ProductVariant productVariant = variant.getProductVariant();
+    if (productVariant != null) {
+      Hibernate.initialize(productVariant);
+    }
+    Facility listingFacility = listing.getFacility();
+    if (listingFacility != null) {
+      Hibernate.initialize(listingFacility);
+    }
+
+    String productName = product != null ? product.getName() : null;
+    String listingTitle = listing.getTitle();
+    String title = StringUtils.hasText(listingTitle) ? listingTitle.trim()
+        : (StringUtils.hasText(productName) ? productName.trim() : "Sản phẩm");
+    String variantLabel = productVariant != null && StringUtils.hasText(productVariant.getSku())
+        ? productVariant.getSku().trim()
+        : null;
+    String thumbnailUrl = product != null ? productMapper.thumbnailImageUrl(product) : null;
+    String facilityId = listingFacility != null ? listingFacility.getId() : null;
+
+    return ListingVariantContextResponse.builder()
+        .listingId(listing.getId())
+        .listingVariantId(variant.getId())
+        .facilityId(facilityId)
+        .title(title)
+        .productName(productName)
+        .variantLabel(variantLabel)
+        .thumbnailUrl(StringUtils.hasText(thumbnailUrl) ? thumbnailUrl.trim() : null)
+        .listingType(listing.getListingType())
+        .buyPrice(variant.getBuyPrice())
+        .rentPrice(variant.getRentPrice())
+        .build();
   }
 
   @Override

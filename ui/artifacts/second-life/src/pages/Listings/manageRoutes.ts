@@ -9,7 +9,7 @@ export type ManageRouteParsed =
   | { tag: "add-listing"; facilityId: string }
   | { tag: "product"; facilityId: string; productId: string }
   | { tag: "unpublished"; facilityId: string }
-  | { tag: "orders"; facilityId: string };
+  | { tag: "orders" };
 
 export function manageDashboardPath(): string {
   return `${MANAGE_BASE}/dashboard`;
@@ -45,8 +45,8 @@ export function manageUnpublishedPath(facilityId: string): string {
   return `${manageFacilityPath(facilityId)}/unpublished`;
 }
 
-export function manageOrdersPath(facilityId: string): string {
-  return `${manageFacilityPath(facilityId)}/orders`;
+export function manageOrdersPath(): string {
+  return `${MANAGE_BASE}/orders`;
 }
 
 export function parseManageRoute(pathname: string): ManageRouteParsed | null {
@@ -69,6 +69,9 @@ export function parseManageRoute(pathname: string): ManageRouteParsed | null {
   }
   if (second === "listings") {
     return segments.length === 2 ? { tag: "listings" } : null;
+  }
+  if (second === "orders") {
+    return segments.length === 2 ? { tag: "orders" } : null;
   }
 
   if (second !== "facilities") {
@@ -93,8 +96,6 @@ export function parseManageRoute(pathname: string): ManageRouteParsed | null {
       return segments.length === 4 ? { tag: "add-listing", facilityId } : null;
     case "unpublished":
       return segments.length === 4 ? { tag: "unpublished", facilityId } : null;
-    case "orders":
-      return segments.length === 4 ? { tag: "orders", facilityId } : null;
     case "products": {
       const productId = segments[4];
       return segments.length === 5 && productId ? { tag: "product", facilityId, productId } : null;
@@ -105,7 +106,12 @@ export function parseManageRoute(pathname: string): ManageRouteParsed | null {
 }
 
 export function facilityScopeActive(route: ManageRouteParsed, facilityId: string): boolean {
-  if (route.tag === "dashboard" || route.tag === "products" || route.tag === "listings") {
+  if (
+    route.tag === "dashboard" ||
+    route.tag === "products" ||
+    route.tag === "listings" ||
+    route.tag === "orders"
+  ) {
     return false;
   }
 

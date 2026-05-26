@@ -5,11 +5,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -26,11 +28,14 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.naodab.bookingservice.dto.request.BookingOrderCreateRequest;
+import com.naodab.bookingservice.dto.request.BookingOrderStatusUpdateRequest;
 import com.naodab.bookingservice.dto.response.BookingOrderResponse;
 import com.naodab.bookingservice.models.enums.BookingOrderStatus;
 import com.naodab.bookingservice.services.BookingOrderService;
 import com.naodab.commonservice.constant.AppConstants;
 import com.naodab.commonservice.exception.GlobalExceptionHandler;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 @ExtendWith(MockitoExtension.class)
 class BookingOrderControllerTest {
@@ -124,11 +129,88 @@ class BookingOrderControllerTest {
   }
 
   @Test
-  void deleteBookingOrder_returnsNoContent() throws Exception {
-    mockMvc.perform(delete("/orders/{id}", ORDER_ID))
+  void listBookingOrders_missingProfileHeader_returnsBadRequest() throws Exception {
+    mockMvc.perform(get("/orders"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value(1000));
+
+    verify(bookingOrderService, never()).listBookingOrders(any());
+  }
+
+  @Test
+  void listBookingOrders_returnsOrdersForProfile() throws Exception {
+    BookingOrderResponse response = BookingOrderResponse.builder()
+        .id(ORDER_ID)
+        .customerId(CUSTOMER_ID)
+        .listingVariantId(LISTING_VARIANT_ID)
+        .quantity(1)
+        .pickupTime(LocalDateTime.now().plusDays(1))
+        .status(BookingOrderStatus.PENDING)
+        .build();
+    when(bookingOrderService.listBookingOrders(PROFILE_ID)).thenReturn(List.of(response));
+
+    mockMvc.perform(get("/orders")
+        .header(AppConstants.HEADER_PROFILE_ID, PROFILE_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[0].id").value(ORDER_ID))
+        .andExpect(jsonPath("$.data[0].listingVariantId").value(LISTING_VARIANT_ID));
+
+    verify(bookingOrderService).listBookingOrders(PROFILE_ID);
+  }
+
+  @Test
+  void cancelBookingOrder_returnsNoContent() throws Exception {
+    mockMvc.perform(delete("/orders/{id}", ORDER_ID)
+        .header(AppConstants.HEADER_PROFILE_ID, PROFILE_ID))
         .andExpect(status().isNoContent());
 
-    verify(bookingOrderService).deleteBookingOrder(ORDER_ID);
+    verify(bookingOrderService).cancelBookingOrder(PROFILE_ID, ORDER_ID);
+  }
+
+  @Test
+  void listFacilityOrders_returnsOrders() throws Exception {
+    BookingOrderResponse response = BookingOrderResponse.builder()
+        .id(ORDER_ID)
+        .customerId(CUSTOMER_ID)
+        .listingVariantId(LISTING_VARIANT_ID)
+        .quantity(1)
+        .pickupTime(LocalDateTime.now().plusDays(1))
+        .status(BookingOrderStatus.PENDING)
+        .build();
+    when(bookingOrderService.listFacilityOrders(PROFILE_ID, "facility-1")).thenReturn(List.of(response));
+
+    mockMvc.perform(get("/orders/by-facility/{facilityId}", "facility-1")
+        .header(AppConstants.HEADER_PROFILE_ID, PROFILE_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[0].id").value(ORDER_ID));
+
+    verify(bookingOrderService).listFacilityOrders(PROFILE_ID, "facility-1");
+  }
+
+  @Test
+  void updateBookingOrderStatus_returnsUpdatedOrder() throws Exception {
+    BookingOrderResponse response = BookingOrderResponse.builder()
+        .id(ORDER_ID)
+        .customerId(CUSTOMER_ID)
+        .listingVariantId(LISTING_VARIANT_ID)
+        .quantity(1)
+        .pickupTime(LocalDateTime.now().plusDays(1))
+        .status(BookingOrderStatus.CONFIRMED)
+        .build();
+    BookingOrderStatusUpdateRequest body = BookingOrderStatusUpdateRequest.builder()
+        .status(BookingOrderStatus.CONFIRMED)
+        .build();
+    when(bookingOrderService.updateBookingOrderStatus(eq(PROFILE_ID), eq(ORDER_ID), any(BookingOrderStatusUpdateRequest.class)))
+        .thenReturn(response);
+
+    mockMvc.perform(patch("/orders/{id}/status", ORDER_ID)
+        .header(AppConstants.HEADER_PROFILE_ID, PROFILE_ID)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(body)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
+
+    verify(bookingOrderService).updateBookingOrderStatus(eq(PROFILE_ID), eq(ORDER_ID), any(BookingOrderStatusUpdateRequest.class));
   }
 
   private static BookingOrderCreateRequest validCreateRequest() {

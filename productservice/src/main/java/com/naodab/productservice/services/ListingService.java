@@ -4,6 +4,7 @@ import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingVariantContextResponse;
 import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
@@ -20,6 +21,8 @@ public interface ListingService {
   ListingPublicDetailResponse getPublicListingById(String listingId);
 
   void assertListingVariantOnListing(String listingId, String listingVariantId);
+
+  ListingVariantContextResponse getListingVariantContext(String listingVariantId);
 
   PagedItemsResponse<ListingItemResponse> searchPublicListingItems(ListingSearchRequest request);
 

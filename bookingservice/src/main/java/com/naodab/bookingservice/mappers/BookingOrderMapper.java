@@ -35,7 +35,9 @@ public class BookingOrderMapper {
         .listingVariantId(bookingOrder.getListingVariantId())
         .quantity(bookingOrder.getQuantity())
         .pickupTime(bookingOrder.getPickupTime())
+        .price(bookingOrder.getPrice())
         .status(bookingOrder.getStatus())
+        .createdAt(bookingOrder.getCreatedAt())
         .build();
   }
 }
