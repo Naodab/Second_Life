@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, Mail, MapPin, MessageSquare, Package, Phone, ShieldCheck, Store } from "lucide-react";
+import { Clock, MapPin, MessageSquare, Package, ShieldCheck, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { facilityAvatarUrl } from "@/api/facility";
 import type { FacilityOverviewDto } from "@/api/listing";
@@ -29,9 +29,6 @@ export function ListingFacilitySection({ facility }: Props) {
     provinceCode: facility.provinceCode,
   });
 
-  const email = facility.email?.trim();
-  const phone = facility.phoneNumber?.trim();
-
   return (
     <div className="mt-10 overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 shadow-sm ring-1 ring-border/35 dark:from-card dark:via-card dark:to-muted/10 dark:shadow-xl dark:shadow-black/20 dark:ring-border/25">
       <div className="p-6 sm:p-7">
@@ -51,22 +48,6 @@ export function ListingFacilitySection({ facility }: Props) {
                   <ShieldCheck className="h-5 w-5 shrink-0 text-primary" aria-hidden />
                 ) : null}
               </div>
-              {(email || phone) && (
-                <ul className="mt-3 space-y-1.5 text-sm text-muted-foreground">
-                  {email ? (
-                    <li className="flex items-center gap-2 min-w-0">
-                      <Mail className="h-4 w-4 shrink-0 opacity-80" />
-                      <span className="break-all">{email}</span>
-                    </li>
-                  ) : null}
-                  {phone ? (
-                    <li className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 shrink-0 opacity-80" />
-                      <span>{phone}</span>
-                    </li>
-                  ) : null}
-                </ul>
-              )}
               {fullAddress ? (
                 <div className="mt-2.5 flex items-start gap-2 text-sm text-muted-foreground">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />

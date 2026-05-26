@@ -23,8 +23,6 @@ public class FacilityResponse {
   String address;
   String provinceCode;
   String wardCode;
-  String email;
-  String phoneNumber;
   Float latitude;
   Float longitude;
   Long viewCount;

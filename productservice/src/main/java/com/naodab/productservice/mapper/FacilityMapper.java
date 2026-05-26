@@ -26,8 +26,6 @@ public class FacilityMapper {
         .address(request.getAddress())
         .provinceCode(request.getProvinceCode())
         .wardCode(request.getWardCode())
-        .email(trimToNull(request.getEmail()))
-        .phoneNumber(trimToNull(request.getPhoneNumber()))
         .build();
 
     parseLatAndLong(facility, request.getLinkGoogleMap());
@@ -49,8 +47,6 @@ public class FacilityMapper {
         .address(facility.getAddress())
         .provinceCode(facility.getProvinceCode())
         .wardCode(facility.getWardCode())
-        .email(facility.getEmail())
-        .phoneNumber(facility.getPhoneNumber())
         .latitude(facility.getLatitude())
         .longitude(facility.getLongitude())
         .viewCount(facility.getViewCount())
@@ -93,23 +89,7 @@ public class FacilityMapper {
       facility.setWardCode(request.getWardCode());
     }
 
-    if (request.getEmail() != null) {
-      facility.setEmail(trimToNull(request.getEmail()));
-    }
-
-    if (request.getPhoneNumber() != null) {
-      facility.setPhoneNumber(trimToNull(request.getPhoneNumber()));
-    }
-
     return facility;
-  }
-
-  private static String trimToNull(String value) {
-    if (value == null) {
-      return null;
-    }
-    String trimmed = value.trim();
-    return trimmed.isEmpty() ? null : trimmed;
   }
 
   private void parseLatAndLong(Facility facility, String linkGoogleMap) {

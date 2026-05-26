@@ -29,8 +29,6 @@ function inLength(s: string, min: number, max: number): boolean {
   return t.length >= min && t.length <= max;
 }
 
-const vnPhoneRegex = /^(\+84|0)\d{9}$/;
-
 function validateForm(f: {
   name: string;
   description: string;
@@ -38,8 +36,6 @@ function validateForm(f: {
   address: string;
   provinceCode: string;
   wardCode: string;
-  email: string;
-  phoneNumber: string;
 }): string | null {
   if (!inLength(f.name, 3, 255)) return "Tên cơ sở: 3–255 ký tự.";
   if (f.description.trim().length > 1000) return "Mô tả tối đa 1000 ký tự.";
@@ -49,12 +45,6 @@ function validateForm(f: {
   if (!inLength(f.address, 3, 255)) return "Địa chỉ: 3–255 ký tự.";
   if (!f.provinceCode.trim()) return "Vui lòng chọn tỉnh/thành.";
   if (!f.wardCode.trim()) return "Vui lòng chọn phường/xã.";
-  const email = f.email.trim();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Email liên hệ không hợp lệ.";
-  const phone = f.phoneNumber.trim();
-  if (!phone || !vnPhoneRegex.test(phone)) {
-    return "Số điện thoại: +84 hoặc 0 và 9 chữ số.";
-  }
   return null;
 }
 
@@ -74,8 +64,6 @@ export function AddFacilityModal({
     address: "",
     provinceCode: "",
     wardCode: "",
-    email: "",
-    phoneNumber: "",
   });
   const [provinces, setProvinces] = useState<ProvinceResponse[]>([]);
   const [wards, setWards] = useState<WardResponse[]>([]);
@@ -95,8 +83,6 @@ export function AddFacilityModal({
       address: "",
       provinceCode: "",
       wardCode: "",
-      email: "",
-      phoneNumber: "",
     });
     setWards([]);
     setError(null);
@@ -179,8 +165,6 @@ export function AddFacilityModal({
       address: form.address.trim(),
       provinceCode: form.provinceCode.trim(),
       wardCode: form.wardCode.trim(),
-      email: form.email.trim(),
-      phoneNumber: form.phoneNumber.trim(),
     };
     const desc = form.description.trim();
     if (desc) body.description = desc;
@@ -248,33 +232,6 @@ export function AddFacilityModal({
                 placeholder="Giới thiệu ngắn về cơ sở…"
                 value={form.description}
                 onChange={(e) => setField("description", e.target.value)}
-                disabled={submitting}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-semibold mb-1.5 block">
-                Email liên hệ <span className="text-destructive">*</span>
-              </label>
-              <Input
-                type="email"
-                placeholder="contact@example.com"
-                value={form.email}
-                onChange={(e) => setField("email", e.target.value)}
-                className="rounded-xl"
-                disabled={submitting}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-semibold mb-1.5 block">
-                Số điện thoại <span className="text-destructive">*</span>
-              </label>
-              <Input
-                type="tel"
-                placeholder="+84901234567 hoặc 0901234567"
-                value={form.phoneNumber}
-                onChange={(e) => setField("phoneNumber", e.target.value)}
-                className="rounded-xl"
                 disabled={submitting}
               />
             </div>

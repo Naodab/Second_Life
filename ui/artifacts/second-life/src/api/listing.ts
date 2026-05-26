@@ -265,8 +265,6 @@ export type FacilityOverviewDto = {
   address?: string | null;
   provinceCode?: string | null;
   wardCode?: string | null;
-  email?: string | null;
-  phoneNumber?: string | null;
   averageRating?: number | null;
   orderCount?: number | null;
 };
