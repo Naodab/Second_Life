@@ -196,6 +196,31 @@ class BookingOrderServiceImplTest {
   }
 
   @Test
+  void listBookingOrders_returnsOrdersForProfile() {
+    BookingOrder order = samplePendingOrder();
+    when(bookingOrderRepository.findActiveByProfileId(PROFILE_ID)).thenReturn(List.of(order));
+
+    List<BookingOrderResponse> responses = bookingOrderService.listBookingOrders(PROFILE_ID);
+
+    assertThat(responses).hasSize(1);
+    assertThat(responses.get(0).getId()).isEqualTo(ORDER_ID);
+    assertThat(responses.get(0).getCustomerId()).isEqualTo(CUSTOMER_ID);
+    assertThat(responses.get(0).getListingVariantId()).isEqualTo(LISTING_VARIANT_ID);
+    assertThat(responses.get(0).getStatus()).isEqualTo(BookingOrderStatus.PENDING);
+    verify(bookingOrderRepository).findActiveByProfileId(PROFILE_ID);
+  }
+
+  @Test
+  void listBookingOrders_returnsEmptyListWhenNoOrders() {
+    when(bookingOrderRepository.findActiveByProfileId(PROFILE_ID)).thenReturn(List.of());
+
+    List<BookingOrderResponse> responses = bookingOrderService.listBookingOrders(PROFILE_ID);
+
+    assertThat(responses).isEmpty();
+    verify(bookingOrderRepository).findActiveByProfileId(PROFILE_ID);
+  }
+
+  @Test
   void listFacilityOrders_returnsOrdersForFacilityVariants() {
     when(productClients.listListingVariantIdsForFacility(PROFILE_ID, "facility-1"))
         .thenReturn(List.of(LISTING_VARIANT_ID));
@@ -207,6 +232,29 @@ class BookingOrderServiceImplTest {
 
     assertThat(responses).hasSize(1);
     assertThat(responses.get(0).getId()).isEqualTo(ORDER_ID);
+    verify(productClients).listListingVariantIdsForFacility(PROFILE_ID, "facility-1");
+    verify(bookingOrderRepository).findActiveByListingVariantIdIn(List.of(LISTING_VARIANT_ID));
+  }
+
+  @Test
+  void listFacilityOrders_emptyVariantIds_returnsEmptyWithoutQuery() {
+    when(productClients.listListingVariantIdsForFacility(PROFILE_ID, "facility-1"))
+        .thenReturn(List.of());
+
+    List<BookingOrderResponse> responses = bookingOrderService.listFacilityOrders(PROFILE_ID, "facility-1");
+
+    assertThat(responses).isEmpty();
+    verify(bookingOrderRepository, never()).findActiveByListingVariantIdIn(any());
+  }
+
+  @Test
+  void listFacilityOrders_blankFacilityId_throwsInvalidInput() {
+    assertThatThrownBy(() -> bookingOrderService.listFacilityOrders(PROFILE_ID, "   "))
+        .isInstanceOf(AppException.class)
+        .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+
+    verify(productClients, never()).listListingVariantIdsForFacility(any(), any());
+    verify(bookingOrderRepository, never()).findActiveByListingVariantIdIn(any());
   }
 
   @Test

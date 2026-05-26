@@ -8,6 +8,6 @@ class BookingserviceApplicationTests {
 
 	@Test
 	void contextLoads() {
+		// Spring Boot smoke test: context startup is the assertion; no additional logic required.
 	}
-
 }

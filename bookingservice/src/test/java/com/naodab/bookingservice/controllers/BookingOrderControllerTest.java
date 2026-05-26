@@ -168,6 +168,80 @@ class BookingOrderControllerTest {
   }
 
   @Test
+  void listBookingOrders_blankProfileHeader_returnsBadRequest() throws Exception {
+    mockMvc.perform(get("/orders")
+        .header(AppConstants.HEADER_PROFILE_ID, "   "))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value(1000));
+
+    verify(bookingOrderService, never()).listBookingOrders(any());
+  }
+
+  @Test
+  void listBookingOrders_returnsEmptyList() throws Exception {
+    when(bookingOrderService.listBookingOrders(PROFILE_ID)).thenReturn(List.of());
+
+    mockMvc.perform(get("/orders")
+        .header(AppConstants.HEADER_PROFILE_ID, PROFILE_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data").isArray())
+        .andExpect(jsonPath("$.data").isEmpty());
+
+    verify(bookingOrderService).listBookingOrders(PROFILE_ID);
+  }
+
+  @Test
+  void listBookingOrders_trimsProfileHeader_andReturnsOrderFields() throws Exception {
+    LocalDateTime createdAt = LocalDateTime.of(2026, 5, 1, 9, 30, 0);
+    BookingOrderResponse response = BookingOrderResponse.builder()
+        .id(ORDER_ID)
+        .customerId(CUSTOMER_ID)
+        .listingVariantId(LISTING_VARIANT_ID)
+        .quantity(2)
+        .price(150_000L)
+        .pickupTime(LocalDateTime.now().plusDays(3))
+        .status(BookingOrderStatus.CONFIRMED)
+        .createdAt(createdAt)
+        .build();
+    when(bookingOrderService.listBookingOrders("profile-1")).thenReturn(List.of(response));
+
+    mockMvc.perform(get("/orders")
+        .header(AppConstants.HEADER_PROFILE_ID, "  profile-1  "))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[0].id").value(ORDER_ID))
+        .andExpect(jsonPath("$.data[0].customerId").value(CUSTOMER_ID))
+        .andExpect(jsonPath("$.data[0].listingVariantId").value(LISTING_VARIANT_ID))
+        .andExpect(jsonPath("$.data[0].quantity").value(2))
+        .andExpect(jsonPath("$.data[0].price").value(150_000))
+        .andExpect(jsonPath("$.data[0].status").value("CONFIRMED"))
+        .andExpect(jsonPath("$.data[0].createdAt").exists());
+
+    verify(bookingOrderService).listBookingOrders("profile-1");
+  }
+
+  @Test
+  void listFacilityOrders_missingProfileHeader_returnsBadRequest() throws Exception {
+    mockMvc.perform(get("/orders/by-facility/{facilityId}", "facility-1"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value(1000));
+
+    verify(bookingOrderService, never()).listFacilityOrders(any(), any());
+  }
+
+  @Test
+  void listFacilityOrders_returnsEmptyList() throws Exception {
+    when(bookingOrderService.listFacilityOrders(PROFILE_ID, "facility-1")).thenReturn(List.of());
+
+    mockMvc.perform(get("/orders/by-facility/{facilityId}", "facility-1")
+        .header(AppConstants.HEADER_PROFILE_ID, PROFILE_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data").isArray())
+        .andExpect(jsonPath("$.data").isEmpty());
+
+    verify(bookingOrderService).listFacilityOrders(PROFILE_ID, "facility-1");
+  }
+
+  @Test
   void listFacilityOrders_returnsOrders() throws Exception {
     BookingOrderResponse response = BookingOrderResponse.builder()
         .id(ORDER_ID)
