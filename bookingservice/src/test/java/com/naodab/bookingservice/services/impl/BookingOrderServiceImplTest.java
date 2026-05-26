@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -60,7 +61,8 @@ class BookingOrderServiceImplTest {
 
   @BeforeEach
   void setUp() {
-    when(locationClients.resolveLabels(anyString(), anyString()))
+    lenient()
+        .when(locationClients.resolveLabels(anyString(), anyString()))
         .thenReturn(new LocationLabels("Ho Chi Minh", "Ben Nghe"));
     bookingOrderMapper = new BookingOrderMapper(new CustomerMapper(locationClients));
     bookingOrderService = new BookingOrderServiceImpl(
@@ -111,6 +113,20 @@ class BookingOrderServiceImplTest {
         .isInstanceOf(DataIntegrityViolationException.class);
 
     verify(inventoryClients).releaseBuyReservation(any());
+  }
+
+  @Test
+  void createBookingOrder_nullInventoryCount_throwsBeforeReserveOrSave() {
+    BookingOrderCreateRequest request = sampleRequest(1);
+    when(customerService.getOwnedCustomerEntity(PROFILE_ID, CUSTOMER_ID)).thenReturn(sampleCustomer());
+    when(inventoryClients.getBuyInventoryCount(LISTING_VARIANT_ID)).thenReturn(null);
+
+    assertThatThrownBy(() -> bookingOrderService.createBookingOrder(PROFILE_ID, request))
+        .isInstanceOf(AppException.class)
+        .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_INVENTORY);
+
+    verify(inventoryClients, never()).createBuyReservation(any());
+    verify(bookingOrderRepository, never()).save(any());
   }
 
   @Test
