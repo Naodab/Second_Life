@@ -144,12 +144,19 @@ public class ListingServiceImpl implements ListingService {
 
     String productName = product != null ? product.getName() : null;
     String listingTitle = listing.getTitle();
-    String title = StringUtils.hasText(listingTitle) ? listingTitle.trim()
-        : (StringUtils.hasText(productName) ? productName.trim() : "Sản phẩm");
-    String variantLabel = productVariant != null && StringUtils.hasText(productVariant.getSku())
-        ? productVariant.getSku().trim()
-        : null;
+    String title;
+    if (listingTitle != null && StringUtils.hasText(listingTitle)) {
+      title = listingTitle.trim();
+    } else if (productName != null && StringUtils.hasText(productName)) {
+      title = productName.trim();
+    } else {
+      title = "Sản phẩm";
+    }
+    String sku = productVariant != null ? productVariant.getSku() : null;
+    String variantLabel = sku != null && StringUtils.hasText(sku) ? sku.trim() : null;
     String thumbnailUrl = product != null ? productMapper.thumbnailImageUrl(product) : null;
+    String normalizedThumbnailUrl =
+        thumbnailUrl != null && StringUtils.hasText(thumbnailUrl) ? thumbnailUrl.trim() : null;
     String facilityId = listingFacility != null ? listingFacility.getId() : null;
 
     return ListingVariantContextResponse.builder()
@@ -159,7 +166,7 @@ public class ListingServiceImpl implements ListingService {
         .title(title)
         .productName(productName)
         .variantLabel(variantLabel)
-        .thumbnailUrl(StringUtils.hasText(thumbnailUrl) ? thumbnailUrl.trim() : null)
+        .thumbnailUrl(normalizedThumbnailUrl)
         .listingType(listing.getListingType())
         .buyPrice(variant.getBuyPrice())
         .rentPrice(variant.getRentPrice())

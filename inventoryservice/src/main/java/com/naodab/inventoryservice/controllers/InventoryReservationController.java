@@ -30,6 +30,13 @@ public class InventoryReservationController {
     return ResponseEntity.ok(ApiResponse.<Void>builder().build());
   }
 
+  @PostMapping("/rent")
+  public ResponseEntity<ApiResponse<Void>> createRentReservation(
+      @RequestBody InventoryReservationCreateEvent request) {
+    inventoryReservationService.createRentReservation(request);
+    return ResponseEntity.ok(ApiResponse.<Void>builder().build());
+  }
+
   @DeleteMapping("/{reservationId}")
   public ResponseEntity<ApiResponse<Void>> releaseReservation(@PathVariable String reservationId) {
     inventoryReservationService.releaseReservation(reservationId);

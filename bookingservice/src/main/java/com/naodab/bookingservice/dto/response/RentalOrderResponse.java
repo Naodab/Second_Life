@@ -1,6 +1,8 @@
-package com.naodab.inventoryservice.dto.event;
+package com.naodab.bookingservice.dto.response;
 
 import java.time.LocalDateTime;
+
+import com.naodab.bookingservice.models.enums.RentalOrderStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,23 +17,15 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class InventoryReservationCreateEvent {
-
-  String inventoryReservationId;
-
-  String listingVariantId;
-
+public class RentalOrderResponse {
+  String id;
   String customerId;
-
-  String referenceId;
-
+  BookingOrderCustomerResponse customer;
+  String listingVariantId;
+  Long price;
   Integer quantity;
-
-  String mode;
-
-  LocalDateTime expiresAt;
-
-  LocalDateTime rentalSlotStart;
-
-  LocalDateTime rentalSlotEnd;
+  LocalDateTime endTime;
+  LocalDateTime startTime;
+  RentalOrderStatus status;
+  LocalDateTime createdAt;
 }

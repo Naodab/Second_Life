@@ -6,6 +6,8 @@ public interface InventoryReservationService {
 
   void createBuyReservation(InventoryReservationCreateEvent event);
 
+  void createRentReservation(InventoryReservationCreateEvent event);
+
   void releaseReservation(String reservationId);
 
   void createFromEvent(InventoryReservationCreateEvent event);

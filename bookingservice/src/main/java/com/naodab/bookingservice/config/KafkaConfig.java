@@ -59,4 +59,5 @@ public class KafkaConfig {
   public KafkaTemplate<String, InventoryReservationCreateEvent> inventoryReservationCreateKafkaTemplate() {
     return kafkaTemplate();
   }
+
 }

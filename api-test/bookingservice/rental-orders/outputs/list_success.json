@@ -1,0 +1,26 @@
+{
+  "code": 1000,
+  "data": [
+    {
+      "id": "<uuid>",
+      "customerId": "<customerId>",
+      "customer": {
+        "id": "<customerId>",
+        "profileId": "<profileId>",
+        "firstName": "An",
+        "lastName": "Nguyen",
+        "phoneNumber": "0901234567",
+        "email": "an@example.com",
+        "address": "123 Duong ABC",
+        "isDefault": true
+      },
+      "listingVariantId": "<listingVariantId>",
+      "price": null,
+      "quantity": 1,
+      "startTime": "2026-08-01T10:00:00",
+      "endTime": "2026-08-03T10:00:00",
+      "status": "PENDING",
+      "createdAt": "<timestamp>"
+    }
+  ]
+}

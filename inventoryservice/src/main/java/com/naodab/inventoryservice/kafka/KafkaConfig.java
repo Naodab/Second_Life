@@ -60,4 +60,5 @@ public class KafkaConfig {
     return kafkaListenerContainerFactory(InventoryReservationCreateEvent.class, consumerGroupId);
   }
 
+
 }
