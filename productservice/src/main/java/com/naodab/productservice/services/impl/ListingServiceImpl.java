@@ -159,8 +159,8 @@ public class ListingServiceImpl implements ListingService {
     String sku = productVariant != null ? productVariant.getSku() : null;
     String variantLabel = sku != null && StringUtils.hasText(sku) ? sku.trim() : null;
     String thumbnailUrl = product != null ? productMapper.thumbnailImageUrl(product) : null;
-    String normalizedThumbnailUrl =
-        thumbnailUrl != null && StringUtils.hasText(thumbnailUrl) ? thumbnailUrl.trim() : null;
+    String normalizedThumbnailUrl = thumbnailUrl != null && StringUtils.hasText(thumbnailUrl) ? thumbnailUrl.trim()
+        : null;
     String facilityId = listingFacility != null ? listingFacility.getId() : null;
 
     return ListingVariantContextResponse.builder()
@@ -255,24 +255,6 @@ public class ListingServiceImpl implements ListingService {
       }
     }
     return out;
-  }
-
-  private static List<String> normalizeIdListPreserveOrder(List<String> raw) {
-    if (raw == null || raw.isEmpty()) {
-      return null;
-    }
-    LinkedHashSet<String> seen = new LinkedHashSet<>();
-    List<String> out = new ArrayList<>();
-    for (String s : raw) {
-      if (!StringUtils.hasText(s)) {
-        continue;
-      }
-      String t = s.trim();
-      if (seen.add(t)) {
-        out.add(t);
-      }
-    }
-    return out.isEmpty() ? null : out;
   }
 
   @Override

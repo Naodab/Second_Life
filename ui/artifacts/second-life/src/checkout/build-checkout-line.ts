@@ -56,7 +56,7 @@ export function buildCheckoutLineItem(
   if (!row) return null;
 
   const { listing, product } = detail;
-  const rentUnit = listing.rentUnit ?? undefined;
+  const rentUnit = row.lv.rentUnit ?? undefined;
   const facility = resolveFacility(detail, facilityOverride);
   const label = row.pv?.label?.trim();
   const baseTitle = listing.title?.trim() || product.name?.trim() || "Sản phẩm";

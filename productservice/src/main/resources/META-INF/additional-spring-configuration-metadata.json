@@ -59,6 +59,11 @@
       "name": "gemini.model",
       "type": "java.lang.String",
       "description": "Gemini model"
+    },
+    {
+      "name": "external.inventory-service.url",
+      "type": "java.lang.String",
+      "description": "Inventory service URL"
     }
   ]
 }
