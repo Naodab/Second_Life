@@ -29,6 +29,7 @@ export type CheckoutLineItem = {
   buyPrice: number;
   rentPrice: number;
   rentalDates?: { start: Date; end: Date };
+  rentUnit?: "HOUR" | "DAY" | "WEEK" | "MONTH";
   catalogStock: number;
   availableQuantity: number | null;
   inventoryTracked: boolean;
@@ -55,6 +56,7 @@ export function buildCheckoutLineItem(
   if (!row) return null;
 
   const { listing, product } = detail;
+  const rentUnit = row.lv.rentUnit ?? undefined;
   const facility = resolveFacility(detail, facilityOverride);
   const label = row.pv?.label?.trim();
   const baseTitle = listing.title?.trim() || product.name?.trim() || "Sản phẩm";
@@ -98,6 +100,7 @@ export function buildCheckoutLineItem(
     buyPrice: input.mode === "buy" ? unitPrice : 0,
     rentPrice: input.mode === "rent" ? unitPrice : 0,
     rentalDates,
+    rentUnit: input.mode === "rent" ? (input.rentUnit ?? rentUnit) : undefined,
     catalogStock,
     availableQuantity: availability.availableQuantity,
     inventoryTracked: availability.tracked,

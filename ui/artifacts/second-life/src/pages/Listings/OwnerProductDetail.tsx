@@ -632,7 +632,7 @@ export function OwnerProductDetail({
                   type="button"
                   variant="outline"
                   className="rounded-full"
-                  onClick={() => setLocation(manageAddListingPath(facilityId, product.id))}
+                  onClick={() => setLocation(manageAddListingPath(undefined, product.id))}
                 >
                   Tạo bài đăng
                 </Button>

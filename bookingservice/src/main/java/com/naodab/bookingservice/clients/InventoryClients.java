@@ -75,6 +75,31 @@ public class InventoryClients {
     }
   }
 
+  public void createRentReservation(InventoryReservationCreateEvent event) {
+    String base = stripTrailingSlashes(inventoryServiceUrl.trim());
+    String uri = base + "/reservations/rent";
+    try {
+      ResponseEntity<ApiResponse<Void>> response =
+          restTemplate.exchange(
+              Objects.requireNonNull(uri),
+              Objects.requireNonNull(HttpMethod.POST),
+              new HttpEntity<>(event),
+              new ParameterizedTypeReference<ApiResponse<Void>>() {});
+      if (response.getStatusCode() != HttpStatus.OK) {
+        throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+      }
+    } catch (HttpClientErrorException.Conflict e) {
+      throw new AppException(ErrorCode.INSUFFICIENT_INVENTORY);
+    } catch (HttpClientErrorException.BadRequest e) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    } catch (HttpClientErrorException.NotFound e) {
+      throw new AppException(ErrorCode.INVENTORY_ITEM_NOT_FOUND);
+    } catch (RestClientException e) {
+      log.error("Inventory create RENT reservation call failed: {}", e.getMessage());
+      throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   public void releaseBuyReservation(String reservationId) {
     String base = stripTrailingSlashes(inventoryServiceUrl.trim());
     String uri = base + "/reservations/{reservationId}";

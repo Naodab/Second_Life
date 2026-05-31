@@ -95,3 +95,5 @@ kafka-logs/
 
 .pnpm-store/**
 !pnpm-workspace.yaml
+
+scripts/**

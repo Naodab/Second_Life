@@ -16,6 +16,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { createBookingOrder, buildDefaultPickupTime } from "@/api/booking";
+import { createRentalOrder, formatRentalDateTime } from "@/api/rental";
 import { buildCheckoutSuccessContext, type CheckoutSuccessContext } from "./checkout-success-context";
 import { SuccessScreen } from "./SuccessScreen";
 import { CheckoutOrderInfoForm, type CheckoutOrderInfoFormRef } from "./CheckoutOrderInfoForm";
@@ -25,7 +26,8 @@ import { useCheckoutPage } from "./useCheckoutPage";
 import {
   groupByFacility,
   itemTotal,
-  itemDays,
+  itemDuration,
+  rentUnitLabelVu,
   checkoutSectionClass,
   checkoutSectionShellClass,
   checkoutAlertClass,
@@ -51,14 +53,24 @@ export default function Checkout() {
     mutationFn: async (payload: { customerId: string; orderItems: typeof items; orderSubCount: number }) => {
       const pickupTime = buildDefaultPickupTime();
       const orders = await Promise.all(
-        payload.orderItems.map((item) =>
-          createBookingOrder({
+        payload.orderItems.map((item) => {
+          if (item.mode === "rent") {
+            if (!item.rentalDates) throw new Error("Thiếu thông tin ngày thuê");
+            return createRentalOrder({
+              listingVariantId: item.listingVariantId,
+              customerId: payload.customerId,
+              startTime: formatRentalDateTime(item.rentalDates.start),
+              endTime: formatRentalDateTime(item.rentalDates.end),
+              quantity: item.quantity,
+            });
+          }
+          return createBookingOrder({
             listingVariantId: item.listingVariantId,
             quantity: item.quantity,
             pickupTime,
             customerId: payload.customerId,
-          }),
-        ),
+          });
+        }),
       );
       return { orders, orderItems: payload.orderItems, orderSubCount: payload.orderSubCount };
     },
@@ -180,20 +192,40 @@ export default function Checkout() {
                       />
                       <div className="px-5 pb-5 divide-y divide-border border-t border-border/60">
                       {facilityItems.map((item) => {
-                        const days = itemDays(item);
+                        const duration = itemDuration(item);
+                        const unitLabel = rentUnitLabelVu(item.rentUnit);
                         const price = itemTotal(item);
+                        const isHourly = item.rentUnit === "HOUR";
+                        const dateFormatStr = isHourly ? "HH:mm dd/MM/yyyy" : "dd/MM/yyyy";
                         return (
                           <div key={item.lineId} className="py-4 flex gap-4">
                             <img src={item.images[0]} className="w-16 h-16 rounded-xl object-cover border border-border flex-shrink-0" alt={item.name} />
                             <div className="flex-1 min-w-0">
                               <h4 className="font-semibold text-sm text-foreground line-clamp-1">{item.name}</h4>
                               {item.mode === "rent" && item.rentalDates ? (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Clock className={cn("w-3 h-3 flex-shrink-0", checkoutRentAccentClass)} />
-                                  <p className={cn("text-xs font-medium", checkoutRentAccentClass)}>
-                                    Thuê {days} ngày ({format(item.rentalDates.start, "dd/MM", { locale: vi })} –{" "}
-                                    {format(item.rentalDates.end, "dd/MM/yyyy", { locale: vi })})
-                                  </p>
+                                <div className={cn("flex items-start gap-1.5 mt-1.5", checkoutRentAccentClass)}>
+                                  <Clock className="w-3 h-3 flex-shrink-0 mt-[3px]" />
+                                  <div className="flex flex-col gap-0.5">
+                                    <p className="text-xs font-semibold">
+                                      Thuê {duration} {unitLabel}
+                                    </p>
+                                    <p className="text-[11px] font-medium">
+                                      Nhận:{" "}
+                                      <span className="font-semibold">
+                                        {format(item.rentalDates.start, isHourly ? "HH:mm" : "dd/MM", { locale: vi })}
+                                      </span>
+                                      {!isHourly && <>{" — "}{format(item.rentalDates.start, "yyyy", { locale: vi })}</>}
+                                      {isHourly && <>{" "}{format(item.rentalDates.start, "dd/MM/yyyy", { locale: vi })}</>}
+                                    </p>
+                                    <p className="text-[11px] font-medium">
+                                      Trả:{" "}
+                                      <span className="font-semibold">
+                                        {format(item.rentalDates.end, isHourly ? "HH:mm" : "dd/MM", { locale: vi })}
+                                      </span>
+                                      {!isHourly && <>{" — "}{format(item.rentalDates.end, "yyyy", { locale: vi })}</>}
+                                      {isHourly && <>{" "}{format(item.rentalDates.end, "dd/MM/yyyy", { locale: vi })}</>}
+                                    </p>
+                                  </div>
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1 mt-1">
@@ -207,9 +239,9 @@ export default function Checkout() {
                                   {formatCurrency(item.unitPrice)} × {item.quantity} sp
                                 </p>
                               )}
-                              {item.mode === "rent" && days > 0 && (
+                              {item.mode === "rent" && duration > 0 && (
                                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  {formatCurrency(item.rentPrice)}/ngày × {days} ngày × {item.quantity} sp
+                                  {formatCurrency(item.rentPrice)}/{unitLabel} × {duration} {unitLabel} × {item.quantity} sp
                                 </p>
                               )}
                             </div>

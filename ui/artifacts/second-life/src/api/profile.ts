@@ -84,7 +84,6 @@ export function profileNeedsSetup(profile: Pick<ProfilePayload, "firstName">): b
   return !fn;
 }
 
-/** Họ, tên, email, SĐT hợp lệ — bắt buộc trước khi vào khu vực quản lý. */
 export function profileIsCompleteForSellerHub(
   profile: Pick<ProfilePayload, "firstName" | "lastName" | "phoneNumber" | "email">,
 ): boolean {

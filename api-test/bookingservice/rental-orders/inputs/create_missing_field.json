@@ -1,0 +1,6 @@
+{
+  "customerId": "{{customerId}}",
+  "startTime": "2026-08-01T10:00:00",
+  "endTime": "2026-08-03T10:00:00",
+  "quantity": 1
+}

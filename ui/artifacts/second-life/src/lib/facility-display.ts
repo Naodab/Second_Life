@@ -29,7 +29,6 @@ export async function resolveFacilityPlaceNames(
   };
 }
 
-/** Một dòng: Phường X, Tỉnh/Thành phố Y (chỉ tên). */
 export function formatWardProvinceLine(
   wardName?: string | null,
   provinceName?: string | null,

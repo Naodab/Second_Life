@@ -7,6 +7,7 @@ import { ListingCard } from "@/components/ListingCard";
 import { fetchListingRecommendations, searchListings, type ListingItemResponse } from "@/api/listing";
 import { useAuth } from "@/context/AuthContext";
 import { useVisitorLocation } from "@/context/VisitorLocationContext";
+import { listingGeoParamsFromVisitor } from "@/lib/listing-geo";
 import { useCategories } from "@/hooks/use-categories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CornerAngleQuickFilter } from "@/components/CornerAngleQuickFilter";
@@ -31,24 +32,24 @@ export default function Home() {
       setIsLoading(true);
       try {
         let next: ListingItemResponse[] = [];
-        if (location) {
-          try {
-            next = await fetchListingRecommendations(
-              {
-                latitude: location.latitude,
-                longitude: location.longitude,
-                provinceCode: location.provinceCode,
-                wardCode: location.wardCode,
-                limit: 8,
-              },
-              profileId,
-            );
-          } catch {
-            next = [];
-          }
+        try {
+          next = await fetchListingRecommendations(
+            {
+              ...listingGeoParamsFromVisitor(location),
+              limit: 8,
+            },
+            profileId,
+          );
+        } catch {
+          next = [];
         }
         if (!cancelled && next.length === 0) {
-          const page = await searchListings({ sortBy: "UPDATED_AT_DESC", page: 0, pageSize: 8 }, { profileId });
+          const page = await searchListings({
+            sortBy: "UPDATED_AT_DESC",
+            page: 0,
+            pageSize: 8,
+            ...listingGeoParamsFromVisitor(location),
+          });
           next = Array.isArray(page.items) ? page.items : [];
         }
         if (!cancelled) setListings(next);
@@ -74,7 +75,7 @@ export default function Home() {
       categories.map((c) => ({
         id: c.id,
         name: c.name,
-        href: buildFreshSearchPath({ categoryIds: [c.id] }),
+        href: buildFreshSearchPath({ categoryId: c.id }),
       })),
     [categories],
   );

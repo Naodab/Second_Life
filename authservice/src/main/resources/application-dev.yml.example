@@ -34,9 +34,7 @@ app:
     secret: ${JWT_SECRET:change-me-min-256-bits-hex-or-random-string}
   oauth2:
     authorized-redirect-uris:
-      - http://localhost:3000/oauth2/redirect
       - http://localhost:5173/oauth2/callback/google
-      - http://localhost:8080/oauth2/redirect
 
 external:
   frontend_url: ${FRONTEND_URL:http://localhost:5173}

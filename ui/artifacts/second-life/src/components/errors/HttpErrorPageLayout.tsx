@@ -5,7 +5,6 @@ import { ERROR_BG_DARK, ERROR_BG_LIGHT } from "./error-background";
 export type HttpErrorPageVariant = "fullscreen" | "embedded";
 
 export type HttpErrorPageLayoutProps = {
-  /** Mã HTTP hiển thị lớn (400, 404, 500, …). */
   httpStatus: number | string;
   title: string;
   message: string;

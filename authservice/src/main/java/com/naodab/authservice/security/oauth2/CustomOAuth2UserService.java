@@ -92,13 +92,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     Optional<Account> byEmail = accountRepository.findByEmail(userInfo.getEmail());
     if (byEmail.isPresent()) {
       Account existing = byEmail.get();
-      if (existing.getAuthProvider() == AuthProvider.LOCAL) {
-        throw new OAuth2AuthenticationException(
-            new OAuth2Error(
-                OAuth2FlowConstants.ERROR_USER_EXISTS_DIFFERENT_PROVIDER,
-                ErrorCode.USER_ALREADY_EXISTS_WITH_DIFFERENT_PROVIDER.getMessage(),
-                null));
-      }
       if (existing.getAuthProvider() != authProvider) {
         throw new OAuth2AuthenticationException(
             new OAuth2Error(

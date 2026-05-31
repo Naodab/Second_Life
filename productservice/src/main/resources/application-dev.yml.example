@@ -28,6 +28,11 @@ external:
     url: ${INVENTORY_SERVICE_URL:http://localhost:8087/api/v1}
   cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}
 
+# Lấy key tại: https://aistudio.google.com/apikey
+gemini:
+  api-key: ${GEMINI_API_KEY:AIza-your-gemini-api-key-here}
+  model: ${GEMINI_MODEL:gemini-1.5-flash-8b}
+
 logging:
   level:
     root: INFO

@@ -1,8 +1,9 @@
 import type { CheckoutLineItem } from "@/checkout/build-checkout-line";
-import { differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { billableRentUnits, rentUnitLabelVu } from "@/pages/ListingDetail/rent-schedule-utils";
 
-/** Khối section — nền/viền theo theme (không hardcode white) */
+export { rentUnitLabelVu };
+
 export const checkoutSectionClass = cn(
   "rounded-3xl border border-border/70 bg-card p-6 text-card-foreground shadow-sm",
   "ring-1 ring-border/40",
@@ -51,17 +52,24 @@ export function groupByFacility(items: CheckoutLineItem[]) {
   return map;
 }
 
+export function itemDuration(item: CheckoutLineItem): number {
+  if (item.mode !== "rent" || !item.rentalDates) return 0;
+  return billableRentUnits(
+    item.rentUnit ?? "DAY",
+    item.rentalDates.start.getTime(),
+    item.rentalDates.end.getTime(),
+  );
+}
+
 export function itemTotal(item: CheckoutLineItem) {
   if (item.mode === "rent" && item.rentalDates) {
-    const days = Math.max(1, differenceInDays(item.rentalDates.end, item.rentalDates.start));
-    return item.rentPrice * days * item.quantity;
+    return item.rentPrice * itemDuration(item) * item.quantity;
   }
   return item.unitPrice * item.quantity;
 }
 
 export function itemDays(item: CheckoutLineItem) {
-  if (item.mode !== "rent" || !item.rentalDates) return 0;
-  return Math.max(1, differenceInDays(item.rentalDates.end, item.rentalDates.start));
+  return itemDuration(item);
 }
 
 export function facilityDisplayName(item: CheckoutLineItem) {

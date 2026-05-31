@@ -8,14 +8,18 @@ import java.util.Locale;
 import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+
+import com.naodab.productservice.config.CacheConfig;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
+import com.naodab.productservice.dto.request.ListingSearchRequestNormalizer;
 import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingVariantContextResponse;
@@ -124,33 +128,17 @@ public class ListingServiceImpl implements ListingService {
     }
     ListingVariant variant = listingVariantRepository.findById(listingVariantId.trim())
         .orElseThrow(() -> new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND));
-    Listing listing = variant.getListing();
-    if (listing == null) {
-      throw new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND);
-    }
-    Hibernate.initialize(listing);
+    Listing listing = requireListing(variant);
     Product product = listing.getProduct();
-    if (product != null) {
-      ProductDocumentGraphInitializer.initialize(product);
-    }
     ProductVariant productVariant = variant.getProductVariant();
-    if (productVariant != null) {
-      Hibernate.initialize(productVariant);
-    }
     Facility listingFacility = listing.getFacility();
-    if (listingFacility != null) {
-      Hibernate.initialize(listingFacility);
-    }
+    initializeVariantContextGraph(listing, product, productVariant, listingFacility);
 
     String productName = product != null ? product.getName() : null;
-    String listingTitle = listing.getTitle();
-    String title = StringUtils.hasText(listingTitle) ? listingTitle.trim()
-        : (StringUtils.hasText(productName) ? productName.trim() : "Sản phẩm");
-    String variantLabel = productVariant != null && StringUtils.hasText(productVariant.getSku())
-        ? productVariant.getSku().trim()
-        : null;
-    String thumbnailUrl = product != null ? productMapper.thumbnailImageUrl(product) : null;
-    String facilityId = listingFacility != null ? listingFacility.getId() : null;
+    String title = resolveContextTitle(listing.getTitle(), productName);
+    String variantLabel = trimToNull(productVariantSku(productVariant));
+    String normalizedThumbnailUrl = trimToNull(productThumbnailUrl(product));
+    String facilityId = facilityIdOrNull(listingFacility);
 
     return ListingVariantContextResponse.builder()
         .listingId(listing.getId())
@@ -159,11 +147,58 @@ public class ListingServiceImpl implements ListingService {
         .title(title)
         .productName(productName)
         .variantLabel(variantLabel)
-        .thumbnailUrl(StringUtils.hasText(thumbnailUrl) ? thumbnailUrl.trim() : null)
+        .thumbnailUrl(normalizedThumbnailUrl)
         .listingType(listing.getListingType())
         .buyPrice(variant.getBuyPrice())
         .rentPrice(variant.getRentPrice())
         .build();
+  }
+
+  private static Listing requireListing(ListingVariant variant) {
+    Listing listing = variant.getListing();
+    if (listing == null) {
+      throw new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND);
+    }
+    return listing;
+  }
+
+  private void initializeVariantContextGraph(
+      Listing listing,
+      Product product,
+      ProductVariant productVariant,
+      Facility listingFacility) {
+    Hibernate.initialize(listing);
+    if (product != null) {
+      ProductDocumentGraphInitializer.initialize(product);
+    }
+    if (productVariant != null) {
+      Hibernate.initialize(productVariant);
+    }
+    if (listingFacility != null) {
+      Hibernate.initialize(listingFacility);
+    }
+  }
+
+  private static String resolveContextTitle(String listingTitle, String productName) {
+    if (StringUtils.hasText(listingTitle)) {
+      return listingTitle.trim();
+    }
+    if (StringUtils.hasText(productName)) {
+      return productName.trim();
+    }
+    return "Sản phẩm";
+  }
+
+  private String productThumbnailUrl(Product product) {
+    return product == null ? null : productMapper.thumbnailImageUrl(product);
+  }
+
+  private static String productVariantSku(ProductVariant productVariant) {
+    return productVariant == null ? null : productVariant.getSku();
+  }
+
+  private static String facilityIdOrNull(Facility listingFacility) {
+    return listingFacility == null ? null : listingFacility.getId();
   }
 
   @Override
@@ -174,8 +209,7 @@ public class ListingServiceImpl implements ListingService {
     } else {
       r.setKeyword(r.getKeyword().trim());
     }
-    r.setCategoryIds(normalizeIdListPreserveOrder(r.getCategoryIds()));
-    r.setSubCategoryIds(normalizeIdListPreserveOrder(r.getSubCategoryIds()));
+    ListingSearchRequestNormalizer.normalizeCategoryScope(r);
     r.setProvinceCode(trimToNull(r.getProvinceCode()));
     r.setWardCode(trimToNull(r.getWardCode()));
     if (r.getListingStatus() == null) {
@@ -186,6 +220,11 @@ public class ListingServiceImpl implements ListingService {
     }
     ElasticsearchSortBy sort = r.getSortBy() == null ? ElasticsearchSortBy.UPDATED_AT_DESC : r.getSortBy();
     if (sort == ElasticsearchSortBy.RELEVANCE && !StringUtils.hasText(r.getKeyword())) {
+      sort = ElasticsearchSortBy.UPDATED_AT_DESC;
+    }
+    if (sort == ElasticsearchSortBy.DISTANCE
+        && !ElasticsearchNativeQueryHelper.hasGeoRadiusFilter(
+            r.getLatitude(), r.getLongitude(), r.getRadiusMeters())) {
       sort = ElasticsearchSortBy.UPDATED_AT_DESC;
     }
     r.setSortBy(sort);
@@ -209,6 +248,7 @@ public class ListingServiceImpl implements ListingService {
   }
 
   @Override
+  @Cacheable(value = CacheConfig.SUGGESTIONS_CACHE, key = "#keyword?.trim().toLowerCase() + '_' + (#limit == null ? 8 : T(java.lang.Math).min(#limit, 20))")
   public List<ListingSuggestionResponse> suggestSearch(String keyword, Integer limit) {
     if (!StringUtils.hasText(keyword)) {
       return Collections.emptyList();
@@ -239,24 +279,6 @@ public class ListingServiceImpl implements ListingService {
       }
     }
     return out;
-  }
-
-  private static List<String> normalizeIdListPreserveOrder(List<String> raw) {
-    if (raw == null || raw.isEmpty()) {
-      return null;
-    }
-    LinkedHashSet<String> seen = new LinkedHashSet<>();
-    List<String> out = new ArrayList<>();
-    for (String s : raw) {
-      if (!StringUtils.hasText(s)) {
-        continue;
-      }
-      String t = s.trim();
-      if (seen.add(t)) {
-        out.add(t);
-      }
-    }
-    return out.isEmpty() ? null : out;
   }
 
   @Override

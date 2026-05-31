@@ -21,7 +21,7 @@ export function ListingDetailBreadcrumb({ subId, subName, listingTitle }: Props)
           </Link>
           <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" aria-hidden />
           <Link
-            href={buildFreshSearchPath(subId ? { "subCategoryIds[]": [subId] } : {})}
+            href={buildFreshSearchPath(subId ? { subCategoryId: subId } : {})}
             className="rounded-md px-1.5 py-0.5 transition-colors hover:bg-muted/90 hover:text-foreground dark:hover:bg-muted/50"
           >
             {subName}

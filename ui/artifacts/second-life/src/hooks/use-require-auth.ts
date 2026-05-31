@@ -2,7 +2,6 @@ import { useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 
-/** Chỉ cho phép đường dẫn nội bộ (tránh open redirect). */
 export function sanitizeReturnTo(path: string | null | undefined): string {
   const raw = path?.trim() ?? "";
   if (!raw.startsWith("/") || raw.startsWith("//")) {

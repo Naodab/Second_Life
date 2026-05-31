@@ -1,0 +1,446 @@
+{
+  "info": {
+    "name": "Booking Service — Rental Orders",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",          "value": "http://localhost:8088/api/v1" },
+    { "key": "profileId",        "value": "test-profile-001" },
+    { "key": "sellerProfileId",  "value": "test-seller-001" },
+    { "key": "customerId",       "value": "test-customer-001" },
+    { "key": "listingVariantId", "value": "test-variant-001" },
+    { "key": "facilityId",       "value": "test-facility-001" },
+    { "key": "orderId",          "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Create Rental Order",
+      "item": [
+        {
+          "name": "Create — success",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code 1000', () => pm.expect(res.code).to.eql(1000));",
+                  "pm.test('data exists', () => pm.expect(res.data).to.be.an('object'));",
+                  "pm.test('id is string', () => pm.expect(res.data.id).to.be.a('string').and.not.empty);",
+                  "pm.test('status is PENDING', () => pm.expect(res.data.status).to.eql('PENDING'));",
+                  "pm.test('listingVariantId matches', () => pm.expect(res.data.listingVariantId).to.eql(pm.collectionVariables.get('listingVariantId')));",
+                  "pm.test('quantity is 1', () => pm.expect(res.data.quantity).to.eql(1));",
+                  "pm.test('startTime present', () => pm.expect(res.data.startTime).to.exist);",
+                  "pm.test('endTime present', () => pm.expect(res.data.endTime).to.exist);",
+                  "pm.collectionVariables.set('orderId', res.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/rental-orders",
+            "header": [
+              { "key": "X-Profile-Id",   "value": "{{profileId}}" },
+              { "key": "Content-Type",   "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingVariantId\": \"{{listingVariantId}}\",\n  \"customerId\": \"{{customerId}}\",\n  \"startTime\": \"2026-08-01T10:00:00\",\n  \"endTime\": \"2026-08-03T10:00:00\",\n  \"quantity\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Create — missing profile header → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code 1000', () => pm.expect(res.code).to.eql(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/rental-orders",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingVariantId\": \"{{listingVariantId}}\",\n  \"customerId\": \"{{customerId}}\",\n  \"startTime\": \"2026-08-01T10:00:00\",\n  \"endTime\": \"2026-08-03T10:00:00\",\n  \"quantity\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Create — quantity = 0 → 400 (code 1063)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code 1063 QUANTITY_MIN', () => pm.expect(res.code).to.eql(1063));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/rental-orders",
+            "header": [
+              { "key": "X-Profile-Id", "value": "{{profileId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingVariantId\": \"{{listingVariantId}}\",\n  \"customerId\": \"{{customerId}}\",\n  \"startTime\": \"2026-08-01T10:00:00\",\n  \"endTime\": \"2026-08-03T10:00:00\",\n  \"quantity\": 0\n}"
+            }
+          }
+        },
+        {
+          "name": "Create — endTime before startTime → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code 1000 INVALID_INPUT', () => pm.expect(res.code).to.eql(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/rental-orders",
+            "header": [
+              { "key": "X-Profile-Id", "value": "{{profileId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingVariantId\": \"{{listingVariantId}}\",\n  \"customerId\": \"{{customerId}}\",\n  \"startTime\": \"2026-08-03T10:00:00\",\n  \"endTime\": \"2026-08-01T10:00:00\",\n  \"quantity\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Create — missing listingVariantId → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code 1000', () => pm.expect(res.code).to.eql(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/rental-orders",
+            "header": [
+              { "key": "X-Profile-Id", "value": "{{profileId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"startTime\": \"2026-08-01T10:00:00\",\n  \"endTime\": \"2026-08-03T10:00:00\",\n  \"quantity\": 1\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "List Rental Orders",
+      "item": [
+        {
+          "name": "List — by profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code 1000', () => pm.expect(res.code).to.eql(1000));",
+                  "pm.test('data is array', () => pm.expect(res.data).to.be.an('array'));",
+                  "if (res.data.length > 0) {",
+                  "  pm.test('first item has id', () => pm.expect(res.data[0].id).to.be.a('string'));",
+                  "  pm.test('first item has status', () => pm.expect(res.data[0].status).to.be.a('string'));",
+                  "  pm.test('first item has startTime', () => pm.expect(res.data[0].startTime).to.exist);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rental-orders",
+            "header": [{ "key": "X-Profile-Id", "value": "{{profileId}}" }]
+          }
+        },
+        {
+          "name": "List — missing profile header → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code 1000', () => pm.expect(pm.response.json().code).to.eql(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rental-orders"
+          }
+        }
+      ]
+    },
+    {
+      "name": "List Rental Orders By Facility",
+      "item": [
+        {
+          "name": "List by facility",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code 1000', () => pm.expect(res.code).to.eql(1000));",
+                  "pm.test('data is array', () => pm.expect(res.data).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rental-orders/by-facility/{{facilityId}}",
+            "header": [{ "key": "X-Profile-Id", "value": "{{sellerProfileId}}" }]
+          }
+        },
+        {
+          "name": "List by facility — missing profile header → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code 1000', () => pm.expect(pm.response.json().code).to.eql(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/rental-orders/by-facility/{{facilityId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update Rental Order Status",
+      "item": [
+        {
+          "name": "Update status — PENDING → CONFIRMED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('code 1000', () => pm.expect(res.code).to.eql(1000));",
+                  "pm.test('status is CONFIRMED', () => pm.expect(res.data.status).to.eql('CONFIRMED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/rental-orders/{{orderId}}/status",
+            "header": [
+              { "key": "X-Profile-Id", "value": "{{sellerProfileId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONFIRMED\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update status — invalid transition → 400 (code 1069)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code 1069', () => pm.expect(res.code).to.eql(1069));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/rental-orders/{{orderId}}/status",
+            "header": [
+              { "key": "X-Profile-Id", "value": "{{sellerProfileId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CANCELLED\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update status — missing profile header → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code 1000', () => pm.expect(pm.response.json().code).to.eql(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/rental-orders/{{orderId}}/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONFIRMED\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update status — order not found → 404 (code 1067)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code 1067', () => pm.expect(res.code).to.eql(1067));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/rental-orders/non-existent-id/status",
+            "header": [
+              { "key": "X-Profile-Id", "value": "{{sellerProfileId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONFIRMED\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cancel Rental Order",
+      "item": [
+        {
+          "name": "Cancel — success (PENDING → CANCELLED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/rental-orders/{{orderId}}",
+            "header": [{ "key": "X-Profile-Id", "value": "{{profileId}}" }]
+          }
+        },
+        {
+          "name": "Cancel — already cancelled → 400 (code 1068)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code 1068', () => pm.expect(res.code).to.eql(1068));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/rental-orders/{{orderId}}",
+            "header": [{ "key": "X-Profile-Id", "value": "{{profileId}}" }]
+          }
+        },
+        {
+          "name": "Cancel — not found → 404 (code 1067)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code 1067', () => pm.expect(res.code).to.eql(1067));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/rental-orders/non-existent-id",
+            "header": [{ "key": "X-Profile-Id", "value": "{{profileId}}" }]
+          }
+        },
+        {
+          "name": "Cancel — missing profile header → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code 1000', () => pm.expect(pm.response.json().code).to.eql(1000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/rental-orders/{{orderId}}"
+          }
+        }
+      ]
+    }
+  ]
+}

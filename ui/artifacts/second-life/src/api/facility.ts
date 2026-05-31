@@ -60,7 +60,6 @@ export function facilityAvatarUrl(f: Pick<FacilityResponse, "imageUrl">): string
   return f.imageUrl?.trim() || DEFAULT_FACILITY_AVATAR;
 }
 
-/** Chuẩn hóa facility từ listing/detail (camelCase hoặc snake_case). */
 export function normalizeFacilityResponse(raw: unknown): FacilityResponse | null {
   if (!raw || typeof raw !== "object") return null;
   const f = raw as Record<string, unknown>;

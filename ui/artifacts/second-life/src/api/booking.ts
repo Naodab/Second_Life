@@ -26,7 +26,6 @@ export type BookingOrderCustomerResponse = {
 export type BookingOrderCreateBody = {
   listingVariantId: string;
   quantity: number;
-  /** Format: "yyyy-MM-dd'T'HH:mm:ss" — phải là thời điểm tương lai */
   pickupTime: string;
   customerId: string;
 };
@@ -170,7 +169,6 @@ export async function createBookingOrder(
   throw new Error("Invalid booking order response");
 }
 
-/** Trả về thời gian lấy hàng mặc định: 7 ngày tới lúc 12:00 */
 export function buildDefaultPickupTime(): string {
   const d = new Date();
   d.setDate(d.getDate() + 7);

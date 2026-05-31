@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import {
   getMyFacilities,
   uploadFacilityMainImage,
@@ -42,10 +42,9 @@ function hasFacilityScope(
 ): r is
   | { tag: "facility"; facilityId: string }
   | { tag: "add-product"; facilityId: string }
-  | { tag: "add-listing"; facilityId: string }
   | { tag: "product"; facilityId: string; productId: string }
   | { tag: "unpublished"; facilityId: string } {
-  return !!r && !["dashboard", "products", "listings", "orders"].includes(r.tag);
+  return !!r && !["dashboard", "products", "listings", "add-listing", "orders"].includes(r.tag);
 }
 
 async function attachPlaceNames(
@@ -78,13 +77,16 @@ async function attachPlaceNames(
 
 export default function Listings() {
   const [location, setLocation] = useLocation();
+  const search = useSearch();
   const route = parseManageRoute(location);
-  const addListingInitialProductId = useMemo(() => {
-    const i = location.indexOf("?");
-    if (i < 0) return undefined;
-    const id = new URLSearchParams(location.slice(i)).get("product");
-    return id?.trim() || undefined;
-  }, [location]);
+  const addListingParams = useMemo(() => {
+    const raw = search.startsWith("?") ? search.slice(1) : search;
+    const q = new URLSearchParams(raw);
+    return {
+      facilityId: q.get("facilityId")?.trim() || undefined,
+      productId: q.get("productId")?.trim() || undefined,
+    };
+  }, [search]);
   const { toast } = useToast();
 
   const [facilities, setFacilities] = useState<FacilityWithPlaceNames[]>([]);
@@ -350,10 +352,8 @@ export default function Listings() {
                       contextFacilityId ? manageAddProductPath(contextFacilityId) : manageDashboardPath(),
                     )
                   }
-                  onCreateListingForProduct={
-                    contextFacilityId
-                      ? (productId) => setLocation(manageAddListingPath(contextFacilityId, productId))
-                      : undefined
+                  onCreateListingForProduct={(productId) =>
+                    setLocation(manageAddListingPath(undefined, productId))
                   }
                 />
               )}
@@ -390,12 +390,18 @@ export default function Listings() {
                 />
               )}
 
-              {route?.tag === "add-listing" && route.facilityId && (
+              {route?.tag === "add-listing" && (
                 <CreateListingPage
-                  facilityId={route.facilityId}
+                  initialFacilityId={addListingParams.facilityId}
                   facilities={facilities}
-                  initialProductId={addListingInitialProductId}
-                  onBack={() => setLocation(manageFacilityPath(route.facilityId))}
+                  initialProductId={addListingParams.productId}
+                  onBack={() =>
+                    setLocation(
+                      addListingParams.facilityId
+                        ? manageFacilityPath(addListingParams.facilityId)
+                        : manageProductsPath(),
+                    )
+                  }
                 />
               )}
 

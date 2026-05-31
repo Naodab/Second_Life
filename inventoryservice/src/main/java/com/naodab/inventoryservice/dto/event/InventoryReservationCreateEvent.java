@@ -30,4 +30,8 @@ public class InventoryReservationCreateEvent {
   String mode;
 
   LocalDateTime expiresAt;
+
+  LocalDateTime rentalSlotStart;
+
+  LocalDateTime rentalSlotEnd;
 }

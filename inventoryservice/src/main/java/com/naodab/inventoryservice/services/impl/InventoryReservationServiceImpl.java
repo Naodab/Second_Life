@@ -1,5 +1,7 @@
 package com.naodab.inventoryservice.services.impl;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -84,6 +86,67 @@ public class InventoryReservationServiceImpl implements InventoryReservationServ
 
   @Override
   @Transactional
+  public void createRentReservation(InventoryReservationCreateEvent event) {
+    validateCreateEvent(event);
+
+    String reservationId = event.getInventoryReservationId().trim();
+    if (inventoryReservationRepository.existsById(reservationId)) {
+      log.debug("Inventory reservation {} already exists, skipping", reservationId);
+      return;
+    }
+
+    InventoryItem.InventoryMode mode = parseMode(event.getMode());
+    if (mode != InventoryItem.InventoryMode.RENT) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+
+    if (event.getRentalSlotStart() == null
+        || event.getRentalSlotEnd() == null
+        || !event.getRentalSlotEnd().isAfter(event.getRentalSlotStart())) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+
+    String listingVariantId = event.getListingVariantId().trim();
+    Optional<InventoryItem> item =
+        inventoryItemRepository.findByListingVariantIdAndMode(listingVariantId, mode);
+    if (item.isEmpty()) {
+      throw new AppException(ErrorCode.INVENTORY_ITEM_NOT_FOUND);
+    }
+
+    long requestedQty = event.getQuantity();
+    Instant intervalStart = event.getRentalSlotStart().toInstant(ZoneOffset.UTC);
+    Instant intervalEnd = event.getRentalSlotEnd().toInstant(ZoneOffset.UTC);
+    inventoryAvailabilityService.requireAvailableQuantityInOpenInterval(
+        listingVariantId, mode, intervalStart, intervalEnd, requestedQty);
+
+    InventoryReservation reservation =
+        InventoryReservation.builder()
+            .id(reservationId)
+            .listingVariantId(listingVariantId)
+            .mode(mode)
+            .quantity(requestedQty)
+            .status(InventoryReservation.ReservationStatus.PENDING)
+            .referenceId(
+                StringUtils.hasText(event.getReferenceId())
+                    ? event.getReferenceId().trim()
+                    : reservationId)
+            .expiresAt(event.getExpiresAt())
+            .rentalSlotStart(event.getRentalSlotStart())
+            .rentalSlotEnd(event.getRentalSlotEnd())
+            .build();
+
+    inventoryReservationRepository.save(reservation);
+    log.info(
+        "Created RENT reservation {} qty={} listingVariantId={} slot=[{}, {}]",
+        reservation.getId(),
+        reservation.getQuantity(),
+        reservation.getListingVariantId(),
+        reservation.getRentalSlotStart(),
+        reservation.getRentalSlotEnd());
+  }
+
+  @Override
+  @Transactional
   public void releaseReservation(String reservationId) {
     if (!StringUtils.hasText(reservationId)) {
       return;
@@ -105,7 +168,12 @@ public class InventoryReservationServiceImpl implements InventoryReservationServ
   @Transactional
   public void createFromEvent(InventoryReservationCreateEvent event) {
     try {
-      createBuyReservation(event);
+      InventoryItem.InventoryMode mode = parseMode(event != null ? event.getMode() : null);
+      if (mode == InventoryItem.InventoryMode.RENT) {
+        createRentReservation(event);
+      } else {
+        createBuyReservation(event);
+      }
     } catch (AppException e) {
       log.warn(
           "Failed to create inventory reservation from event id={}: {}",

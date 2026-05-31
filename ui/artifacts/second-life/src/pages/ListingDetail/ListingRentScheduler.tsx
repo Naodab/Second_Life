@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { Leaf } from "lucide-react";
+import { CalendarDays, Leaf } from "lucide-react";
 import type { RentUnit } from "@/api/listing";
 import { cn } from "@/lib/utils";
 import { addHours, addMonths, format, startOfDay, startOfMonth } from "date-fns";
@@ -417,8 +417,12 @@ export function ListingRentScheduler({
               type="number"
               disabled={pickLocked}
               className={cn(
-                "w-[7.5rem] rounded-xl border bg-background px-3 py-2 text-base font-semibold tabular-nums outline-none",
-                "border-border/70 shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/55",
+                "h-10 w-28 rounded-xl border-2 bg-muted/30 px-3 text-base font-bold tabular-nums outline-none",
+                "border-border/50 shadow-sm transition-colors",
+                "hover:border-border/80",
+                "focus:border-primary/50 focus:ring-2 focus:ring-primary/20",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+                "dark:bg-muted/20",
               )}
               min={2000}
               max={2100}
@@ -489,39 +493,61 @@ export function ListingRentScheduler({
         )}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <label htmlFor="rent-day-start" className="text-xs font-medium text-muted-foreground">
+          <div className="flex min-w-0 flex-col gap-2">
+            <label htmlFor="rent-day-start" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <CalendarDays className="w-3.5 h-3.5" />
               Ngày bắt đầu
             </label>
-            <input
-              id="rent-day-start"
-              type="date"
-              min={todayStr}
-              disabled={pickLocked}
-              className={cn(
-                "w-full min-w-0 rounded-xl border bg-background px-3 py-2.5 text-sm tabular-nums outline-none",
-                "border-border/70 shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/55",
+            <div className="relative">
+              <input
+                id="rent-day-start"
+                type="date"
+                min={todayStr}
+                disabled={pickLocked}
+                className={cn(
+                  "h-11 w-full min-w-0 rounded-xl border-2 bg-muted/30 px-4 text-sm font-medium tabular-nums outline-none",
+                  "border-border/50 shadow-sm transition-colors",
+                  "hover:border-border/80",
+                  "focus:border-primary/50 focus:ring-2 focus:ring-primary/20",
+                  "disabled:cursor-not-allowed disabled:opacity-50",
+                  "dark:bg-muted/20",
+                  dayStartStr ? "text-foreground" : "text-muted-foreground",
+                )}
+                value={dayStartStr}
+                onChange={(ev) => setDayStartStr(ev.target.value)}
+              />
+              {dayStartStr && (
+                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-primary/70" />
               )}
-              value={dayStartStr}
-              onChange={(ev) => setDayStartStr(ev.target.value)}
-            />
+            </div>
           </div>
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <label htmlFor="rent-day-end" className="text-xs font-medium text-muted-foreground">
+          <div className="flex min-w-0 flex-col gap-2">
+            <label htmlFor="rent-day-end" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <CalendarDays className="w-3.5 h-3.5" />
               Ngày kết thúc
             </label>
-            <input
-              id="rent-day-end"
-              type="date"
-              min={dayStartStr || todayStr}
-              disabled={pickLocked}
-              className={cn(
-                "w-full min-w-0 rounded-xl border bg-background px-3 py-2.5 text-sm tabular-nums outline-none",
-                "border-border/70 shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/55",
+            <div className="relative">
+              <input
+                id="rent-day-end"
+                type="date"
+                min={dayStartStr || todayStr}
+                disabled={pickLocked}
+                className={cn(
+                  "h-11 w-full min-w-0 rounded-xl border-2 bg-muted/30 px-4 text-sm font-medium tabular-nums outline-none",
+                  "border-border/50 shadow-sm transition-colors",
+                  "hover:border-border/80",
+                  "focus:border-primary/50 focus:ring-2 focus:ring-primary/20",
+                  "disabled:cursor-not-allowed disabled:opacity-50",
+                  "dark:bg-muted/20",
+                  dayEndStr ? "text-foreground" : "text-muted-foreground",
+                )}
+                value={dayEndStr}
+                onChange={(ev) => setDayEndStr(ev.target.value)}
+              />
+              {dayEndStr && (
+                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-secondary/70" />
               )}
-              value={dayEndStr}
-              onChange={(ev) => setDayEndStr(ev.target.value)}
-            />
+            </div>
           </div>
         </div>
       </div>

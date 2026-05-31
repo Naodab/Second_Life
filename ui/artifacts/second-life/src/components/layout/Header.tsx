@@ -230,8 +230,8 @@ export function Header() {
     queryKey: ["listingSuggestions", debouncedDraft],
     queryFn: () => fetchListingSuggestions(debouncedDraft, 8),
     enabled: debouncedDraft.length >= 2,
-    staleTime: 60_000,
-    gcTime: 5 * 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
   });
   const suggestions = suggestionsData ?? EMPTY_SUGGESTION_ITEMS;
 

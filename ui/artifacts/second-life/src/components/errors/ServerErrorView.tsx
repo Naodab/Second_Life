@@ -8,7 +8,6 @@ export type ServerErrorViewProps = ErrorStateActionsProps &
     errorCode?: number;
   };
 
-/** Trang lỗi 500 — nền ảnh full màn hình. */
 export function ServerErrorView({
   title = "Lỗi máy chủ",
   message = "Hệ thống đang gặp sự cố. Vui lòng thử lại sau ít phút.",
