@@ -39,6 +39,9 @@ public class SearchHistoryPersistService {
     }
     String pid = profileId.trim();
     SearchHistorySnapshot snapshot = SearchHistorySnapshot.fromNormalizedSearch(normalizedSearch);
+    if (!snapshot.isWorthRecording()) {
+      return;
+    }
 
     SearchHistories row = searchHistoriesRepository.findByProfileIdForUpdate(pid).orElseGet(
         () -> SearchHistories.builder().profileId(pid).entriesJson("[]").build());

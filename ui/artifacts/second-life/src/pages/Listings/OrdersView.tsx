@@ -40,7 +40,6 @@ export function OrdersView({
 }: {
   facilities: FacilityWithPlaceNames[];
   embedded?: boolean;
-  /** Khi nhúng trong tab cơ sở — khóa filter, ẩn select cơ sở */
   lockedFacilityId?: string;
 }) {
   const [activeTab, setActiveTab] = useState<FacilityOrderTab>("PENDING");

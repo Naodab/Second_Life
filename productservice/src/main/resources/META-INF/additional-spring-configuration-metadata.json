@@ -49,6 +49,16 @@
       "name": "spring.kafka.topics.create-inventory-item",
       "type": "java.lang.String",
       "description": "Create inventory item topic"
+    },
+    {
+      "name": "gemini.api-key",
+      "type": "java.lang.String",
+      "description": "Gemini API key"
+    },
+    {
+      "name": "gemini.model",
+      "type": "java.lang.String",
+      "description": "Gemini model"
     }
   ]
 }

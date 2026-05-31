@@ -22,6 +22,7 @@ import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingRecommendationRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
+import com.naodab.productservice.dto.request.ListingSearchRequestNormalizer;
 import com.naodab.productservice.dto.response.AdminListingPurgeResponse;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingVariantContextResponse;
@@ -80,9 +81,11 @@ public class ListingController {
   public ResponseEntity<ApiResponse<PagedItemsResponse<ListingItemResponse>>> searchListingItems(
       @ModelAttribute ListingSearchRequest request,
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
-    var data = listingService.searchPublicListingItems(request);
+    ListingSearchRequest searchRequest = request == null ? ListingSearchRequest.builder().build() : request;
+    ListingSearchRequestNormalizer.normalizeCategoryScope(searchRequest);
+    var data = listingService.searchPublicListingItems(searchRequest);
     if (profileIdHeader != null && !profileIdHeader.isBlank()) {
-      searchHistoryAsyncRecorder.recordListingSearchAsync(profileIdHeader.trim(), request);
+      searchHistoryAsyncRecorder.recordListingSearchAsync(profileIdHeader.trim(), searchRequest);
     }
     return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ListingItemResponse>>builder()
         .data(data)

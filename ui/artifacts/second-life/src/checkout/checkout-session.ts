@@ -1,4 +1,4 @@
-/** Tham số checkout từ modal Mua / Thuê (hoặc query URL). */
+
 export type CheckoutLineInput = {
   listingId: string;
   listingVariantId: string;
@@ -6,6 +6,7 @@ export type CheckoutLineInput = {
   mode: "buy" | "rent";
   rentalStart?: string;
   rentalEnd?: string;
+  rentUnit?: "HOUR" | "DAY" | "WEEK" | "MONTH";
 };
 
 let pendingLine: CheckoutLineInput | null = null;
@@ -50,6 +51,10 @@ export function parseCheckoutSearch(search: string): CheckoutLineInput | null {
     if (!rentalStart || !rentalEnd) return null;
     line.rentalStart = rentalStart;
     line.rentalEnd = rentalEnd;
+    const ru = q.get("rentUnit")?.trim().toUpperCase();
+    if (ru === "HOUR" || ru === "DAY" || ru === "WEEK" || ru === "MONTH") {
+      line.rentUnit = ru;
+    }
   }
 
   return line;
@@ -65,6 +70,7 @@ export function buildCheckoutHref(line: CheckoutLineInput): string {
   if (line.mode === "rent" && line.rentalStart && line.rentalEnd) {
     q.set("rentalStart", line.rentalStart);
     q.set("rentalEnd", line.rentalEnd);
+    if (line.rentUnit) q.set("rentUnit", line.rentUnit);
   }
   return `/checkout?${q.toString()}`;
 }

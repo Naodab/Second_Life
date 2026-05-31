@@ -46,9 +46,6 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
             .orElse("login");
 
     String targetUrl = buildTargetUrl(request, oauth2Error, redirectUriFromCookie, oauthEntry, exception);
-
-    log.error("OAuth2 authentication failed: {}", exception.getMessage());
-
     authorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
     getRedirectStrategy().sendRedirect(request, response, targetUrl);
   }
@@ -84,8 +81,9 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
       fallback = "/oauth2/redirect";
     }
 
+    log.error("OAuth2 fallback error detail: {}", exception.getMessage());
     return UriComponentsBuilder.fromUriString(fallback)
-        .queryParam("error", exception.getLocalizedMessage())
+        .queryParam("error", "authentication_error")
         .build()
         .toUriString();
   }

@@ -1,6 +1,7 @@
 import { customFetch } from "@workspace/api-client-react";
 import { normalizeFacilityResponse } from "@/api/facility";
 import { unwrapApiData, type ApiResponseEnvelope, type PagedItemsResponse } from "./types";
+import { getSuggestionFromPrefix, setSuggestionCached } from "@/lib/suggestion-cache";
 
 export type ListingType = "BUY" | "RENT";
 
@@ -61,10 +62,15 @@ export type SearchListingsParams = {
   productId?: string | null;
   listingStatus?: ListingStatus | null;
   listingType?: "BUY" | "RENT" | null;
+  categoryId?: string | null;
+  subCategoryId?: string | null;
   categoryIds?: string[] | null;
   subCategoryIds?: string[] | null;
   provinceCode?: string | null;
   wardCode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  radiusMeters?: number | null;
   priceMin?: number | null;
   priceMax?: number | null;
   sortBy?: ListingSearchSort | null;
@@ -100,6 +106,17 @@ export async function searchListings(
   if (params.priceMax != null && Number.isFinite(params.priceMax)) q.set("priceMax", String(params.priceMax));
   if (params.provinceCode?.trim()) q.set("provinceCode", params.provinceCode.trim());
   if (params.wardCode?.trim()) q.set("wardCode", params.wardCode.trim());
+  if (params.latitude != null && Number.isFinite(params.latitude)) {
+    q.set("latitude", String(params.latitude));
+  }
+  if (params.longitude != null && Number.isFinite(params.longitude)) {
+    q.set("longitude", String(params.longitude));
+  }
+  if (params.radiusMeters != null && Number.isFinite(params.radiusMeters) && params.radiusMeters > 0) {
+    q.set("radiusMeters", String(params.radiusMeters));
+  }
+  if (params.categoryId?.trim()) q.set("categoryId", params.categoryId.trim());
+  if (params.subCategoryId?.trim()) q.set("subCategoryId", params.subCategoryId.trim());
   if (params.categoryIds?.length) {
     for (const id of params.categoryIds) {
       if (id?.trim()) q.append("categoryIds", id.trim());
@@ -121,8 +138,6 @@ export async function searchListings(
 export type ListingRecommendationBody = {
   latitude?: number | null;
   longitude?: number | null;
-  provinceCode?: string | null;
-  wardCode?: string | null;
   radiusMeters?: number | null;
   limit?: number | null;
 };
@@ -137,8 +152,6 @@ export async function fetchListingRecommendations(
     body: JSON.stringify({
       latitude: body.latitude ?? undefined,
       longitude: body.longitude ?? undefined,
-      provinceCode: body.provinceCode?.trim() || undefined,
-      wardCode: body.wardCode?.trim() || undefined,
       radiusMeters: body.radiusMeters ?? undefined,
       limit: body.limit ?? undefined,
     }),
@@ -153,6 +166,11 @@ export async function fetchListingSuggestions(
 ): Promise<ListingSuggestionResponse[]> {
   const trimmed = keyword.trim();
   if (trimmed.length < 2) return [];
+
+  // Serve from cache or derive from a shorter cached prefix (skips network call)
+  const cached = getSuggestionFromPrefix(trimmed, limit);
+  if (cached !== null) return cached;
+
   const q = new URLSearchParams({
     keyword: trimmed,
     limit: String(limit),
@@ -165,7 +183,10 @@ export async function fetchListingSuggestions(
     },
   );
   const data = unwrapApiData<ListingSuggestionResponse[]>(raw);
-  return Array.isArray(data) ? data : [];
+  const result = Array.isArray(data) ? data : [];
+
+  setSuggestionCached(trimmed, result);
+  return result;
 }
 
 export async function getFacilityListingPage(
@@ -254,7 +275,6 @@ export type CategoryRefDto = {
   name?: string | null;
 };
 
-/** Facility snapshot on listing public detail (matches productservice FacilityResponse). */
 export type FacilityOverviewDto = {
   id: string;
   name?: string | null;

@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getProvinces, ProvinceResponse, getWards, WardResponse } from "@/api/location";
+import { getProvinces, getWards, type ProvinceResponse, type WardResponse } from "@/api/location";
 import {
   searchListings,
   type ListingItemResponse,
@@ -27,6 +27,12 @@ import { buildFreshSearchPath, searchPathsQueryEqual } from "@/lib/search-url";
 import { pathStubForSearchQueryCompare, rawQueryFromBrowserSearch } from "@/lib/wouter-location";
 import { ListingPaginationBar } from "@/components/ListingPaginationBar";
 import { useAuth } from "@/context/AuthContext";
+import { useVisitorLocation } from "@/context/VisitorLocationContext";
+import {
+  hasVisitorGeo,
+  LISTING_GEO_RADIUS_METERS,
+  listingGeoParamsFromVisitor,
+} from "@/lib/listing-geo";
 
 const DEFAULT_SORT: ListingSearchSort = "UPDATED_AT_DESC";
 
@@ -42,26 +48,59 @@ const SORT_VALUES_IN_SELECT = new Set<ListingSearchSort>([
 
 const EMPTY_WARD_LIST: WardResponse[] = [];
 
-function readArrayParam(searchParams: URLSearchParams, key: string): string[] {
-  const values = [...searchParams.getAll(`${key}[]`), ...searchParams.getAll(key)].filter(Boolean);
-  return Array.from(new Set(values.map(String)));
-}
-
-function mergeSingularParam(ids: string[], singular: string | null): string[] {
-  const v = singular?.trim();
-  if (!v) return ids;
-  return Array.from(new Set([...ids, v]));
-}
-
-function shallowStringArrayEq(a: string[], b: string[]): boolean {
-  return (
-    a === b || (a.length === b.length && a.every((v, i) => v === b[i]))
-  );
-}
-
 function trimParam(raw: string | null | undefined): string | undefined {
   const t = raw?.trim();
   return t ? t : undefined;
+}
+
+function provinceKnown(code: string | undefined, provinces: ProvinceResponse[]): boolean {
+  if (!code?.trim()) return false;
+  const n = code.trim();
+  return provinces.some((x) => String(x.code ?? "").trim() === n);
+}
+
+function wardMatchesList(raw: string, wards: WardResponse[]): boolean {
+  const n = raw.trim();
+  if (!n) return false;
+  return wards.some((w) => {
+    const c = String(w.code ?? "").trim();
+    const id = String(w.id ?? "").trim();
+    return (c.length > 0 && c === n) || (id.length > 0 && id === n);
+  });
+}
+
+function readFirstSearchParam(searchParams: URLSearchParams, baseKey: string): string | undefined {
+  const values = [...searchParams.getAll(`${baseKey}[]`), ...searchParams.getAll(baseKey)].filter(Boolean);
+  for (const v of values) {
+    const t = String(v).trim();
+    if (t) return t;
+  }
+  const legacyKey = baseKey.endsWith("Ids") ? `${baseKey.slice(0, -3)}Id` : null;
+  if (legacyKey) {
+    const legacy = searchParams.get(legacyKey)?.trim();
+    if (legacy) return legacy;
+  }
+  return undefined;
+}
+
+function normalizeKnownCategoryId(
+  raw: string | undefined,
+  categories: CategoryResponse[],
+): string | undefined {
+  if (!raw?.trim()) return undefined;
+  const id = raw.trim();
+  const known = new Set(categories.map((c) => String(c.id)));
+  return known.has(id) ? id : undefined;
+}
+
+function normalizeKnownSubCategoryId(
+  raw: string | undefined,
+  categories: CategoryResponse[],
+): string | undefined {
+  if (!raw?.trim()) return undefined;
+  const id = raw.trim();
+  const known = new Set(categories.flatMap((c) => (c.items ?? []).map((s) => String(s.id))));
+  return known.has(id) ? id : undefined;
 }
 
 function listingTypeFromSearchParams(searchParams: URLSearchParams): "all" | "buy" | "rent" {
@@ -94,41 +133,13 @@ function parseCommaNumber(raw: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function filterCategoryIdsToKnown(ids: string[], categories: CategoryResponse[]): string[] {
-  const knownCat = new Set(categories.map((c) => String(c.id)));
-  return ids.filter((id) => knownCat.has(String(id)));
-}
-
-function filterSubCategoryIdsToKnown(ids: string[], categories: CategoryResponse[]): string[] {
-  const knownSub = new Set(
-    categories.flatMap((c) => (c.items ?? []).map((s) => String(s.id))),
-  );
-  return ids.filter((id) => knownSub.has(String(id)));
-}
-
-function provinceKnown(code: string | undefined, provinces: ProvinceResponse[]): boolean {
-  if (!code?.trim()) return false;
-  const n = code.trim();
-  return provinces.some((x) => String(x.code ?? "").trim() === n);
-}
-
-function wardMatchesList(raw: string, wards: WardResponse[]): boolean {
-  const n = raw.trim();
-  if (!n) return false;
-  return wards.some((w) => {
-    const c = String(w.code ?? "").trim();
-    const id = String(w.id ?? "").trim();
-    return (c.length > 0 && c === n) || (id.length > 0 && id === n);
-  });
-}
-
 export default function Search() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const { user } = useAuth();
+  const { location: visitorLocation } = useVisitorLocation();
+  const visitorGeoReady = hasVisitorGeo(visitorLocation);
   const searchProfileId = user?.id?.trim() ? user.id : undefined;
-  const [provinces, setProvinces] = useState<ProvinceResponse[]>([]);
-  const [wards, setWards] = useState<WardResponse[]>([]);
   const [hoverCategoryId, setHoverCategoryId] = useState<string | null>(null);
   const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number } | null>(null);
   const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -139,6 +150,8 @@ export default function Search() {
   const [searchPage, setSearchPage] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [provinces, setProvinces] = useState<ProvinceResponse[]>([]);
+  const [wards, setWards] = useState<WardResponse[]>([]);
   const [provinceListReady, setProvinceListReady] = useState(false);
   const [wardsLoading, setWardsLoading] = useState(false);
 
@@ -178,16 +191,14 @@ export default function Search() {
 
   const parsedFilters = useMemo(() => {
     const searchParams = new URLSearchParams(rawQueryFromBrowserSearch(search) || "");
+    const subCategoryId = readFirstSearchParam(searchParams, "subCategoryIds");
+    const categoryId = subCategoryId
+      ? undefined
+      : readFirstSearchParam(searchParams, "categoryIds");
     return {
       listingType: listingTypeFromSearchParams(searchParams),
-      categoryIds: mergeSingularParam(
-        readArrayParam(searchParams, "categoryIds"),
-        searchParams.get("categoryId"),
-      ),
-      subCategoryIds: mergeSingularParam(
-        readArrayParam(searchParams, "subCategoryIds"),
-        searchParams.get("subCategoryId"),
-      ),
+      categoryId,
+      subCategoryId,
       provinceCode:
         trimParam(searchParams.get("provinceCode")) ??
         trimParam(searchParams.get("province")),
@@ -203,8 +214,8 @@ export default function Search() {
   }, [search]);
 
   const [typeFilter, setTypeFilter] = useState<"all" | "buy" | "rent">(parsedFilters.listingType);
-  const [categoryIds, setCategoryIds] = useState<string[]>(parsedFilters.categoryIds);
-  const [subCategoryIds, setSubCategoryIds] = useState<string[]>(parsedFilters.subCategoryIds);
+  const [categoryId, setCategoryId] = useState<string | undefined>(parsedFilters.categoryId);
+  const [subCategoryId, setSubCategoryId] = useState<string | undefined>(parsedFilters.subCategoryId);
   const [provinceCode, setProvinceCode] = useState<string | undefined>(parsedFilters.provinceCode);
   const [wardCode, setWardCode] = useState<string | undefined>(parsedFilters.wardCode);
   const [keyword, setKeyword] = useState(parsedFilters.keyword);
@@ -219,12 +230,8 @@ export default function Search() {
   useLayoutEffect(() => {
     const p = parsedFilters;
     setTypeFilter((prev) => (prev === p.listingType ? prev : p.listingType));
-    setCategoryIds((prev) =>
-      shallowStringArrayEq(prev, p.categoryIds) ? prev : p.categoryIds,
-    );
-    setSubCategoryIds((prev) =>
-      shallowStringArrayEq(prev, p.subCategoryIds) ? prev : p.subCategoryIds,
-    );
+    setCategoryId((prev) => (prev === p.categoryId ? prev : p.categoryId));
+    setSubCategoryId((prev) => (prev === p.subCategoryId ? prev : p.subCategoryId));
     setProvinceCode((prev) => (prev === p.provinceCode ? prev : p.provinceCode));
     setWardCode((prev) => (prev === p.wardCode ? prev : p.wardCode));
     setKeyword((prev) => (prev === p.keyword ? prev : p.keyword));
@@ -234,6 +241,14 @@ export default function Search() {
     setPriceMinInput((prev) => (prev === nextMin ? prev : nextMin));
     setPriceMaxInput((prev) => (prev === nextMax ? prev : nextMax));
   }, [parsedFilters]);
+
+  useEffect(() => {
+    if (!refsReady) return;
+    if (categories.length > 0) {
+      setCategoryId((prev) => normalizeKnownCategoryId(prev, categories));
+      setSubCategoryId((prev) => normalizeKnownSubCategoryId(prev, categories));
+    }
+  }, [refsReady, categories]);
 
   useEffect(() => {
     let cancelled = false;
@@ -281,17 +296,7 @@ export default function Search() {
     if (provinces.length > 0) {
       setProvinceCode((prev) => (provinceKnown(prev, provinces) ? prev : undefined));
     }
-    if (categories.length > 0) {
-      setCategoryIds((prev) => {
-        const next = filterCategoryIdsToKnown(prev, categories);
-        return shallowStringArrayEq(prev, next) ? prev : next;
-      });
-      setSubCategoryIds((prev) => {
-        const next = filterSubCategoryIdsToKnown(prev, categories);
-        return shallowStringArrayEq(prev, next) ? prev : next;
-      });
-    }
-  }, [refsReady, provinces, categories]);
+  }, [refsReady, provinces]);
 
   useEffect(() => {
     if (!provinceCode) {
@@ -309,6 +314,16 @@ export default function Search() {
     });
   }, [provinceCode, wards, wardsLoading]);
 
+  useEffect(() => {
+    if (!subCategoryId) return;
+    setCategoryId(undefined);
+  }, [subCategoryId]);
+
+  useEffect(() => {
+    if (visitorGeoReady || sortBy !== "DISTANCE") return;
+    setSortBy(DEFAULT_SORT);
+  }, [visitorGeoReady, sortBy]);
+
   const priceMinNum = useMemo(() => parseCommaNumber(priceMinInput), [priceMinInput]);
   const priceMaxNum = useMemo(() => parseCommaNumber(priceMaxInput), [priceMaxInput]);
 
@@ -324,8 +339,8 @@ export default function Search() {
       sortBy: sortBy !== DEFAULT_SORT ? sortBy : null,
       listingType: typeFilter === "all" ? null : typeFilter,
       type: null,
-      "categoryIds[]": categoryIds.length > 0 ? categoryIds : null,
-      "subCategoryIds[]": subCategoryIds.length > 0 ? subCategoryIds : null,
+      categoryId: categoryId ?? null,
+      subCategoryId: subCategoryId ?? null,
       provinceCode: provinceCode ?? null,
       WardCode: wardCode ?? null,
       priceMin: priceMinNum != null ? String(priceMinNum) : null,
@@ -337,8 +352,8 @@ export default function Search() {
     parsedFilters.keyword,
     sortBy,
     typeFilter,
-    categoryIds,
-    subCategoryIds,
+    categoryId,
+    subCategoryId,
     provinceCode,
     wardCode,
     priceMinNum,
@@ -363,24 +378,28 @@ export default function Search() {
       [
         debouncedKeyword,
         typeFilter,
-        categoryIds.join("\0"),
-        subCategoryIds.join("\0"),
+        categoryId ?? "",
+        subCategoryId ?? "",
         provinceCode ?? "",
         wardCode ?? "",
         String(priceMinNum ?? ""),
         String(priceMaxNum ?? ""),
         sortBy,
+        visitorLocation?.latitude ?? "",
+        visitorLocation?.longitude ?? "",
       ].join("|"),
     [
       debouncedKeyword,
       typeFilter,
-      categoryIds,
-      subCategoryIds,
+      categoryId,
+      subCategoryId,
       provinceCode,
       wardCode,
       priceMinNum,
       priceMaxNum,
       sortBy,
+      visitorLocation?.latitude,
+      visitorLocation?.longitude,
     ],
   );
 
@@ -405,19 +424,22 @@ export default function Search() {
       setIsLoading(true);
       setFetchError(null);
       try {
+        const effectiveSortBy =
+          sortBy === "DISTANCE" && !visitorGeoReady ? DEFAULT_SORT : sortBy;
         const data = await searchListings(
           {
             keyword: debouncedKeyword.trim() || undefined,
             listingType: typeFilter === "all" ? null : typeFilter === "buy" ? "BUY" : "RENT",
-            categoryIds: categoryIds.length > 0 ? categoryIds : null,
-            subCategoryIds: subCategoryIds.length > 0 ? subCategoryIds : null,
+            categoryId: categoryId ?? null,
+            subCategoryId: subCategoryId ?? null,
             provinceCode: provinceCode ?? null,
             wardCode: wardCode ?? null,
             priceMin: priceMinNum ?? null,
             priceMax: priceMaxNum ?? null,
-            sortBy,
+            sortBy: effectiveSortBy,
             page: searchPage,
             pageSize: SEARCH_LISTING_PAGE_SIZE,
+            ...listingGeoParamsFromVisitor(visitorLocation),
           },
           { profileId: searchProfileId },
         );
@@ -442,8 +464,8 @@ export default function Search() {
   }, [
     debouncedKeyword,
     typeFilter,
-    categoryIds.join("\0"),
-    subCategoryIds.join("\0"),
+    categoryId,
+    subCategoryId,
     provinceCode,
     wardCode,
     priceMinNum,
@@ -451,6 +473,9 @@ export default function Search() {
     sortBy,
     searchPage,
     searchProfileId,
+    visitorGeoReady,
+    visitorLocation?.latitude,
+    visitorLocation?.longitude,
   ]);
 
   const searchListingPageCount = Math.max(1, Math.ceil(searchTotalCount / SEARCH_LISTING_PAGE_SIZE));
@@ -460,32 +485,54 @@ export default function Search() {
     [categories],
   );
 
-  const selectedCategoryText = useMemo(() => {
-    if (categoryIds.length === 0) return "Tất cả sản phẩm";
-    if (categoryIds.length === 1) return categoryNameMap.get(categoryIds[0]) || "Danh mục";
-    return `${categoryIds.length} danh mục`;
-  }, [categoryIds, categoryNameMap]);
+  const subCategoryNameMap = useMemo(
+    () =>
+      new Map(
+        categories.flatMap((cat) =>
+          (cat.items ?? []).map((sub) => [String(sub.id), sub.name] as const),
+        ),
+      ),
+    [categories],
+  );
 
-  const toggleCategory = (id: string, checked: boolean) => {
-    setCategoryIds((prev) => {
-      if (checked) return prev.includes(id) ? prev : [...prev, id];
-      return prev.filter((item) => item !== id);
-    });
+  const selectedCategoryText = useMemo(() => {
+    if (subCategoryId) {
+      return subCategoryNameMap.get(subCategoryId) || "Danh mục con";
+    }
+    if (categoryId) {
+      return categoryNameMap.get(categoryId) || "Danh mục";
+    }
+    return "Tất cả sản phẩm";
+  }, [categoryId, subCategoryId, categoryNameMap, subCategoryNameMap]);
+
+  const selectCategory = (id: string, checked: boolean) => {
+    if (checked) {
+      setCategoryId(id);
+      setSubCategoryId(undefined);
+      return;
+    }
+    if (categoryId === id) {
+      setCategoryId(undefined);
+    }
   };
 
-  const toggleSubCategory = (id: string, checked: boolean) => {
-    setSubCategoryIds((prev) => {
-      if (checked) return prev.includes(id) ? prev : [...prev, id];
-      return prev.filter((item) => item !== id);
-    });
+  const selectSubCategory = (id: string, checked: boolean) => {
+    if (checked) {
+      setSubCategoryId(id);
+      setCategoryId(undefined);
+      return;
+    }
+    if (subCategoryId === id) {
+      setSubCategoryId(undefined);
+    }
   };
 
   const resetFiltersPreserveKeyword = () => {
-    setCategoryIds([]);
-    setSubCategoryIds([]);
-    setTypeFilter("all");
+    setCategoryId(undefined);
+    setSubCategoryId(undefined);
     setProvinceCode(undefined);
     setWardCode(undefined);
+    setTypeFilter("all");
     setSortBy(DEFAULT_SORT);
     setPriceMinInput("");
     setPriceMaxInput("");
@@ -560,14 +607,17 @@ export default function Search() {
                     <h4 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
                       Danh mục
                     </h4>
+                    <p className="text-xs text-muted-foreground mb-3 leading-snug">
+                      Chọn một danh mục hoặc một danh mục con tại một thời điểm.
+                    </p>
                     <div className="space-y-3 pr-2">
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="cat-all"
-                          checked={categoryIds.length === 0 && subCategoryIds.length === 0}
+                          checked={!categoryId && !subCategoryId}
                           onCheckedChange={() => {
-                            setCategoryIds([]);
-                            setSubCategoryIds([]);
+                            setCategoryId(undefined);
+                            setSubCategoryId(undefined);
                           }}
                         />
                         <label htmlFor="cat-all" className="text-sm font-medium leading-none cursor-pointer">
@@ -590,8 +640,8 @@ export default function Search() {
                               <div className="flex items-center space-x-2 min-w-0">
                                 <Checkbox
                                   id={`cat-${catId}`}
-                                  checked={categoryIds.includes(catId)}
-                                  onCheckedChange={(checked) => toggleCategory(catId, checked === true)}
+                                  checked={categoryId === catId}
+                                  onCheckedChange={(checked) => selectCategory(catId, checked === true)}
                                 />
                                 <label
                                   htmlFor={`cat-${catId}`}
@@ -622,9 +672,9 @@ export default function Search() {
                                       <div key={subId} className="flex items-center space-x-2">
                                         <Checkbox
                                           id={`sub-${catId}-${subId}`}
-                                          checked={subCategoryIds.includes(subId)}
+                                          checked={subCategoryId === subId}
                                           onCheckedChange={(checked) =>
-                                            toggleSubCategory(subId, checked === true)
+                                            selectSubCategory(subId, checked === true)
                                           }
                                         />
                                         <label
@@ -697,7 +747,9 @@ export default function Search() {
                     <SelectItem value="CREATED_AT_DESC">Đăng mới nhất</SelectItem>
                     <SelectItem value="NAME_ASC">Tên A → Z</SelectItem>
                     <SelectItem value="RELEVANCE">Liên quan từ khóa</SelectItem>
-                    <SelectItem value="DISTANCE">Gần nhất (khoảng cách)</SelectItem>
+                    <SelectItem value="DISTANCE" disabled={!visitorGeoReady}>
+                      Gần nhất (khoảng cách)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -706,6 +758,13 @@ export default function Search() {
             {sortBy === "RELEVANCE" && !keyword.trim() && (
               <p className="mb-4 text-xs text-muted-foreground leading-snug">
                 Không có từ khóa trong URL thì máy chủ xếp theo «Cập nhật mới nhất».
+              </p>
+            )}
+
+            {!visitorGeoReady && (
+              <p className="mb-4 text-xs text-muted-foreground leading-snug">
+                Bật định vị để dùng «Gần nhất» và lọc tin trong bán kính{" "}
+                {Math.round(LISTING_GEO_RADIUS_METERS / 1000)} km quanh bạn.
               </p>
             )}
 

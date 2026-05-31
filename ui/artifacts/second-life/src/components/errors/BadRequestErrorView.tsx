@@ -8,7 +8,6 @@ export type BadRequestErrorViewProps = ErrorStateActionsProps &
     errorCode?: number;
   };
 
-/** Trang lỗi 400 — nền ảnh full màn hình. */
 export function BadRequestErrorView({
   title = "Thông tin không hợp lệ",
   message = "Yêu cầu không hợp lệ. Vui lòng kiểm tra lại và thử lại.",

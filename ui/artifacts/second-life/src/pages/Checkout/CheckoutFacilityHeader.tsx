@@ -46,7 +46,6 @@ function InfoRow({
   );
 }
 
-/** Hàng thu gọn trên header accordion (tên + tổng tiền). */
 export function CheckoutFacilityCollapseHeader({
   item,
   subOrderIndex,
@@ -97,7 +96,6 @@ export function CheckoutFacilityCollapseHeader({
   );
 }
 
-/** Card chi tiết — hiển thị khi mở rộng đơn theo cơ sở. */
 export function CheckoutSellerInfoPanel({
   item,
   ownerNameLoading,

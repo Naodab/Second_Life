@@ -1,6 +1,5 @@
 import { ApiError } from "@workspace/api-client-react";
 
-/** Mã lỗi đồng bộ với {@link com.naodab.commonservice.exception.ErrorCode}. */
 export const ApiErrorCodes = {
   INVALID_INPUT: 1000,
   PROFILE_NOT_FOUND: 1002,
@@ -27,9 +26,7 @@ export type ApiErrorViewModel = {
 };
 
 export type MapApiErrorOptions = {
-  /** Tiêu đề khi không phân loại được (generic). */
   fallbackTitle?: string;
-  /** Mô tả khi không phân loại được (generic). */
   fallbackMessage?: string;
 };
 
@@ -75,7 +72,6 @@ export function isInsufficientStockError(err: unknown): boolean {
   return readApiErrorCode(err) === ApiErrorCodes.INSUFFICIENT_INVENTORY;
 }
 
-/** Phân loại lỗi API → view model dùng cho {@link ApiErrorState} và các màn 400/404. */
 export function mapApiError(err: unknown, options: MapApiErrorOptions = {}): ApiErrorViewModel {
   const status = err instanceof ApiError ? err.status : undefined;
   const code = readApiErrorCode(err);

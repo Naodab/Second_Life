@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, FileText, Loader2, Package } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Loader2, Package, Sparkles } from "lucide-react";
 import {
   createListing,
   type ListingCreateBody,
   type ListingType,
   type RentUnit,
 } from "@/api/listing";
+import { generateAiDescription } from "@/api/ai";
 import {
   getFacilityProductPage,
+  getOwnedProductWithVariants,
   getProductVariants,
   type ProductStatus,
   type ProductVariantSummaryResponse,
@@ -61,20 +63,19 @@ function emptyVariantDraft(): VariantPriceDraft {
 }
 
 export function CreateListingPage({
-  facilityId,
+  initialFacilityId,
   facilities,
   initialProductId,
   onBack,
   onCreated,
 }: {
-  facilityId: string;
+  initialFacilityId?: string;
   facilities: FacilityWithPlaceNames[];
   initialProductId?: string;
   onBack: () => void;
   onCreated?: () => void;
 }) {
   const { toast } = useToast();
-  const initialProductAppliedRef = useRef(false);
 
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
@@ -83,7 +84,7 @@ export function CreateListingPage({
   >([]);
 
   const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(facilityId);
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(initialFacilityId ?? "");
   const [variantsLoading, setVariantsLoading] = useState(false);
   const [variantsError, setVariantsError] = useState<string | null>(null);
   const [variants, setVariants] = useState<ProductVariantSummaryResponse[]>([]);
@@ -95,13 +96,14 @@ export function CreateListingPage({
   const [priceByVariantId, setPriceByVariantId] = useState<Record<string, VariantPriceDraft>>({});
 
   const [submitting, setSubmitting] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   useEffect(() => {
-    const current = facilities.some((f) => f.id === selectedFacilityId);
-    if (current) return;
-    const fallback = facilities.find((f) => f.id === facilityId)?.id ?? facilities[0]?.id ?? "";
-    setSelectedFacilityId(fallback);
-  }, [facilities, facilityId, selectedFacilityId]);
+    if (!initialFacilityId) return;
+    if (facilities.some((f) => f.id === initialFacilityId)) {
+      setSelectedFacilityId(initialFacilityId);
+    }
+  }, [initialFacilityId, facilities]);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,7 +111,7 @@ export function CreateListingPage({
       setProductsLoading(true);
       setProductsError(null);
       try {
-        const page = await getFacilityProductPage(selectedFacilityId, {
+        const page = await getFacilityProductPage("", {
           page: 0,
           pageSize: PRODUCT_PICK_PAGE_SIZE,
         });
@@ -121,14 +123,34 @@ export function CreateListingPage({
           if (ap !== bp) return ap - bp;
           return String(a.name).localeCompare(String(b.name), "vi");
         });
-        setProductOptions(
-          rows.map((p) => ({
-            id: p.id,
-            name: p.name,
-            status: p.status,
-            thumb: (p.thumbnailImage && p.thumbnailImage.trim()) || DEFAULT_PRODUCT_THUMB,
-          })),
-        );
+        let options = rows.map((p) => ({
+          id: p.id,
+          name: p.name,
+          status: p.status,
+          thumb: (p.thumbnailImage && p.thumbnailImage.trim()) || DEFAULT_PRODUCT_THUMB,
+        }));
+
+        const pid = initialProductId?.trim();
+        if (pid && !options.some((p) => p.id === pid)) {
+          try {
+            const detail = await getOwnedProductWithVariants(pid);
+            if (!cancelled && detail?.id) {
+              options = [
+                {
+                  id: detail.id,
+                  name: detail.name,
+                  status: detail.status,
+                  thumb: (detail.thumbnailUrl && detail.thumbnailUrl.trim()) || DEFAULT_PRODUCT_THUMB,
+                },
+                ...options,
+              ];
+            }
+          } catch {
+            // product not found — keep list as-is
+          }
+        }
+
+        if (!cancelled) setProductOptions(options);
       } catch (e) {
         if (!cancelled) {
           setProductOptions([]);
@@ -141,24 +163,16 @@ export function CreateListingPage({
     return () => {
       cancelled = true;
     };
-  }, [selectedFacilityId]);
+  }, [initialProductId]);
 
   useEffect(() => {
-    initialProductAppliedRef.current = false;
-    setSelectedProductId("");
-    setVariants([]);
-    setSelectedVariantIds(new Set());
-    setPriceByVariantId({});
-  }, [selectedFacilityId, initialProductId]);
-
-  useEffect(() => {
-    if (!initialProductId?.trim()) return;
-    if (initialProductAppliedRef.current) return;
-    const matchInit = productOptions.find((p) => p.id === initialProductId);
-    if (!matchInit || matchInit.status !== "PUBLISHED") return;
-    initialProductAppliedRef.current = true;
+    if (!initialProductId?.trim() || productsLoading) return;
+    if (selectedProductId && selectedProductId !== initialProductId) return;
+    const match = productOptions.find((p) => p.id === initialProductId);
+    if (!match || match.status !== "PUBLISHED") return;
+    if (selectedProductId === initialProductId) return;
     setSelectedProductId(initialProductId);
-  }, [initialProductId, productOptions]);
+  }, [initialProductId, productOptions, productsLoading, selectedProductId]);
 
   useEffect(() => {
     if (!selectedProductId) {
@@ -248,6 +262,27 @@ export function CreateListingPage({
       ...prev,
       [vid]: { ...(prev[vid] ?? emptyVariantDraft()), [field]: value },
     }));
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!selectedProductId) return;
+    const productName = productOptions.find((p) => p.id === selectedProductId)?.name ?? "";
+    if (!productName) return;
+    setAiGenerating(true);
+    try {
+      const thumb = productOptions.find((p) => p.id === selectedProductId)?.thumb;
+      const imageUrls = thumb && !thumb.includes("unsplash.com") ? [thumb] : [];
+      const result = await generateAiDescription({
+        productName,
+        listingType,
+        imageUrls,
+      });
+      setDescription(result.description);
+    } catch {
+      toast({ title: "Không thể tạo mô tả AI", description: "Vui lòng thử lại.", variant: "destructive" });
+    } finally {
+      setAiGenerating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -410,9 +445,12 @@ export function CreateListingPage({
             {facilities.length === 0 ? (
               <p className="text-sm text-muted-foreground">Bạn chưa có cơ sở để đăng bài.</p>
             ) : (
-              <Select value={selectedFacilityId} onValueChange={setSelectedFacilityId}>
+              <Select
+                value={selectedFacilityId || undefined}
+                onValueChange={setSelectedFacilityId}
+              >
                 <SelectTrigger className="rounded-xl border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card">
-                  <SelectValue placeholder="Chọn cơ sở" />
+                  <SelectValue placeholder="Chọn cơ sở đăng bài" />
                 </SelectTrigger>
                 <SelectContent position="popper" className="rounded-xl border-emerald-100 dark:border-emerald-900/50">
                   {facilities.map((facility) => (
@@ -592,14 +630,30 @@ export function CreateListingPage({
                     />
                   </div>
                   <div className="space-y-2 sm:col-span-2">
-                    <label htmlFor="listing-desc" className="text-sm font-semibold block">
-                      Mô tả
-                    </label>
+                    <div className="flex items-center justify-between gap-2">
+                      <label htmlFor="listing-desc" className="text-sm font-semibold">
+                        Mô tả
+                      </label>
+                      <button
+                        type="button"
+                        disabled={!selectedProductId || aiGenerating}
+                        onClick={() => void handleGenerateDescription()}
+                        title={!selectedProductId ? "Chọn sản phẩm trước" : "Tạo mô tả bằng AI"}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-background px-3 py-1 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50 disabled:pointer-events-none disabled:opacity-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
+                      >
+                        {aiGenerating ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5" />
+                        )}
+                        {aiGenerating ? "Đang tạo..." : "Tạo bằng AI"}
+                      </button>
+                    </div>
                     <Textarea
                       id="listing-desc"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Mô tả chi tiết bài đăng (tuỳ chọn)"
+                      placeholder="Mô tả chi tiết bài đăng... hoặc nhấn 'Tạo bằng AI'"
                       rows={4}
                       className="min-h-[100px] resize-y rounded-xl border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
                     />

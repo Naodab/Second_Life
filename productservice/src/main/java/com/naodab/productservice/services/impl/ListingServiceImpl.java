@@ -8,14 +8,18 @@ import java.util.Locale;
 import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+
+import com.naodab.productservice.config.CacheConfig;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
+import com.naodab.productservice.dto.request.ListingSearchRequestNormalizer;
 import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingVariantContextResponse;
@@ -181,8 +185,7 @@ public class ListingServiceImpl implements ListingService {
     } else {
       r.setKeyword(r.getKeyword().trim());
     }
-    r.setCategoryIds(normalizeIdListPreserveOrder(r.getCategoryIds()));
-    r.setSubCategoryIds(normalizeIdListPreserveOrder(r.getSubCategoryIds()));
+    ListingSearchRequestNormalizer.normalizeCategoryScope(r);
     r.setProvinceCode(trimToNull(r.getProvinceCode()));
     r.setWardCode(trimToNull(r.getWardCode()));
     if (r.getListingStatus() == null) {
@@ -193,6 +196,11 @@ public class ListingServiceImpl implements ListingService {
     }
     ElasticsearchSortBy sort = r.getSortBy() == null ? ElasticsearchSortBy.UPDATED_AT_DESC : r.getSortBy();
     if (sort == ElasticsearchSortBy.RELEVANCE && !StringUtils.hasText(r.getKeyword())) {
+      sort = ElasticsearchSortBy.UPDATED_AT_DESC;
+    }
+    if (sort == ElasticsearchSortBy.DISTANCE
+        && !ElasticsearchNativeQueryHelper.hasGeoRadiusFilter(
+            r.getLatitude(), r.getLongitude(), r.getRadiusMeters())) {
       sort = ElasticsearchSortBy.UPDATED_AT_DESC;
     }
     r.setSortBy(sort);
@@ -216,6 +224,7 @@ public class ListingServiceImpl implements ListingService {
   }
 
   @Override
+  @Cacheable(value = CacheConfig.SUGGESTIONS_CACHE, key = "#keyword?.trim().toLowerCase() + '_' + (#limit == null ? 8 : T(java.lang.Math).min(#limit, 20))")
   public List<ListingSuggestionResponse> suggestSearch(String keyword, Integer limit) {
     if (!StringUtils.hasText(keyword)) {
       return Collections.emptyList();

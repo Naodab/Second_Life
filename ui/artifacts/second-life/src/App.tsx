@@ -64,6 +64,14 @@ function ProfileSetupRedirect() {
   return null;
 }
 
+function ScrollToTop() {
+  const [location] = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+  return null;
+}
+
 function Router() {
   const [location] = useLocation();
   const isSellerHub = location.startsWith("/manage") || location.startsWith("/listings");
@@ -75,6 +83,7 @@ function Router() {
     location.startsWith("/oauth2/callback/");
   return (
     <div className="min-h-screen flex flex-col">
+      <ScrollToTop />
       {!isAuthPage && !isSellerHub && <Header />}
       <main className="flex flex-1 flex-col">
         <Switch>

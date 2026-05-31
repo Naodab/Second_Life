@@ -1,4 +1,4 @@
-import { AlertCircle, Minus, Plus } from "lucide-react";
+import { AlertCircle, CalendarDays, Minus, Plus } from "lucide-react";
 import { format, startOfDay } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 
@@ -152,8 +152,9 @@ export function ListingRentDialog({
                   <p className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Lịch và khung thuê
                   </p>
-                  <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:max-w-[13rem]">
-                    <label htmlFor="rent-hour-day" className="text-[11px] font-medium text-muted-foreground">
+                  <div className="flex w-full min-w-0 flex-col gap-1.5 sm:w-auto sm:max-w-[14rem]">
+                    <label htmlFor="rent-hour-day" className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <CalendarDays className="w-3 h-3" />
                       Ngày thuê
                     </label>
                     <input
@@ -161,8 +162,12 @@ export function ListingRentDialog({
                       type="date"
                       disabled={scheduleLocked}
                       className={cn(
-                        "w-full min-w-0 rounded-xl border bg-background px-3 py-2 text-sm tabular-nums outline-none sm:w-[12.5rem]",
-                        "border-border/70 shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/55 disabled:opacity-50",
+                        "h-10 w-full min-w-0 rounded-xl border-2 bg-muted/30 px-3 text-sm font-medium tabular-nums outline-none sm:w-[13.5rem]",
+                        "border-border/50 shadow-sm transition-colors",
+                        "hover:border-border/80",
+                        "focus:border-sky-500/50 focus:ring-2 focus:ring-sky-500/20",
+                        "disabled:cursor-not-allowed disabled:opacity-50",
+                        "dark:bg-muted/20",
                       )}
                       min={format(startOfDay(new Date()), "yyyy-MM-dd")}
                       value={format(hourRentDay, "yyyy-MM-dd")}
@@ -219,18 +224,25 @@ export function ListingRentDialog({
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-sm text-foreground">Số lượng</span>
-              <div className="flex items-center gap-3 rounded-xl border border-border/80 bg-muted/25 px-2 py-1.5 dark:bg-muted/20">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <span className="font-semibold text-sm text-foreground">Số lượng</span>
+                {lineStock > 0 && (
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Tối đa {lineStock}</p>
+                )}
+              </div>
+              <div className="flex items-center overflow-hidden rounded-2xl border-2 border-border/60 bg-muted/20 shadow-sm dark:border-border/45 dark:bg-muted/15">
                 <button
                   type="button"
                   onClick={() => onRentQtyChange(Math.max(1, rentQty - 1))}
-                  className="rounded-lg p-1.5 transition-colors hover:bg-accent disabled:opacity-40"
+                  className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                   disabled={lineStock <= 0 || rentQty <= 1}
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <span className="w-8 text-center font-bold tabular-nums">{rentQty}</span>
+                <div className="flex h-10 min-w-[2.75rem] items-center justify-center border-x border-border/50 px-2 font-bold tabular-nums text-base text-foreground">
+                  {rentQty}
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -238,7 +250,7 @@ export function ListingRentDialog({
                     onRentQtyChange(Math.min(lineStock, rentQty + 1));
                   }}
                   disabled={lineStock <= 0 || rentQty >= lineStock}
-                  className="rounded-lg p-1.5 transition-colors hover:bg-accent disabled:opacity-40"
+                  className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                 >
                   <Plus className="w-4 h-4" />
                 </button>

@@ -60,3 +60,7 @@ logging:
 
 default:
   page-size: 20
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-1.5-flash-8b}

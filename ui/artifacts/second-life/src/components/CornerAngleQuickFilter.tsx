@@ -11,6 +11,15 @@ type Props = {
   variant: "home" | "search";
 };
 
+function readCategoryIdFromUrl(location: string): string | undefined {
+  const q = location.includes("?") ? (location.split("?")[1] ?? "") : "";
+  const sp = new URLSearchParams(q);
+  const fromSingular = sp.get("categoryId")?.trim();
+  if (fromSingular) return fromSingular;
+  const fromPlural = [...sp.getAll("categoryIds[]"), ...sp.getAll("categoryIds")].find((v) => v?.trim());
+  return fromPlural?.trim() || undefined;
+}
+
 export function CornerAngleQuickFilter({ variant }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [location, setLocation] = useLocation();
@@ -34,21 +43,14 @@ export function CornerAngleQuickFilter({ variant }: Props) {
     setOpen(true);
   };
 
-  const categoryIdsFromUrl = useMemo(() => {
-    const q = location.includes("?") ? (location.split("?")[1] ?? "") : "";
-    const sp = new URLSearchParams(q);
-    const raw = [...sp.getAll("categoryIds[]"), ...sp.getAll("categoryIds")];
-    if (raw.length) return raw.map(String);
-    const legacy = sp.get("categoryId") ?? "";
-    return legacy ? [String(legacy)] : [];
-  }, [location]);
+  const categoryIdFromUrl = useMemo(() => readCategoryIdFromUrl(location), [location]);
 
   const { data: categories, isLoading } = useCategories();
-  const [draft, setDraft] = useState<string[]>([]);
+  const [draftCategoryId, setDraftCategoryId] = useState<string | undefined>();
 
   useEffect(() => {
-    if (open) setDraft(categoryIdsFromUrl);
-  }, [open, categoryIdsFromUrl]);
+    if (open) setDraftCategoryId(categoryIdFromUrl);
+  }, [open, categoryIdFromUrl]);
 
   useEffect(() => {
     if (!open) return;
@@ -60,26 +62,21 @@ export function CornerAngleQuickFilter({ variant }: Props) {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  const setChecked = (id: string, checked: boolean) => {
+  const selectCategory = (id: string, checked: boolean) => {
     const sid = String(id);
-    setDraft((prev) => {
-      if (checked) return prev.includes(sid) ? prev : [...prev, sid];
-      return prev.filter((x) => x !== sid);
-    });
+    setDraftCategoryId(checked ? sid : draftCategoryId === sid ? undefined : draftCategoryId);
   };
 
   const apply = () => {
     if (variant === "search") {
       setLocation(
         buildSearchPath({
-          categoryId: null,
+          categoryId: draftCategoryId ?? null,
           subCategoryId: null,
-          subCategoryIds: null,
-          categoryIds: draft.length ? draft : null,
         }),
       );
     } else {
-      setLocation(buildFreshSearchPath({ categoryIds: draft.length ? draft : null }));
+      setLocation(buildFreshSearchPath({ categoryId: draftCategoryId ?? null, subCategoryId: null }));
     }
     setOpen(false);
   };
@@ -100,7 +97,7 @@ export function CornerAngleQuickFilter({ variant }: Props) {
           <h3 className="font-semibold text-sm mb-1">Chọn danh mục</h3>
           <p className="text-xs text-muted-foreground mb-3">
             {variant === "search"
-              ? "Có thể chọn nhiều danh mục cùng lúc."
+              ? "Chọn một danh mục tại một thời điểm."
               : "Chọn danh mục rồi mở trang tìm kiếm với bộ lọc đó."}
           </p>
           {isLoading ? (
@@ -113,8 +110,8 @@ export function CornerAngleQuickFilter({ variant }: Props) {
                   <div key={cid} className="flex items-center gap-2">
                     <Checkbox
                       id={`corner-cat-${variant}-${cid}`}
-                      checked={draft.includes(cid)}
-                      onCheckedChange={(v) => setChecked(cid, v === true)}
+                      checked={draftCategoryId === cid}
+                      onCheckedChange={(v) => selectCategory(cid, v === true)}
                     />
                     <label htmlFor={`corner-cat-${variant}-${cid}`} className="text-sm cursor-pointer leading-snug">
                       {cat.name}

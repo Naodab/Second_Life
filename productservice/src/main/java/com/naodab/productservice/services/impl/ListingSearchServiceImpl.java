@@ -18,6 +18,7 @@ import org.springframework.util.StringUtils;
 
 import com.naodab.productservice.documents.ListingDocument;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
+import com.naodab.productservice.dto.request.ListingSearchRequestNormalizer;
 import com.naodab.productservice.elasticsearch.ElasticsearchNativeQueryHelper;
 import com.naodab.productservice.models.Listing;
 import com.naodab.productservice.repositories.ListingRepository;
@@ -145,6 +146,7 @@ public class ListingSearchServiceImpl implements ListingSearchService {
   @Override
   public ListingDocumentPage searchListingsPaged(ListingSearchRequest request) {
     ListingSearchRequest safeRequest = request == null ? ListingSearchRequest.builder().build() : request;
+    ListingSearchRequestNormalizer.normalizeCategoryScope(safeRequest);
     int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(safeRequest.getPage());
     int normalizedPageSize = ElasticsearchNativeQueryHelper.normalizePageSize(safeRequest.getPageSize(),
         defaultPageSize);
@@ -189,9 +191,13 @@ public class ListingSearchServiceImpl implements ListingSearchService {
           ElasticsearchNativeQueryHelper.addStandardLocationFilters(
               filter, request.getFacilityId(), request.getProvinceCode(), request.getWardCode());
           ElasticsearchNativeQueryHelper.addTermIfTextPresent(filter, "productId", request.getProductId());
-          ElasticsearchNativeQueryHelper.addCategoryIdsMatchAllFilterIfPresent(filter, request.getCategoryIds());
-          ElasticsearchNativeQueryHelper.addSubCategoryIdsMatchAllFilterIfPresent(
-              filter, request.getSubCategoryIds());
+          if (StringUtils.hasText(request.getSubCategoryId())) {
+            ElasticsearchNativeQueryHelper.addSubCategoryIdsMatchAllFilterIfPresent(
+                filter, List.of(request.getSubCategoryId().trim()));
+          } else if (StringUtils.hasText(request.getCategoryId())) {
+            ElasticsearchNativeQueryHelper.addCategoryIdsMatchAllFilterIfPresent(
+                filter, List.of(request.getCategoryId().trim()));
+          }
           ElasticsearchNativeQueryHelper.addTermIfPresent(filter, "status", request.getProductStatus());
           ElasticsearchNativeQueryHelper.addTermIfPresent(filter, "listingType", request.getListingType());
           ElasticsearchNativeQueryHelper.addTermIfPresent(filter, "listingStatus", request.getListingStatus());

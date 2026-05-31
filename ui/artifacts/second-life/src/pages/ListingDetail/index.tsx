@@ -247,6 +247,7 @@ export default function ListingDetail() {
             mode: "rent" as const,
             rentalStart: new Date(rentWindow!.startMs).toISOString(),
             rentalEnd: new Date(rentWindow!.endExclusiveMs).toISOString(),
+            rentUnit,
           };
 
     setPendingCheckoutLine(line);

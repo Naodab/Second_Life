@@ -122,18 +122,25 @@ export function ListingBuyDialog({
             </div>
           ) : null}
 
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-foreground">Số lượng</span>
-            <div className="flex items-center gap-3 rounded-xl border border-border/80 bg-muted/25 px-2 py-1.5 dark:bg-muted/20">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <span className="font-semibold text-foreground">Số lượng</span>
+              {lineStock > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-0.5">Tối đa {lineStock}</p>
+              )}
+            </div>
+            <div className="flex items-center overflow-hidden rounded-2xl border-2 border-border/60 bg-muted/20 shadow-sm dark:border-border/45 dark:bg-muted/15">
               <button
                 type="button"
                 onClick={() => onBuyQtyChange(Math.max(1, buyQty - 1))}
-                className="rounded-lg p-1.5 transition-colors hover:bg-accent disabled:opacity-40"
+                className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
                 disabled={lineStock <= 0 || buyQty <= 1}
               >
                 <Minus className="w-4 h-4" />
               </button>
-              <span className="font-bold w-8 text-center tabular-nums">{buyQty}</span>
+              <div className="flex h-10 min-w-[2.75rem] items-center justify-center border-x border-border/50 px-2 font-bold tabular-nums text-base text-foreground">
+                {buyQty}
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -141,16 +148,17 @@ export function ListingBuyDialog({
                   onBuyQtyChange(Math.min(lineStock, buyQty + 1));
                 }}
                 disabled={lineStock <= 0 || buyQty >= lineStock}
-                className="rounded-lg p-1.5 transition-colors hover:bg-accent disabled:opacity-40"
+                className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
               >
                 <Plus className="w-4 h-4" />
               </button>
             </div>
           </div>
-          <div className="flex justify-between rounded-2xl bg-muted/45 px-4 py-3.5 text-sm dark:bg-muted/25">
-            <span className="text-muted-foreground">Tổng cộng</span>
+
+          <div className="flex items-center justify-between rounded-2xl border border-border/50 bg-muted/30 px-5 py-4 dark:border-border/40 dark:bg-muted/20">
+            <span className="text-sm font-medium text-muted-foreground">Tổng cộng</span>
             {showUnitPrice ? (
-              <span className="font-bold text-primary text-base tabular-nums">{formatCurrency(lineTotal)}</span>
+              <span className="font-bold text-primary text-xl tabular-nums">{formatCurrency(lineTotal)}</span>
             ) : (
               <span className="font-medium text-muted-foreground tabular-nums">—</span>
             )}

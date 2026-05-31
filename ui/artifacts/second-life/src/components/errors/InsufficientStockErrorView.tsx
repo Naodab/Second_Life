@@ -8,7 +8,6 @@ export type InsufficientStockErrorViewProps = ErrorStateActionsProps &
     errorCode?: number;
   };
 
-/** Hết hàng (409) — cùng layout trang lỗi, hiển thị mã 409. */
 export function InsufficientStockErrorView({
   title = "Không đủ hàng",
   message = "Số lượng vượt quá tồn kho hiện có. Vui lòng giảm số lượng hoặc chọn lại.",

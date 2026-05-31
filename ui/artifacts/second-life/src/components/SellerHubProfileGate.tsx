@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { loginPathWithReturn, sanitizeReturnTo } from "@/hooks/use-require-auth";
 
-/** Chặn /manage khi hồ sơ chưa đủ họ, tên, email, SĐT. */
 export function SellerHubProfileGate() {
   const { isLoggedIn, isLoading, sellerHubProfileComplete } = useAuth();
   const [location, setLocation] = useLocation();
@@ -28,7 +27,6 @@ export function SellerHubProfileGate() {
   return null;
 }
 
-/** Trước khi điều hướng vào seller hub từ menu — tránh flash rồi mới redirect. */
 export function guardSellerHubNavigation(
   targetPath: string,
   ctx: { isLoggedIn: boolean; sellerHubProfileComplete: boolean },

@@ -1,5 +1,6 @@
 package com.naodab.productservice.models;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -43,6 +44,7 @@ public class Listing {
 
   String title;
 
+  @Column(length = 8096)
   String description;
 
   @Enumerated(EnumType.STRING)

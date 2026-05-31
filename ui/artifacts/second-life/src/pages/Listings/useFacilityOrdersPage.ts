@@ -38,7 +38,6 @@ export function sellerOrdersQueryKey(facilityFilter: string) {
   return ["sellerBookingOrders", facilityFilter] as const;
 }
 
-/** @deprecated use sellerOrdersQueryKey */
 export function facilityOrdersQueryKey(facilityId: string) {
   return sellerOrdersQueryKey(facilityId);
 }
@@ -164,7 +163,6 @@ export function useFacilityOrdersCount(facilityId: string) {
   return query.data?.length ?? 0;
 }
 
-/** @deprecated use useManageOrdersPage */
 export function useFacilityOrdersPage(facilityId: string, activeTab: FacilityOrderTab) {
   return useManageOrdersPage([{ id: facilityId, name: "" }], facilityId, activeTab);
 }

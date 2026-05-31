@@ -4,12 +4,12 @@ export type ManageRouteParsed =
   | { tag: "dashboard" }
   | { tag: "products" }
   | { tag: "listings" }
+  | { tag: "add-listing" }
+  | { tag: "orders" }
   | { tag: "facility"; facilityId: string }
   | { tag: "add-product"; facilityId: string }
-  | { tag: "add-listing"; facilityId: string }
   | { tag: "product"; facilityId: string; productId: string }
-  | { tag: "unpublished"; facilityId: string }
-  | { tag: "orders" };
+  | { tag: "unpublished"; facilityId: string };
 
 export function manageDashboardPath(): string {
   return `${MANAGE_BASE}/dashboard`;
@@ -31,10 +31,12 @@ export function manageAddProductPath(facilityId: string): string {
   return `${manageFacilityPath(facilityId)}/add-product`;
 }
 
-export function manageAddListingPath(facilityId: string, productId?: string): string {
-  const base = `${manageFacilityPath(facilityId)}/add-listing`;
-  const pid = productId?.trim();
-  return pid ? `${base}?product=${encodeURIComponent(pid)}` : base;
+export function manageAddListingPath(facilityId?: string, productId?: string): string {
+  const params = new URLSearchParams();
+  if (facilityId?.trim()) params.set("facilityId", facilityId.trim());
+  if (productId?.trim()) params.set("productId", productId.trim());
+  const qs = params.toString();
+  return `${MANAGE_BASE}/add-listing${qs ? `?${qs}` : ""}`;
 }
 
 export function manageProductDetailPath(facilityId: string, productId: string): string {
@@ -70,6 +72,9 @@ export function parseManageRoute(pathname: string): ManageRouteParsed | null {
   if (second === "listings") {
     return segments.length === 2 ? { tag: "listings" } : null;
   }
+  if (second === "add-listing") {
+    return segments.length === 2 ? { tag: "add-listing" } : null;
+  }
   if (second === "orders") {
     return segments.length === 2 ? { tag: "orders" } : null;
   }
@@ -93,7 +98,7 @@ export function parseManageRoute(pathname: string): ManageRouteParsed | null {
     case "add-product":
       return segments.length === 4 ? { tag: "add-product", facilityId } : null;
     case "add-listing":
-      return segments.length === 4 ? { tag: "add-listing", facilityId } : null;
+      return null;
     case "unpublished":
       return segments.length === 4 ? { tag: "unpublished", facilityId } : null;
     case "products": {
@@ -110,6 +115,7 @@ export function facilityScopeActive(route: ManageRouteParsed, facilityId: string
     route.tag === "dashboard" ||
     route.tag === "products" ||
     route.tag === "listings" ||
+    route.tag === "add-listing" ||
     route.tag === "orders"
   ) {
     return false;

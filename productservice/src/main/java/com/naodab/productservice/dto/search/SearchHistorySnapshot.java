@@ -1,8 +1,9 @@
 package com.naodab.productservice.dto.search;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
+import org.springframework.util.StringUtils;
 
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.models.Listing.ListingType;
@@ -40,8 +41,8 @@ public class SearchHistorySnapshot {
     }
     return SearchHistorySnapshot.builder()
         .keyword(r.getKeyword())
-        .categoryIds(copyNullable(r.getCategoryIds()))
-        .subCategoryIds(copyNullable(r.getSubCategoryIds()))
+        .categoryIds(singleIdList(r.getCategoryId()))
+        .subCategoryIds(singleIdList(r.getSubCategoryId()))
         .listingType(r.getListingType())
         .priceMin(r.getPriceMin())
         .priceMax(r.getPriceMax())
@@ -50,11 +51,33 @@ public class SearchHistorySnapshot {
         .build();
   }
 
-  private static List<String> copyNullable(List<String> raw) {
-    if (raw == null || raw.isEmpty()) {
+  public boolean isWorthRecording() {
+    if (StringUtils.hasText(keyword)) {
+      return true;
+    }
+    if (categoryIds != null && !categoryIds.isEmpty()) {
+      return true;
+    }
+    if (subCategoryIds != null && !subCategoryIds.isEmpty()) {
+      return true;
+    }
+    if (listingType != null) {
+      return true;
+    }
+    if (priceMin != null || priceMax != null) {
+      return true;
+    }
+    if (StringUtils.hasText(provinceCode) || StringUtils.hasText(wardCode)) {
+      return true;
+    }
+    return false;
+  }
+
+  private static List<String> singleIdList(String id) {
+    if (!StringUtils.hasText(id)) {
       return null;
     }
-    return new ArrayList<>(raw);
+    return List.of(id.trim());
   }
 
   public boolean contentEquals(SearchHistorySnapshot o) {
