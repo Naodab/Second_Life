@@ -3,6 +3,8 @@ package com.naodab.productservice.services.impl;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.naodab.commonservice.exception.AppException;
+import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.config.CacheConfig;
 import com.naodab.productservice.dto.request.AiAnalyzeRequest;
 import com.naodab.productservice.dto.request.AiDescriptionRequest;
@@ -29,48 +31,49 @@ import org.springframework.web.client.RestClient;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class AiServiceImpl implements AiService {
 
-  private static final String GEMINI_BASE_URL =
-    "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+  private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
   private static final String DESCRIPTION_PROMPT = """
-    You are an expert copywriter for "Second Life" — a Vietnamese second-hand marketplace.
+      You are an expert copywriter for "Second Life" — a Vietnamese second-hand marketplace.
 
-    Write a short, honest, engaging product description in Vietnamese (vi-VN) based on the input below.
+      Write a short, honest, engaging product description in Vietnamese (vi-VN) based on the input below.
 
-    Rules:
-    - 2 to 4 sentences, concise
-    - Highlight the most notable feature and actual condition of the used item
-    - Natural, friendly tone — no hollow marketing phrases
-    - Never invent information not present in the input
-    - Output ONLY the plain paragraph. No title, no bullets, no markdown.
-    """;
+      Rules:
+      - 2 to 4 sentences, concise
+      - Highlight the most notable feature and actual condition of the used item
+      - Natural, friendly tone — no hollow marketing phrases
+      - Never invent information not present in the input
+      - Output ONLY the plain paragraph. No title, no bullets, no markdown.
+      """;
 
   private static final String ANALYZE_PROMPT_SUFFIX = """
 
-    Return this exact JSON (no markdown, no code fences):
-    {
-      "name": "concise Vietnamese product name",
-      "description": "2-4 sentence Vietnamese description of the visible condition",
-      "categoryHints": ["category name from the list above"],
-      "subCategoryHints": ["subcategory name from the list above"],
-      "attributeHints": [{"name": "attribute name from list", "value": "exact value from list"}]
-    }
+      Return this exact JSON (no markdown, no code fences):
+      {
+        "name": "concise Vietnamese product name",
+        "description": "2-4 sentence Vietnamese description of the visible condition",
+        "categoryHints": ["category name from the list above"],
+        "subCategoryHints": ["subcategory name from the list above"],
+        "attributeHints": [{"name": "attribute name from list", "value": "exact value from list"}]
+      }
 
-    Rules:
-    - name: short, factual (e.g. "Máy ảnh Sony A6000", "Áo khoác len nam cũ")
-    - description: honest Vietnamese text; note scratches, wear, discoloration if visible
-    - categoryHints: 1-2 best-matching categories from the list
-    - subCategoryHints: 1-2 most specific matching subcategories
-    - attributeHints: only clearly visible attributes; omit anything you are not confident about
-    """;
+      Rules:
+      - name: short, factual (e.g. "Máy ảnh Sony A6000", "Áo khoác len nam cũ")
+      - description: honest Vietnamese text; note scratches, wear, discoloration if visible
+      - categoryHints: 1-2 best-matching categories from the list
+      - subCategoryHints: 1-2 most specific matching subcategories
+      - attributeHints: only clearly visible attributes; omit anything you are not confident about
+      """;
 
   @Value("${gemini.api-key:}")
   private String geminiApiKey;
@@ -104,10 +107,10 @@ public class AiServiceImpl implements AiService {
       return new AiDescriptionResponse(text.trim());
     } catch (HttpClientErrorException.TooManyRequests e) {
       log.warn("Gemini rate limit (description)");
-      throw new RuntimeException("AI đang bận, vui lòng thử lại sau vài giây.");
+      throw new AppException(ErrorCode.AI_SERVICE_BUSY);
     } catch (Exception e) {
       log.error("AI description failed", e);
-      throw new RuntimeException("Không thể tạo mô tả AI lúc này. Vui lòng thử lại sau.");
+      throw new AppException(ErrorCode.AI_SERVICE_UNAVAILABLE);
     }
   }
 
@@ -135,10 +138,10 @@ public class AiServiceImpl implements AiService {
 
     } catch (HttpClientErrorException.TooManyRequests e) {
       log.warn("Gemini rate limit (analyze)");
-      throw new RuntimeException("AI đang bận, vui lòng thử lại sau vài giây.");
+      throw new AppException(ErrorCode.AI_SERVICE_BUSY);
     } catch (Exception e) {
       log.error("AI analyze failed", e);
-      throw new RuntimeException("Không thể phân tích ảnh lúc này. Vui lòng thử lại sau.");
+      throw new AppException(ErrorCode.AI_SERVICE_UNAVAILABLE);
     }
   }
 
@@ -152,10 +155,10 @@ public class AiServiceImpl implements AiService {
 
   private String buildAnalyzePrompt(String dbContext) {
     return "Analyze the provided second-hand product image(s) for \"Second Life\" — a Vietnamese marketplace.\n\n"
-      + "IMPORTANT: Use ONLY the categories, subcategories, and attribute values listed below. "
-      + "Never invent names outside these lists.\n\n"
-      + dbContext
-      + ANALYZE_PROMPT_SUFFIX;
+        + "IMPORTANT: Use ONLY the categories, subcategories, and attribute values listed below. "
+        + "Never invent names outside these lists.\n\n"
+        + dbContext
+        + ANALYZE_PROMPT_SUFFIX;
   }
 
   private String buildDescriptionUserMessage(AiDescriptionRequest request) {
@@ -166,108 +169,134 @@ public class AiServiceImpl implements AiService {
     if (notEmpty(request.getAttributeValues()))
       sb.append("Attributes: ").append(String.join(", ", request.getAttributeValues())).append("\n");
     if (request.getListingType() != null && !request.getListingType().isBlank())
-      sb.append("Listing type: ").append("RENT".equalsIgnoreCase(request.getListingType()) ? "For Rent" : "For Sale").append("\n");
+      sb.append("Listing type: ").append("RENT".equalsIgnoreCase(request.getListingType()) ? "For Rent" : "For Sale")
+          .append("\n");
     sb.append("\nRespond with the Vietnamese description only.");
     return sb.toString();
   }
 
   private AiAnalyzeResponse resolveToIds(GeminiAnalysis raw, DbContext ctx) {
+    CategoryResolution categories = resolveCategories(raw, ctx);
     AiAnalyzeResponse result = new AiAnalyzeResponse();
     result.setName(raw.getName());
     result.setDescription(raw.getDescription());
+    result.setCategoryIds(categories.categoryIds());
+    result.setSubCategoryIds(categories.subCategoryIds());
+    result.setAttributeValues(resolveAttributeHints(raw.getAttributeHints(), ctx));
+    return result;
+  }
 
-    List<String> subCategoryIds = new ArrayList<>();
-    List<String> categoryIds = new ArrayList<>();
+  private CategoryResolution resolveCategories(GeminiAnalysis raw, DbContext ctx) {
+    LinkedHashSet<String> subCategoryIds = new LinkedHashSet<>();
+    LinkedHashSet<String> categoryIds = new LinkedHashSet<>();
 
     for (String hint : safeList(raw.getSubCategoryHints())) {
-      String norm = norm(hint);
-      for (Map.Entry<String, String> entry : ctx.subNormToId.entrySet()) {
-        if (entry.getKey().contains(norm) || norm.contains(entry.getKey())) {
-          String subId = entry.getValue();
-          if (!subCategoryIds.contains(subId)) subCategoryIds.add(subId);
-          String catId = ctx.subToCat.get(subId);
-          if (catId != null && !categoryIds.contains(catId)) categoryIds.add(catId);
-          break;
-        }
-      }
+      fuzzyMatchId(hint, ctx.subNormToId).ifPresent(subId -> {
+        subCategoryIds.add(subId);
+        Optional.ofNullable(ctx.subToCat.get(subId)).ifPresent(categoryIds::add);
+      });
     }
 
     if (categoryIds.isEmpty()) {
       for (String hint : safeList(raw.getCategoryHints())) {
-        String norm = norm(hint);
-        for (Map.Entry<String, String> entry : ctx.catNormToId.entrySet()) {
-          if (entry.getKey().contains(norm) || norm.contains(entry.getKey())) {
-            if (!categoryIds.contains(entry.getValue())) categoryIds.add(entry.getValue());
-            break;
-          }
-        }
+        fuzzyMatchId(hint, ctx.catNormToId).ifPresent(categoryIds::add);
       }
     }
 
-    result.setCategoryIds(categoryIds);
-    result.setSubCategoryIds(subCategoryIds);
-
-    List<AiAnalyzeResponse.AttributeValueRef> attrValues = new ArrayList<>();
-    for (GeminiAnalysis.HintPair hint : safeList(raw.getAttributeHints())) {
-      String attrNorm = norm(hint.getName());
-      String attrId = null;
-      for (Map.Entry<String, String> entry : ctx.attrNormToId.entrySet()) {
-        if (entry.getKey().contains(attrNorm) || attrNorm.contains(entry.getKey())) {
-          attrId = entry.getValue();
-          break;
-        }
-      }
-      if (attrId == null) continue;
-      Map<String, String> valMap = ctx.attrValueMap.get(attrId);
-      if (valMap == null) continue;
-      String valNorm = norm(hint.getValue());
-      for (Map.Entry<String, String> entry : valMap.entrySet()) {
-        if (entry.getKey().contains(valNorm) || valNorm.contains(entry.getKey())) {
-          attrValues.add(new AiAnalyzeResponse.AttributeValueRef(attrId, entry.getValue()));
-          break;
-        }
-      }
-    }
-    result.setAttributeValues(attrValues);
-    return result;
+    return new CategoryResolution(new ArrayList<>(subCategoryIds), new ArrayList<>(categoryIds));
   }
 
-  private String callGemini(List<Map<String, Object>> parts, int maxTokens, double temperature, String responseMimeType) {
+  private List<AiAnalyzeResponse.AttributeValueRef> resolveAttributeHints(
+      List<GeminiAnalysis.HintPair> hints,
+      DbContext ctx) {
+    List<AiAnalyzeResponse.AttributeValueRef> attrValues = new ArrayList<>();
+    for (GeminiAnalysis.HintPair hint : safeList(hints)) {
+      resolveAttributeValueRef(hint, ctx).ifPresent(attrValues::add);
+    }
+    return attrValues;
+  }
+
+  private Optional<AiAnalyzeResponse.AttributeValueRef> resolveAttributeValueRef(
+      GeminiAnalysis.HintPair hint,
+      DbContext ctx) {
+    return fuzzyMatchId(hint.getName(), ctx.attrNormToId)
+        .flatMap(attrId -> Optional.ofNullable(ctx.attrValueMap.get(attrId))
+            .flatMap(valMap -> fuzzyMatchId(hint.getValue(), valMap)
+                .map(valId -> new AiAnalyzeResponse.AttributeValueRef(attrId, valId))));
+  }
+
+  private Optional<String> fuzzyMatchId(String hint, Map<String, String> normToId) {
+    String normalized = norm(hint);
+    if (normalized.isEmpty()) {
+      return Optional.empty();
+    }
+    for (Map.Entry<String, String> entry : normToId.entrySet()) {
+      if (fuzzyMatch(normalized, entry.getKey())) {
+        return Optional.of(entry.getValue());
+      }
+    }
+    return Optional.empty();
+  }
+
+  private static boolean fuzzyMatch(String left, String right) {
+    return left.contains(right) || right.contains(left);
+  }
+
+  private record CategoryResolution(List<String> subCategoryIds, List<String> categoryIds) {
+  }
+
+  private String callGemini(List<Map<String, Object>> parts, int maxTokens, double temperature,
+      String responseMimeType) {
     String url = String.format(GEMINI_BASE_URL, geminiModel, geminiApiKey);
 
     Map<String, Object> genConfig = new HashMap<>();
     genConfig.put("maxOutputTokens", maxTokens);
     genConfig.put("temperature", temperature);
-    if (responseMimeType != null) genConfig.put("responseMimeType", responseMimeType);
+    if (responseMimeType != null)
+      genConfig.put("responseMimeType", responseMimeType);
 
     Map<String, Object> body = new HashMap<>();
     body.put("contents", List.of(Map.of("parts", parts)));
     body.put("generationConfig", genConfig);
 
     JsonNode response = restClient.post()
-      .uri(url)
-      .contentType(MediaType.APPLICATION_JSON)
-      .body(body)
-      .retrieve()
-      .body(JsonNode.class);
+        .uri(url)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(body)
+        .retrieve()
+        .body(JsonNode.class);
 
     return response
-      .path("candidates").path(0)
-      .path("content").path("parts").path(0)
-      .path("text").asText("").trim();
+        .path("candidates").path(0)
+        .path("content").path("parts").path(0)
+        .path("text").asText("").trim();
   }
 
   private GeminiAnalysis parseGeminiAnalysis(String raw) {
     try {
-      String json = raw.trim();
-      if (json.startsWith("```")) {
-        json = json.replaceAll("(?s)^```(?:json)?\\s*", "").replaceAll("\\s*```$", "").trim();
-      }
+      String json = stripMarkdownCodeFence(raw);
       return objectMapper.readValue(json, GeminiAnalysis.class);
     } catch (Exception e) {
       log.warn("Failed to parse AI analyze JSON: {}", raw, e);
       return new GeminiAnalysis();
     }
+  }
+
+  private static String stripMarkdownCodeFence(String raw) {
+    String json = raw.trim();
+    if (!json.startsWith("```")) {
+      return json;
+    }
+    int lineEnd = json.indexOf('\n');
+    if (lineEnd < 0) {
+      return json;
+    }
+    json = json.substring(lineEnd + 1);
+    int closing = json.lastIndexOf("```");
+    if (closing >= 0) {
+      json = json.substring(0, closing);
+    }
+    return json.trim();
   }
 
   private String norm(String s) {
@@ -314,13 +343,12 @@ public class AiServiceImpl implements AiService {
     final Map<String, Map<String, String>> attrValueMap;
 
     DbContext(
-      String promptContext,
-      Map<String, String> catNormToId,
-      Map<String, String> subNormToId,
-      Map<String, String> subToCat,
-      Map<String, String> attrNormToId,
-      Map<String, Map<String, String>> attrValueMap
-    ) {
+        String promptContext,
+        Map<String, String> catNormToId,
+        Map<String, String> subNormToId,
+        Map<String, String> subToCat,
+        Map<String, String> attrNormToId,
+        Map<String, Map<String, String>> attrValueMap) {
       this.promptContext = promptContext;
       this.catNormToId = catNormToId;
       this.subNormToId = subNormToId;
@@ -336,7 +364,7 @@ public class AiServiceImpl implements AiService {
       Map<String, String> subToCat = new HashMap<>();
 
       prompt.append("AVAILABLE CATEGORIES AND SUBCATEGORIES ")
-        .append("(use these exact Vietnamese names in categoryHints and subCategoryHints):\n");
+          .append("(use these exact Vietnamese names in categoryHints and subCategoryHints):\n");
 
       for (Category cat : categories) {
         catNormToId.put(cat.getName().toLowerCase().trim(), cat.getId());
@@ -344,7 +372,7 @@ public class AiServiceImpl implements AiService {
         prompt.append("- ").append(cat.getName());
         if (subs != null && !subs.isEmpty()) {
           prompt.append(": ")
-            .append(subs.stream().map(s -> s.getName()).collect(Collectors.joining(", ")));
+              .append(subs.stream().map(s -> s.getName()).collect(Collectors.joining(", ")));
           for (var sub : subs) {
             subNormToId.put(sub.getName().toLowerCase().trim(), sub.getId());
             subToCat.put(sub.getId(), cat.getId());
@@ -357,23 +385,25 @@ public class AiServiceImpl implements AiService {
       Map<String, Map<String, String>> attrValueMap = new HashMap<>();
 
       prompt.append("\nAVAILABLE ATTRIBUTES AND VALUES ")
-        .append("(use these exact Vietnamese names in attributeHints):\n");
+          .append("(use these exact Vietnamese names in attributeHints):\n");
 
       for (Attribute attr : attributes) {
         var vals = attr.getAttributeValues();
-        if (vals == null || vals.isEmpty()) continue;
+        if (vals == null || vals.isEmpty())
+          continue;
         attrNormToId.put(attr.getName().toLowerCase().trim(), attr.getId());
         Map<String, String> valMap = new LinkedHashMap<>();
         List<String> valNames = new ArrayList<>();
         for (var v : vals) {
-          if (v.getValue() == null || v.getValue().isBlank()) continue;
+          if (v.getValue() == null || v.getValue().isBlank())
+            continue;
           valMap.put(v.getValue().toLowerCase().trim(), v.getId());
           valNames.add(v.getValue());
         }
         if (!valMap.isEmpty()) {
           attrValueMap.put(attr.getId(), valMap);
           prompt.append("- ").append(attr.getName()).append(": ")
-            .append(String.join(", ", valNames)).append("\n");
+              .append(String.join(", ", valNames)).append("\n");
         }
       }
 
