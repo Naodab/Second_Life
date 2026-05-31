@@ -11,7 +11,9 @@ import com.naodab.productservice.dto.request.AiDescriptionRequest;
 import com.naodab.productservice.dto.response.AiAnalyzeResponse;
 import com.naodab.productservice.dto.response.AiDescriptionResponse;
 import com.naodab.productservice.models.Attribute;
+import com.naodab.productservice.models.AttributeValue;
 import com.naodab.productservice.models.Category;
+import com.naodab.productservice.models.SubCategory;
 import com.naodab.productservice.repositories.AttributeRepository;
 import com.naodab.productservice.repositories.CategoryRepository;
 import com.naodab.productservice.services.AiService;
@@ -362,52 +364,106 @@ public class AiServiceImpl implements AiService {
       Map<String, String> catNormToId = new LinkedHashMap<>();
       Map<String, String> subNormToId = new LinkedHashMap<>();
       Map<String, String> subToCat = new HashMap<>();
-
-      prompt.append("AVAILABLE CATEGORIES AND SUBCATEGORIES ")
-          .append("(use these exact Vietnamese names in categoryHints and subCategoryHints):\n");
-
-      for (Category cat : categories) {
-        catNormToId.put(cat.getName().toLowerCase().trim(), cat.getId());
-        var subs = cat.getSubCategories();
-        prompt.append("- ").append(cat.getName());
-        if (subs != null && !subs.isEmpty()) {
-          prompt.append(": ")
-              .append(subs.stream().map(s -> s.getName()).collect(Collectors.joining(", ")));
-          for (var sub : subs) {
-            subNormToId.put(sub.getName().toLowerCase().trim(), sub.getId());
-            subToCat.put(sub.getId(), cat.getId());
-          }
-        }
-        prompt.append("\n");
-      }
+      appendCategorySection(prompt, categories, catNormToId, subNormToId, subToCat);
 
       Map<String, String> attrNormToId = new LinkedHashMap<>();
       Map<String, Map<String, String>> attrValueMap = new HashMap<>();
-
-      prompt.append("\nAVAILABLE ATTRIBUTES AND VALUES ")
-          .append("(use these exact Vietnamese names in attributeHints):\n");
-
-      for (Attribute attr : attributes) {
-        var vals = attr.getAttributeValues();
-        if (vals == null || vals.isEmpty())
-          continue;
-        attrNormToId.put(attr.getName().toLowerCase().trim(), attr.getId());
-        Map<String, String> valMap = new LinkedHashMap<>();
-        List<String> valNames = new ArrayList<>();
-        for (var v : vals) {
-          if (v.getValue() == null || v.getValue().isBlank())
-            continue;
-          valMap.put(v.getValue().toLowerCase().trim(), v.getId());
-          valNames.add(v.getValue());
-        }
-        if (!valMap.isEmpty()) {
-          attrValueMap.put(attr.getId(), valMap);
-          prompt.append("- ").append(attr.getName()).append(": ")
-              .append(String.join(", ", valNames)).append("\n");
-        }
-      }
+      appendAttributeSection(prompt, attributes, attrNormToId, attrValueMap);
 
       return new DbContext(prompt.toString(), catNormToId, subNormToId, subToCat, attrNormToId, attrValueMap);
+    }
+
+    private static void appendCategorySection(
+        StringBuilder prompt,
+        List<Category> categories,
+        Map<String, String> catNormToId,
+        Map<String, String> subNormToId,
+        Map<String, String> subToCat) {
+      prompt.append("AVAILABLE CATEGORIES AND SUBCATEGORIES ")
+          .append("(use these exact Vietnamese names in categoryHints and subCategoryHints):\n");
+      for (Category cat : categories) {
+        appendCategoryLine(prompt, cat, catNormToId, subNormToId, subToCat);
+      }
+    }
+
+    private static void appendCategoryLine(
+        StringBuilder prompt,
+        Category cat,
+        Map<String, String> catNormToId,
+        Map<String, String> subNormToId,
+        Map<String, String> subToCat) {
+      catNormToId.put(normName(cat.getName()), cat.getId());
+      prompt.append("- ").append(cat.getName());
+      var subs = cat.getSubCategories();
+      if (subs != null && !subs.isEmpty()) {
+        prompt.append(": ")
+            .append(subs.stream().map(s -> s.getName()).collect(Collectors.joining(", ")));
+        registerSubCategories(subs, cat.getId(), subNormToId, subToCat);
+      }
+      prompt.append("\n");
+    }
+
+    private static void registerSubCategories(
+        List<SubCategory> subs,
+        String categoryId,
+        Map<String, String> subNormToId,
+        Map<String, String> subToCat) {
+      for (var sub : subs) {
+        subNormToId.put(normName(sub.getName()), sub.getId());
+        subToCat.put(sub.getId(), categoryId);
+      }
+    }
+
+    private static void appendAttributeSection(
+        StringBuilder prompt,
+        List<Attribute> attributes,
+        Map<String, String> attrNormToId,
+        Map<String, Map<String, String>> attrValueMap) {
+      prompt.append("\nAVAILABLE ATTRIBUTES AND VALUES ")
+          .append("(use these exact Vietnamese names in attributeHints):\n");
+      for (Attribute attr : attributes) {
+        appendAttributeLine(prompt, attr, attrNormToId, attrValueMap);
+      }
+    }
+
+    private static void appendAttributeLine(
+        StringBuilder prompt,
+        Attribute attr,
+        Map<String, String> attrNormToId,
+        Map<String, Map<String, String>> attrValueMap) {
+      var vals = attr.getAttributeValues();
+      if (vals == null || vals.isEmpty()) {
+        return;
+      }
+      AttributeValuesEntry entry = collectAttributeValues(vals);
+      if (entry.valMap.isEmpty()) {
+        return;
+      }
+      attrNormToId.put(normName(attr.getName()), attr.getId());
+      attrValueMap.put(attr.getId(), entry.valMap);
+      prompt.append("- ").append(attr.getName()).append(": ")
+          .append(String.join(", ", entry.valNames)).append("\n");
+    }
+
+    private static AttributeValuesEntry collectAttributeValues(
+        List<AttributeValue> vals) {
+      Map<String, String> valMap = new LinkedHashMap<>();
+      List<String> valNames = new ArrayList<>();
+      for (var v : vals) {
+        if (v.getValue() == null || v.getValue().isBlank()) {
+          continue;
+        }
+        valMap.put(normName(v.getValue()), v.getId());
+        valNames.add(v.getValue());
+      }
+      return new AttributeValuesEntry(valMap, valNames);
+    }
+
+    private static String normName(String name) {
+      return name.toLowerCase().trim();
+    }
+
+    private record AttributeValuesEntry(Map<String, String> valMap, List<String> valNames) {
     }
   }
 }

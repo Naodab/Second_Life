@@ -52,25 +52,14 @@ public class SearchHistorySnapshot {
   }
 
   public boolean isWorthRecording() {
-    if (StringUtils.hasText(keyword)) {
-      return true;
-    }
-    if (categoryIds != null && !categoryIds.isEmpty()) {
-      return true;
-    }
-    if (subCategoryIds != null && !subCategoryIds.isEmpty()) {
-      return true;
-    }
-    if (listingType != null) {
-      return true;
-    }
-    if (priceMin != null || priceMax != null) {
-      return true;
-    }
-    if (StringUtils.hasText(provinceCode) || StringUtils.hasText(wardCode)) {
-      return true;
-    }
-    return false;
+    return StringUtils.hasText(keyword)
+        || (categoryIds != null && !categoryIds.isEmpty())
+        || (subCategoryIds != null && !subCategoryIds.isEmpty())
+        || listingType != null
+        || priceMin != null
+        || priceMax != null
+        || StringUtils.hasText(provinceCode)
+        || StringUtils.hasText(wardCode);
   }
 
   private static List<String> singleIdList(String id) {

@@ -128,40 +128,17 @@ public class ListingServiceImpl implements ListingService {
     }
     ListingVariant variant = listingVariantRepository.findById(listingVariantId.trim())
         .orElseThrow(() -> new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND));
-    Listing listing = variant.getListing();
-    if (listing == null) {
-      throw new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND);
-    }
-    Hibernate.initialize(listing);
+    Listing listing = requireListing(variant);
     Product product = listing.getProduct();
-    if (product != null) {
-      ProductDocumentGraphInitializer.initialize(product);
-    }
     ProductVariant productVariant = variant.getProductVariant();
-    if (productVariant != null) {
-      Hibernate.initialize(productVariant);
-    }
     Facility listingFacility = listing.getFacility();
-    if (listingFacility != null) {
-      Hibernate.initialize(listingFacility);
-    }
+    initializeVariantContextGraph(listing, product, productVariant, listingFacility);
 
     String productName = product != null ? product.getName() : null;
-    String listingTitle = listing.getTitle();
-    String title;
-    if (listingTitle != null && StringUtils.hasText(listingTitle)) {
-      title = listingTitle.trim();
-    } else if (productName != null && StringUtils.hasText(productName)) {
-      title = productName.trim();
-    } else {
-      title = "Sản phẩm";
-    }
-    String sku = productVariant != null ? productVariant.getSku() : null;
-    String variantLabel = sku != null && StringUtils.hasText(sku) ? sku.trim() : null;
-    String thumbnailUrl = product != null ? productMapper.thumbnailImageUrl(product) : null;
-    String normalizedThumbnailUrl = thumbnailUrl != null && StringUtils.hasText(thumbnailUrl) ? thumbnailUrl.trim()
-        : null;
-    String facilityId = listingFacility != null ? listingFacility.getId() : null;
+    String title = resolveContextTitle(listing.getTitle(), productName);
+    String variantLabel = trimToNull(productVariantSku(productVariant));
+    String normalizedThumbnailUrl = trimToNull(productThumbnailUrl(product));
+    String facilityId = facilityIdOrNull(listingFacility);
 
     return ListingVariantContextResponse.builder()
         .listingId(listing.getId())
@@ -175,6 +152,53 @@ public class ListingServiceImpl implements ListingService {
         .buyPrice(variant.getBuyPrice())
         .rentPrice(variant.getRentPrice())
         .build();
+  }
+
+  private static Listing requireListing(ListingVariant variant) {
+    Listing listing = variant.getListing();
+    if (listing == null) {
+      throw new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND);
+    }
+    return listing;
+  }
+
+  private void initializeVariantContextGraph(
+      Listing listing,
+      Product product,
+      ProductVariant productVariant,
+      Facility listingFacility) {
+    Hibernate.initialize(listing);
+    if (product != null) {
+      ProductDocumentGraphInitializer.initialize(product);
+    }
+    if (productVariant != null) {
+      Hibernate.initialize(productVariant);
+    }
+    if (listingFacility != null) {
+      Hibernate.initialize(listingFacility);
+    }
+  }
+
+  private static String resolveContextTitle(String listingTitle, String productName) {
+    if (StringUtils.hasText(listingTitle)) {
+      return listingTitle.trim();
+    }
+    if (StringUtils.hasText(productName)) {
+      return productName.trim();
+    }
+    return "Sản phẩm";
+  }
+
+  private String productThumbnailUrl(Product product) {
+    return product == null ? null : productMapper.thumbnailImageUrl(product);
+  }
+
+  private static String productVariantSku(ProductVariant productVariant) {
+    return productVariant == null ? null : productVariant.getSku();
+  }
+
+  private static String facilityIdOrNull(Facility listingFacility) {
+    return listingFacility == null ? null : listingFacility.getId();
   }
 
   @Override
