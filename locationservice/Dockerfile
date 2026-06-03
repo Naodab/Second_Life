@@ -26,6 +26,9 @@ COPY commonjpa commonjpa
 COPY commonservice commonservice
 COPY locationservice locationservice
 
+RUN cp locationservice/src/main/resources/application-prod.yml.example \
+    locationservice/src/main/resources/application-prod.yml
+
 # build
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -pl locationservice -am clean package -DskipTests -B

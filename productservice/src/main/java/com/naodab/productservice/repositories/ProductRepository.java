@@ -23,7 +23,7 @@ public interface ProductRepository extends JpaRepository<Product, String> {
   Optional<Product> findByIdWithVariantsGraph(@Param("id") String id);
 
   @Query(value = "SELECT p.id FROM Product p WHERE p.deletedAt IS NULL ORDER BY p.id", countQuery = "SELECT count(p) FROM Product p WHERE p.deletedAt IS NULL")
-  Page<String> findIdsForElasticsearchReindex(Pageable pageable);
+  Page<String> findIdsForOpenSearchReindex(Pageable pageable);
 
   @EntityGraph(attributePaths = {
       "primarySubCategory",
@@ -33,5 +33,5 @@ public interface ProductRepository extends JpaRepository<Product, String> {
       "productSubCategories.subCategory.category",
   })
   @Query("SELECT p FROM Product p WHERE p.id IN :ids")
-  List<Product> findAllByIdInWithElasticsearchGraph(@Param("ids") Collection<String> ids);
+  List<Product> findAllByIdInWithOpenSearchGraph(@Param("ids") Collection<String> ids);
 }

@@ -31,7 +31,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.naodab.productservice.documents.ProductDocument;
 import com.naodab.productservice.dto.request.ProductSearchRequest;
 import com.naodab.productservice.dto.response.ProductItemResponse;
-import com.naodab.productservice.elasticsearch.ElasticsearchSortBy;
+import com.naodab.productservice.opensearch.OpenSearchSortBy;
 import com.naodab.productservice.mapper.ProductMapper;
 import com.naodab.productservice.models.Product;
 import com.naodab.productservice.repositories.ProductRepository;
@@ -43,13 +43,13 @@ class ProductSearchServiceImplTest {
   static final int BATCH = 50;
 
   @Mock
-  ElasticsearchOperations elasticsearchOperations;
+  ElasticsearchOperations openSearchOperations;
 
   @Mock
   ProductMapper productMapper;
 
   @Mock
-  ProductElasticsearchIndexWriter productElasticsearchIndexWriter;
+  ProductOpenSearchIndexWriter productOpenSearchIndexWriter;
 
   @Mock
   ProductRepository productRepository;
@@ -66,21 +66,21 @@ class ProductSearchServiceImplTest {
   }
 
   @Test
-  void delete_blankId_doesNotCallElasticsearch() {
+  void delete_blankId_doesNotCallOpenSearch() {
     productSearchService.delete(null);
     productSearchService.delete("   ");
-    verify(elasticsearchOperations, never()).delete(any(), any(IndexCoordinates.class));
+    verify(openSearchOperations, never()).delete(any(), any(IndexCoordinates.class));
   }
 
   @Test
   void delete_trimsIdAndDeletes() {
     productSearchService.delete("  pid  ");
-    verify(elasticsearchOperations).delete(eq("pid"), eq(IndexCoordinates.of("products")));
+    verify(openSearchOperations).delete(eq("pid"), eq(IndexCoordinates.of("products")));
   }
 
   @Test
   void sync_swallowsWriterExceptions() {
-    doThrow(new RuntimeException("boom")).when(productElasticsearchIndexWriter).writeProductDocumentById("x");
+    doThrow(new RuntimeException("boom")).when(productOpenSearchIndexWriter).writeProductDocumentById("x");
     assertThatCode(() -> productSearchService.sync("x")).doesNotThrowAnyException();
   }
 
@@ -88,7 +88,7 @@ class ProductSearchServiceImplTest {
   void listOwnedPrimarySubcategorySummaries_blankOwner_returnsEmpty() {
     assertThat(productSearchService.listOwnedPrimarySubcategorySummaries(null)).isEmpty();
     assertThat(productSearchService.listOwnedPrimarySubcategorySummaries("  ")).isEmpty();
-    verify(elasticsearchOperations, never()).search(any(Query.class),
+    verify(openSearchOperations, never()).search(any(Query.class),
         ArgumentMatchers.<Class<ProductDocument>>any(), any());
   }
 
@@ -103,7 +103,7 @@ class ProductSearchServiceImplTest {
         productSearchService.searchProductItems(ProductSearchRequest.builder().build());
 
     assertThat(out).containsExactly(item);
-    verify(elasticsearchOperations).search(any(Query.class), eq(ProductDocument.class),
+    verify(openSearchOperations).search(any(Query.class), eq(ProductDocument.class),
         eq(IndexCoordinates.of("products")));
   }
 
@@ -115,12 +115,12 @@ class ProductSearchServiceImplTest {
     when(productMapper.toProductItemResponse(doc)).thenReturn(item);
 
     ProductSearchRequest req =
-        ProductSearchRequest.builder().ownerId("  own ").keyword(null).sortBy(ElasticsearchSortBy.RELEVANCE)
+        ProductSearchRequest.builder().ownerId("  own ").keyword(null).sortBy(OpenSearchSortBy.RELEVANCE)
             .page(3).pageSize(5).build();
 
     productSearchService.listOwnedProductItems(req);
 
-    assertThat(req.getSortBy()).isEqualTo(ElasticsearchSortBy.UPDATED_AT_DESC);
+    assertThat(req.getSortBy()).isEqualTo(OpenSearchSortBy.UPDATED_AT_DESC);
     assertThat(req.getOwnerId()).isEqualTo("own");
   }
 
@@ -132,9 +132,9 @@ class ProductSearchServiceImplTest {
     when(p2.getId()).thenReturn("id2");
 
     PageRequest firstPage = PageRequest.of(0, BATCH);
-    when(productRepository.findIdsForElasticsearchReindex(firstPage)).thenReturn(
+    when(productRepository.findIdsForOpenSearchReindex(firstPage)).thenReturn(
         new PageImpl<>(List.of("id1", "id2"), firstPage, 2));
-    when(productRepository.findAllByIdInWithElasticsearchGraph(List.of("id1", "id2"))).thenReturn(List.of(p1, p2));
+    when(productRepository.findAllByIdInWithOpenSearchGraph(List.of("id1", "id2"))).thenReturn(List.of(p1, p2));
 
     ProductDocument d1 = ProductDocument.builder().id("id1").build();
     ProductDocument d2 = ProductDocument.builder().id("id2").build();
@@ -144,9 +144,9 @@ class ProductSearchServiceImplTest {
     int written = productSearchService.reindexAllProductsFromDatabase();
 
     assertThat(written).isEqualTo(2);
-    verify(elasticsearchOperations).save(d1, IndexCoordinates.of("products"));
-    verify(elasticsearchOperations).save(d2, IndexCoordinates.of("products"));
-    verify(productRepository).findIdsForElasticsearchReindex(firstPage);
+    verify(openSearchOperations).save(d1, IndexCoordinates.of("products"));
+    verify(openSearchOperations).save(d2, IndexCoordinates.of("products"));
+    verify(productRepository).findIdsForOpenSearchReindex(firstPage);
   }
 
   @SuppressWarnings("unchecked")
@@ -161,7 +161,7 @@ class ProductSearchServiceImplTest {
     when(hits.getSearchHits()).thenReturn(searchHits);
     when(hits.getTotalHits()).thenReturn(total);
 
-    when(elasticsearchOperations.search(any(Query.class), eq(ProductDocument.class),
+    when(openSearchOperations.search(any(Query.class), eq(ProductDocument.class),
         eq(IndexCoordinates.of("products")))).thenReturn(hits);
   }
 }

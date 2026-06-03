@@ -196,6 +196,7 @@ public class ProductMapper {
         .id(product.getId())
         .name(product.getName())
         .description(product.getDescription())
+        .manufactureYear(product.getManufactureYear())
         .thumbnailUrl(thumbnailUrl)
         .productMedias(productMedias)
         .ownerId(product.getOwnerId())
@@ -214,7 +215,7 @@ public class ProductMapper {
         .build();
   }
 
-  static GeoPoint toElasticsearchGeoPoint(Float lat, Float lon) {
+  static GeoPoint toOpenSearchGeoPoint(Float lat, Float lon) {
     if (lat == null || lon == null) {
       return null;
     }
@@ -305,6 +306,7 @@ public class ProductMapper {
         .id(product.getId())
         .name(product.getName())
         .description(product.getDescription())
+        .manufactureYear(product.getManufactureYear())
         .ownerId(product.getOwnerId())
         .thumbnailUrl(thumbnailImageUrl(product))
         .primarySubCategory(product.getPrimarySubCategory() == null ? null

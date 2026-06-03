@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.log
+
+# Pricing training dataset
+pricing/data/*.csv
+pricing/data/*.json
+
+# Import / seed data
+import_real_data/data/raw_products.json

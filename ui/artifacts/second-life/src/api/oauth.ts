@@ -7,7 +7,8 @@ export function appHref(path: string): string {
 }
 
 export function redirectToGoogleOAuth(entry: GoogleOAuthEntry): void {
-  const backend = (import.meta.env.VITE_BACKEND_URL || "http://localhost").replace(
+  const raw = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.trim();
+  const backend = (raw || window.location.origin).replace(
     /\/$/,
     "",
   );

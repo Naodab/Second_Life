@@ -1,0 +1,33 @@
+# Production profile — copy to application-prod.yml or rely on Docker build (see Dockerfile).
+
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+external:
+  inventory-service:
+    url: ${INVENTORY_SERVICE_URL:http://inventory-service:8087/api/v1}
+  location-service:
+    url: ${LOCATION_SERVICE_URL:http://location-service:8085/api/v1}
+  product-service:
+    url: ${PRODUCT_SERVICE_URL:http://product-service:8086/api/v1}
+  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS}
+
+logging:
+  level:
+    root: WARN
+    "[com.naodab.bookingservice]": INFO
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

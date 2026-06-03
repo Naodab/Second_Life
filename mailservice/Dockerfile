@@ -26,6 +26,9 @@ COPY commonjpa commonjpa
 COPY commonservice commonservice
 COPY mailservice mailservice
 
+RUN cp mailservice/src/main/resources/application-prod.yml.example \
+    mailservice/src/main/resources/application-prod.yml
+
 # build
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -pl mailservice -am clean package -DskipTests -B

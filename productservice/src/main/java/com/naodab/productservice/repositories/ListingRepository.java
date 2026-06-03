@@ -25,7 +25,7 @@ public interface ListingRepository extends JpaRepository<Listing, String> {
           JOIN l.product p
           WHERE p.deletedAt IS NULL
           """)
-  Page<String> findIdsForElasticsearchReindex(Pageable pageable);
+  Page<String> findIdsForOpenSearchReindex(Pageable pageable);
 
   @EntityGraph(attributePaths = {
       "product",

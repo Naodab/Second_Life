@@ -111,8 +111,16 @@ function Router() {
   );
 }
 
+function resolveBackendBaseUrl(): string | null {
+  const raw = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.trim();
+  if (!raw) {
+    return null;
+  }
+  return raw.replace(/\/+$/, "");
+}
+
 function App() {
-  setBaseUrl(import.meta.env.VITE_BACKEND_URL || "http://localhost");
+  setBaseUrl(resolveBackendBaseUrl());
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -36,6 +36,9 @@ logs/
 .env
 .env.*
 !.env.example
+!.env.production.example
+!**/.env.production.example
+!ui/artifacts/second-life/.env.production
 application-local.yml
 **/application-dev.yml
 application-prod.yml
@@ -71,6 +74,7 @@ Thumbs.db
 # Docker
 ######################################
 docker-compose.override.yml
+.deploy-initialized
 
 ######################################
 # Node (nếu có frontend)
@@ -96,4 +100,4 @@ kafka-logs/
 .pnpm-store/**
 !pnpm-workspace.yaml
 
-scripts/**
+*/.venv/**

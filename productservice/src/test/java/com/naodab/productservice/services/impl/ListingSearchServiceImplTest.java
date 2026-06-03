@@ -39,10 +39,10 @@ class ListingSearchServiceImplTest {
   static final int BATCH = 50;
 
   @Mock
-  ElasticsearchOperations elasticsearchOperations;
+  ElasticsearchOperations openSearchOperations;
 
   @Mock
-  ListingElasticsearchIndexWriter listingElasticsearchIndexWriter;
+  ListingOpenSearchIndexWriter listingOpenSearchIndexWriter;
 
   @Mock
   ListingRepository listingRepository;
@@ -61,14 +61,14 @@ class ListingSearchServiceImplTest {
     Listing blank = new Listing();
     blank.setId("   ");
     listingSearchService.sync(blank);
-    verify(listingElasticsearchIndexWriter, never()).writeListingDocumentById(any());
+    verify(listingOpenSearchIndexWriter, never()).writeListingDocumentById(any());
   }
 
   @Test
   void sync_swallowsWriterFailure() {
     Listing listing = new Listing();
     listing.setId("l1");
-    doThrow(new RuntimeException("boom")).when(listingElasticsearchIndexWriter).writeListingDocumentById("l1");
+    doThrow(new RuntimeException("boom")).when(listingOpenSearchIndexWriter).writeListingDocumentById("l1");
     assertThatCode(() -> listingSearchService.sync(listing)).doesNotThrowAnyException();
   }
 
@@ -76,20 +76,20 @@ class ListingSearchServiceImplTest {
   void delete_blankSkipped() {
     listingSearchService.delete(null);
     listingSearchService.delete("  ");
-    verify(elasticsearchOperations, never()).delete(any(), any(IndexCoordinates.class));
+    verify(openSearchOperations, never()).delete(any(), any(IndexCoordinates.class));
   }
 
   @Test
   void delete_trimsAndDeletesDocument() {
     listingSearchService.delete("  lx  ");
-    verify(elasticsearchOperations).delete(eq("lx"), eq(IndexCoordinates.of("listings")));
+    verify(openSearchOperations).delete(eq("lx"), eq(IndexCoordinates.of("listings")));
   }
 
   @Test
   void reindexAllListingsForProduct_blankSkipped() {
     listingSearchService.reindexAllListingsForProduct(null);
     listingSearchService.reindexAllListingsForProduct("   ");
-    verify(listingElasticsearchIndexWriter, never()).writeListingDocumentById(any());
+    verify(listingOpenSearchIndexWriter, never()).writeListingDocumentById(any());
   }
 
   @Test
@@ -98,8 +98,8 @@ class ListingSearchServiceImplTest {
 
     listingSearchService.reindexAllListingsForProduct(" p1 ");
 
-    verify(listingElasticsearchIndexWriter).writeListingDocumentById("l1");
-    verify(listingElasticsearchIndexWriter).writeListingDocumentById("l2");
+    verify(listingOpenSearchIndexWriter).writeListingDocumentById("l1");
+    verify(listingOpenSearchIndexWriter).writeListingDocumentById("l2");
   }
 
   @Test
@@ -108,8 +108,8 @@ class ListingSearchServiceImplTest {
 
     listingSearchService.deleteListingsIndexByProductId("p9");
 
-    verify(elasticsearchOperations).delete("a", IndexCoordinates.of("listings"));
-    verify(elasticsearchOperations).delete("b", IndexCoordinates.of("listings"));
+    verify(openSearchOperations).delete("a", IndexCoordinates.of("listings"));
+    verify(openSearchOperations).delete("b", IndexCoordinates.of("listings"));
   }
 
   @Test
@@ -124,7 +124,7 @@ class ListingSearchServiceImplTest {
     when(hits.getTotalHits()).thenReturn(1L);
     when(hits.iterator()).thenAnswer(inv -> hitList.iterator());
 
-    when(elasticsearchOperations.search(any(Query.class), eq(ListingDocument.class),
+    when(openSearchOperations.search(any(Query.class), eq(ListingDocument.class),
         eq(IndexCoordinates.of("listings")))).thenReturn(hits);
 
     ListingSearchService.ListingDocumentPage page =
@@ -132,7 +132,7 @@ class ListingSearchServiceImplTest {
 
     assertThat(page.totalCount()).isEqualTo(1L);
     assertThat(page.items()).containsExactly(doc);
-    verify(elasticsearchOperations).search(any(Query.class), eq(ListingDocument.class),
+    verify(openSearchOperations).search(any(Query.class), eq(ListingDocument.class),
         eq(IndexCoordinates.of("listings")));
   }
 
@@ -148,9 +148,9 @@ class ListingSearchServiceImplTest {
     long n = listingSearchService.removeAllListingDocumentsFromIndex();
 
     assertThat(n).isEqualTo(3);
-    verify(elasticsearchOperations).delete("a", IndexCoordinates.of("listings"));
-    verify(elasticsearchOperations).delete("b", IndexCoordinates.of("listings"));
-    verify(elasticsearchOperations).delete("c", IndexCoordinates.of("listings"));
+    verify(openSearchOperations).delete("a", IndexCoordinates.of("listings"));
+    verify(openSearchOperations).delete("b", IndexCoordinates.of("listings"));
+    verify(openSearchOperations).delete("c", IndexCoordinates.of("listings"));
   }
 
   @Test
@@ -159,15 +159,15 @@ class ListingSearchServiceImplTest {
     PageRequest pg1 = PageRequest.of(1, BATCH);
     var first = new PageImpl<>(List.of("l1"), pg0, 51);
     var second = new PageImpl<>(List.of("l2"), pg1, 51);
-    when(listingRepository.findIdsForElasticsearchReindex(pg0)).thenReturn(first);
-    when(listingRepository.findIdsForElasticsearchReindex(pg1)).thenReturn(second);
+    when(listingRepository.findIdsForOpenSearchReindex(pg0)).thenReturn(first);
+    when(listingRepository.findIdsForOpenSearchReindex(pg1)).thenReturn(second);
 
     int total = listingSearchService.reindexAllListingsFromDatabase();
 
     assertThat(total).isEqualTo(2);
-    verify(listingElasticsearchIndexWriter).writeListingDocumentById("l1");
-    verify(listingElasticsearchIndexWriter).writeListingDocumentById("l2");
-    verify(listingRepository).findIdsForElasticsearchReindex(pg0);
-    verify(listingRepository).findIdsForElasticsearchReindex(pg1);
+    verify(listingOpenSearchIndexWriter).writeListingDocumentById("l1");
+    verify(listingOpenSearchIndexWriter).writeListingDocumentById("l2");
+    verify(listingRepository).findIdsForOpenSearchReindex(pg0);
+    verify(listingRepository).findIdsForOpenSearchReindex(pg1);
   }
 }

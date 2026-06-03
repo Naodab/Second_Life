@@ -37,8 +37,8 @@ import com.naodab.productservice.dto.request.ProductSearchRequest;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
 import com.naodab.productservice.dto.response.PrimarySubcategorySummaryResponse;
 import com.naodab.productservice.dto.response.ProductItemResponse;
-import com.naodab.productservice.elasticsearch.ElasticsearchNativeQueryHelper;
-import com.naodab.productservice.elasticsearch.ElasticsearchSortBy;
+import com.naodab.productservice.opensearch.OpenSearchNativeQueryHelper;
+import com.naodab.productservice.opensearch.OpenSearchSortBy;
 import com.naodab.productservice.mapper.ProductMapper;
 import com.naodab.productservice.models.Product;
 import com.naodab.productservice.repositories.ProductRepository;
@@ -57,9 +57,9 @@ import lombok.extern.slf4j.Slf4j;
 public class ProductSearchServiceImpl implements ProductSearchService {
   static final IndexCoordinates PRODUCT_INDEX = IndexCoordinates.of("products");
 
-  ElasticsearchOperations elasticsearchOperations;
+  ElasticsearchOperations openSearchOperations;
   ProductMapper productMapper;
-  ProductElasticsearchIndexWriter productElasticsearchIndexWriter;
+  ProductOpenSearchIndexWriter productOpenSearchIndexWriter;
   ProductRepository productRepository;
   SubCategoryRepository subCategoryRepository;
 
@@ -70,9 +70,9 @@ public class ProductSearchServiceImpl implements ProductSearchService {
   @Override
   public void sync(String productId) {
     try {
-      productElasticsearchIndexWriter.writeProductDocumentById(productId);
+      productOpenSearchIndexWriter.writeProductDocumentById(productId);
     } catch (Exception e) {
-      log.error("Elasticsearch sync failed for product id={}", productId, e);
+      log.error("OpenSearch sync failed for product id={}", productId, e);
     }
   }
 
@@ -84,19 +84,19 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     Pageable pageable = PageRequest.of(0, batchSize);
     Page<String> idPage;
     do {
-      idPage = productRepository.findIdsForElasticsearchReindex(pageable);
+      idPage = productRepository.findIdsForOpenSearchReindex(pageable);
       List<String> ids = idPage.getContent();
       if (ids.isEmpty()) {
         break;
       }
-      List<Product> products = productRepository.findAllByIdInWithElasticsearchGraph(ids);
+      List<Product> products = productRepository.findAllByIdInWithOpenSearchGraph(ids);
       for (Product p : products) {
         saveProductDocument(p);
         total++;
       }
       pageable = idPage.nextPageable();
     } while (idPage.hasNext());
-    log.info("Elasticsearch products reindex finished: {} documents", total);
+    log.info("OpenSearch products reindex finished: {} documents", total);
     return total;
   }
 
@@ -105,7 +105,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
       return;
     }
 
-    elasticsearchOperations.save(productMapper.toProductDocument(product), PRODUCT_INDEX);
+    openSearchOperations.save(productMapper.toProductDocument(product), PRODUCT_INDEX);
   }
 
   @Override
@@ -114,7 +114,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
       return;
     }
 
-    elasticsearchOperations.delete(productId.trim(), PRODUCT_INDEX);
+    openSearchOperations.delete(productId.trim(), PRODUCT_INDEX);
   }
 
   private record ProductDocumentsPage(List<ProductDocument> documents, long totalCount) {
@@ -122,13 +122,13 @@ public class ProductSearchServiceImpl implements ProductSearchService {
 
   private ProductDocumentsPage fetchProductDocumentsPage(ProductSearchRequest request) {
     ProductSearchRequest safeRequest = request == null ? ProductSearchRequest.builder().build() : request;
-    int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(safeRequest.getPage());
-    int normalizedPageSize = ElasticsearchNativeQueryHelper.normalizePageSize(safeRequest.getPageSize(),
+    int normalizedPage = OpenSearchNativeQueryHelper.normalizePage(safeRequest.getPage());
+    int normalizedPageSize = OpenSearchNativeQueryHelper.normalizePageSize(safeRequest.getPageSize(),
         defaultPageSize);
     Pageable pageable = PageRequest.of(normalizedPage, normalizedPageSize);
     NativeQuery query = buildNativeQuery(safeRequest, pageable);
 
-    SearchHits<ProductDocument> hits = elasticsearchOperations.search(query, ProductDocument.class, PRODUCT_INDEX);
+    SearchHits<ProductDocument> hits = openSearchOperations.search(query, ProductDocument.class, PRODUCT_INDEX);
     List<ProductDocument> products = hits.getSearchHits().stream().map(SearchHit::getContent).toList();
     return new ProductDocumentsPage(products, hits.getTotalHits());
   }
@@ -155,11 +155,11 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     r.setKeyword(StringUtils.hasText(r.getKeyword()) ? r.getKeyword().trim() : null);
     r.setCategoryIds(emptyToNullNormalize(r.getCategoryIds()));
     r.setSubCategoryIds(emptyToNullNormalize(r.getSubCategoryIds()));
-    ElasticsearchSortBy sort = normalizeOwnedProductSort(r.getSortBy(), r.getKeyword());
+    OpenSearchSortBy sort = normalizeOwnedProductSort(r.getSortBy(), r.getKeyword());
     r.setSortBy(sort);
     ProductDocumentsPage slice = fetchProductDocumentsPage(r);
-    int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(r.getPage());
-    int normalizedPageSize = ElasticsearchNativeQueryHelper.normalizePageSize(r.getPageSize(), defaultPageSize);
+    int normalizedPage = OpenSearchNativeQueryHelper.normalizePage(r.getPage());
+    int normalizedPageSize = OpenSearchNativeQueryHelper.normalizePageSize(r.getPageSize(), defaultPageSize);
     List<ProductItemResponse> items = slice.documents().stream()
         .map(productMapper::toProductItemResponse)
         .filter(Objects::nonNull)
@@ -180,24 +180,24 @@ public class ProductSearchServiceImpl implements ProductSearchService {
   private NativeQuery buildNativeQuery(
       ProductSearchRequest request,
       Pageable pageable) {
-    return ElasticsearchNativeQueryHelper.buildPagedSearchQuery(
+    return OpenSearchNativeQueryHelper.buildPagedSearchQuery(
         pageable,
         request.getSortBy(),
         false,
         null,
         null,
-        must -> ElasticsearchNativeQueryHelper.addKeywordMultiMatchMust(
+        must -> OpenSearchNativeQueryHelper.addKeywordMultiMatchMust(
             must,
             request.getKeyword(),
             TextQueryType.PhrasePrefix,
-            ElasticsearchNativeQueryHelper.productKeywordSearchFields()),
+            OpenSearchNativeQueryHelper.productKeywordSearchFields()),
         filter -> {
-          ElasticsearchNativeQueryHelper.addTermIfTextPresent(filter, "ownerId", request.getOwnerId());
-          ElasticsearchNativeQueryHelper.addCategoryIdsMatchAllFilterIfPresent(
+          OpenSearchNativeQueryHelper.addTermIfTextPresent(filter, "ownerId", request.getOwnerId());
+          OpenSearchNativeQueryHelper.addCategoryIdsMatchAllFilterIfPresent(
               filter, request.getCategoryIds());
-          ElasticsearchNativeQueryHelper.addSubCategoryIdsMatchAllFilterIfPresent(
+          OpenSearchNativeQueryHelper.addSubCategoryIdsMatchAllFilterIfPresent(
               filter, request.getSubCategoryIds());
-          ElasticsearchNativeQueryHelper.addTermIfPresent(filter, "status", request.getStatus());
+          OpenSearchNativeQueryHelper.addTermIfPresent(filter, "status", request.getStatus());
         });
   }
 
@@ -209,8 +209,8 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     }
 
     List<Query> filters = new ArrayList<>();
-    ElasticsearchNativeQueryHelper.addTermIfTextPresent(filters, "ownerId", oid);
-    Query root = ElasticsearchNativeQueryHelper.boolMustFilterQuery(List.of(), filters);
+    OpenSearchNativeQueryHelper.addTermIfTextPresent(filters, "ownerId", oid);
+    Query root = OpenSearchNativeQueryHelper.boolMustFilterQuery(List.of(), filters);
 
     NativeQuery aggregationQuery = NativeQuery.builder()
         .withMaxResults(0)
@@ -220,7 +220,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
             Aggregation.of(a -> a.terms(t -> t.field("primarySubCategoryId").size(500).minDocCount(1))))
         .build();
 
-    SearchHits<ProductDocument> hits = elasticsearchOperations.search(aggregationQuery, ProductDocument.class,
+    SearchHits<ProductDocument> hits = openSearchOperations.search(aggregationQuery, ProductDocument.class,
         PRODUCT_INDEX);
     if (!hits.hasAggregations()) {
       return List.of();
@@ -271,11 +271,11 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     return out;
   }
 
-  private static ElasticsearchSortBy normalizeOwnedProductSort(
-      ElasticsearchSortBy requested, String keyword) {
-    ElasticsearchSortBy s = requested == null ? ElasticsearchSortBy.UPDATED_AT_DESC : requested;
-    if (s == ElasticsearchSortBy.RELEVANCE && !StringUtils.hasText(keyword)) {
-      return ElasticsearchSortBy.UPDATED_AT_DESC;
+  private static OpenSearchSortBy normalizeOwnedProductSort(
+      OpenSearchSortBy requested, String keyword) {
+    OpenSearchSortBy s = requested == null ? OpenSearchSortBy.UPDATED_AT_DESC : requested;
+    if (s == OpenSearchSortBy.RELEVANCE && !StringUtils.hasText(keyword)) {
+      return OpenSearchSortBy.UPDATED_AT_DESC;
     }
     return s;
   }

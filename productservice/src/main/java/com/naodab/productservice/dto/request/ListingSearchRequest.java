@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.util.StringUtils;
 
-import com.naodab.productservice.elasticsearch.ElasticsearchSortBy;
+import com.naodab.productservice.opensearch.OpenSearchSortBy;
 import com.naodab.productservice.models.Listing.ListingStatus;
 import com.naodab.productservice.models.Listing.ListingType;
 import com.naodab.productservice.models.Product.ProductStatus;
@@ -31,7 +31,7 @@ public class ListingSearchRequest {
   Float latitude;
   Float longitude;
   Float radiusMeters;
-  ElasticsearchSortBy sortBy;
+  OpenSearchSortBy sortBy;
   ProductStatus productStatus;
   ListingType listingType;
   ListingStatus listingStatus;

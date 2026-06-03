@@ -71,7 +71,7 @@ public class ListingMapper {
         .updatedAt(productDocument.getUpdatedAt())
         .provinceCode(facility == null ? null : facility.getProvinceCode())
         .wardCode(facility == null ? null : facility.getWardCode())
-        .location(facility == null ? null : ProductMapper.toElasticsearchGeoPoint(facility.getLatitude(), facility.getLongitude()))
+        .location(facility == null ? null : ProductMapper.toOpenSearchGeoPoint(facility.getLatitude(), facility.getLongitude()))
         .build();
   }
 

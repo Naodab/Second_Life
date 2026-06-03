@@ -1,0 +1,28 @@
+# Production profile — copy to application-prod.yml or rely on Docker build (see Dockerfile).
+
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+external:
+  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS}
+
+logging:
+  level:
+    root: WARN
+    "[com.naodab.inventoryservice]": INFO
+    "[org.springframework.kafka]": WARN
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

@@ -25,6 +25,8 @@ public class ProductResponse {
 
   String description;
 
+  Integer manufactureYear;
+
   String ownerId;
 
   String thumbnailUrl;
