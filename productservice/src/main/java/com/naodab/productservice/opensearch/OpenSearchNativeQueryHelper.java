@@ -7,17 +7,17 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.opensearch.client.json.JsonData;
+import org.opensearch.client.opensearch._types.DistanceUnit;
+import org.opensearch.client.opensearch._types.FieldValue;
+import org.opensearch.client.opensearch._types.SortOptions;
+import org.opensearch.client.opensearch._types.SortOrder;
+import org.opensearch.client.opensearch._types.query_dsl.Query;
+import org.opensearch.client.opensearch._types.query_dsl.TextQueryType;
+import org.opensearch.data.client.osc.NativeQuery;
+import org.opensearch.data.client.osc.NativeQueryBuilder;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.elasticsearch.client.elc.NativeQuery;
-import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.util.StringUtils;
-
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.DistanceUnit;
-import co.elastic.clients.elasticsearch._types.SortOrder;
-import co.elastic.clients.elasticsearch._types.SortOptions;
-import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -176,11 +176,13 @@ public final class OpenSearchNativeQueryHelper {
     return Query.of(root -> root.bool(bool -> {
       if (filterMin != null) {
         bool.must(Query.of(inner -> inner.range(range -> range
-            .number(n -> n.field("maxPrice").gte(filterMin)))));
+            .field("maxPrice")
+            .gte(JsonData.of(filterMin)))));
       }
       if (filterMax != null) {
         bool.must(Query.of(inner -> inner.range(range -> range
-            .number(n -> n.field("minPrice").lte(filterMax)))));
+            .field("minPrice")
+            .lte(JsonData.of(filterMax)))));
       }
       return bool;
     }));
