@@ -1,4 +1,11 @@
 # Search: product-service dùng OpenSearch (Aiven) qua OPENSEARCH_* trong .env
+# Prod disables springdoc — healthcheck must not rely on /v3/api-docs (404 ≠ down).
+x-spring-healthcheck: &spring-healthcheck
+  interval: 15s
+  timeout: 10s
+  retries: 15
+  start_period: 300s
+
 services:
   kafka:
     image: confluentinc/cp-kafka:7.6.0
@@ -94,15 +101,12 @@ services:
         condition: service_started
       # - db
     healthcheck:
+      <<: *spring-healthcheck
       test:
         [
           "CMD-SHELL",
-          "curl -sf http://127.0.0.1:8081/api/v1/v3/api-docs -o /dev/null || exit 1",
+          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8081/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
         ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -125,15 +129,12 @@ services:
       kafka:
         condition: service_healthy
     healthcheck:
+      <<: *spring-healthcheck
       test:
         [
           "CMD-SHELL",
-          "curl -sf http://127.0.0.1:8083/api/v1/v3/api-docs -o /dev/null || exit 1",
+          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8083/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
         ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -157,15 +158,12 @@ services:
         condition: service_healthy
       # - db
     healthcheck:
+      <<: *spring-healthcheck
       test:
         [
           "CMD-SHELL",
-          "curl -sf http://127.0.0.1:8082/api/v1/v3/api-docs -o /dev/null || exit 1",
+          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8082/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
         ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -187,15 +185,12 @@ services:
       redis:
         condition: service_started
     healthcheck:
+      <<: *spring-healthcheck
       test:
         [
           "CMD-SHELL",
-          "curl -sf http://127.0.0.1:8085/api/v1/v3/api-docs -o /dev/null || exit 1",
+          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8085/api/v1/provinces); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
         ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -218,15 +213,12 @@ services:
       kafka:
         condition: service_healthy
     healthcheck:
+      <<: *spring-healthcheck
       test:
         [
           "CMD-SHELL",
-          "curl -sf http://127.0.0.1:8086/api/v1/v3/api-docs -o /dev/null || exit 1",
+          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8086/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
         ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -249,15 +241,12 @@ services:
       kafka:
         condition: service_healthy
     healthcheck:
+      <<: *spring-healthcheck
       test:
         [
           "CMD-SHELL",
-          "curl -sf http://127.0.0.1:8087/api/v1/v3/api-docs -o /dev/null || exit 1",
+          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8087/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
         ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 120s
     networks:
       - second_life_network
     labels:
@@ -284,15 +273,12 @@ services:
       location-service:
         condition: service_healthy
     healthcheck:
+      <<: *spring-healthcheck
       test:
         [
           "CMD-SHELL",
-          "curl -sf http://127.0.0.1:8088/api/v1/v3/api-docs -o /dev/null || exit 1",
+          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8088/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
         ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 120s
     networks:
       - second_life_network
     labels:
