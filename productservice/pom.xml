@@ -53,11 +53,6 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-		<!-- Query DSL types for NativeQuery (Spring Data OpenSearch 2.x reuses spring-data-elasticsearch API) -->
-		<dependency>
-			<groupId>co.elastic.clients</groupId>
-			<artifactId>elasticsearch-java</artifactId>
-		</dependency>
 		<dependency>
 			<groupId>org.opensearch.client</groupId>
 			<artifactId>opensearch-java</artifactId>

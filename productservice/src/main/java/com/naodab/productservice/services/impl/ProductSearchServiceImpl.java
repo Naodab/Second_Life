@@ -12,25 +12,23 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.opensearch.client.opensearch._types.aggregations.Aggregate;
+import org.opensearch.client.opensearch._types.aggregations.Aggregation;
+import org.opensearch.client.opensearch._types.aggregations.Buckets;
+import org.opensearch.client.opensearch._types.aggregations.StringTermsAggregate;
+import org.opensearch.client.opensearch._types.aggregations.StringTermsBucket;
+import org.opensearch.client.opensearch._types.query_dsl.Query;
+import org.opensearch.client.opensearch._types.query_dsl.TextQueryType;
+import org.opensearch.data.client.osc.NativeQuery;
+import org.opensearch.data.client.osc.OpenSearchAggregation;
+import org.opensearch.data.client.osc.OpenSearchAggregations;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
-import co.elastic.clients.elasticsearch._types.aggregations.Buckets;
-import co.elastic.clients.elasticsearch._types.aggregations.StringTermsAggregate;
-import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
-import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 
 import com.naodab.productservice.documents.ProductDocument;
 import com.naodab.productservice.dto.request.ProductSearchRequest;
@@ -225,15 +223,15 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     if (!hits.hasAggregations()) {
       return List.of();
     }
-    ElasticsearchAggregations esAggs;
+    OpenSearchAggregations osAggs;
     try {
-      esAggs = (ElasticsearchAggregations) hits.getAggregations();
+      osAggs = (OpenSearchAggregations) hits.getAggregations();
     } catch (ClassCastException ex) {
       log.warn("Unexpected aggregations type: {}", hits.getAggregations().getClass().getName());
       return List.of();
     }
 
-    Map<String, Long> counts = extractStringTermCounts(esAggs, "psc");
+    Map<String, Long> counts = extractStringTermCounts(osAggs, "psc");
 
     List<PrimarySubcategorySummaryResponse> rows = new ArrayList<>();
     for (Map.Entry<String, Long> entry : counts.entrySet()) {
@@ -280,9 +278,9 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     return s;
   }
 
-  private static Map<String, Long> extractStringTermCounts(ElasticsearchAggregations root, String aggName) {
+  private static Map<String, Long> extractStringTermCounts(OpenSearchAggregations root, String aggName) {
     Map<String, Long> map = new LinkedHashMap<>();
-    ElasticsearchAggregation wrap = root.get(aggName);
+    OpenSearchAggregation wrap = root.get(aggName);
     if (wrap == null) {
       return map;
     }
@@ -296,11 +294,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
       return map;
     }
     for (StringTermsBucket bucket : buckets.array()) {
-      FieldValue key = bucket.key();
-      if (!key.isString()) {
-        continue;
-      }
-      String s = key.stringValue();
+      String s = bucket.key();
       if (!StringUtils.hasText(s)) {
         continue;
       }
