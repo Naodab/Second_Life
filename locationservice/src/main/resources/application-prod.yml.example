@@ -1,0 +1,31 @@
+# Production profile — copy to application-prod.yml or rely on Docker build (see Dockerfile).
+
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+external:
+  cors_allowed_origins: ${CORS_ALLOWED_ORIGINS}
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+
+logging:
+  level:
+    root: WARN
+    "[com.naodab.locationservice]": INFO
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

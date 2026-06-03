@@ -15,11 +15,11 @@ import com.naodab.productservice.dto.request.ListingRecommendationRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.search.SearchHistorySnapshot;
-import com.naodab.productservice.elasticsearch.ElasticsearchSortBy;
+import com.naodab.productservice.opensearch.OpenSearchSortBy;
 import com.naodab.productservice.mapper.ListingMapper;
 import com.naodab.productservice.models.Listing;
 import com.naodab.productservice.models.Product.ProductStatus;
-import com.naodab.productservice.elasticsearch.ElasticsearchNativeQueryHelper;
+import com.naodab.productservice.opensearch.OpenSearchNativeQueryHelper;
 import com.naodab.productservice.services.ListingRecommendationService;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.SearchHistoryPersistService;
@@ -158,11 +158,11 @@ public class ListingRecommendationServiceImpl implements ListingRecommendationSe
   }
 
   private ListingSearchRequest browseNear(LocationContext ctx, int pageSize) {
-    ElasticsearchSortBy sort =
-        ElasticsearchNativeQueryHelper.hasGeoRadiusFilter(ctx.latitude, ctx.longitude, ctx.radiusMeters)
-            ? ElasticsearchSortBy.DISTANCE
-            : ElasticsearchSortBy.UPDATED_AT_DESC;
-    int ps = ElasticsearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
+    OpenSearchSortBy sort =
+        OpenSearchNativeQueryHelper.hasGeoRadiusFilter(ctx.latitude, ctx.longitude, ctx.radiusMeters)
+            ? OpenSearchSortBy.DISTANCE
+            : OpenSearchSortBy.UPDATED_AT_DESC;
+    int ps = OpenSearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
     var b =
         ListingSearchRequest.builder()
             .provinceCode(trim(ctx.provinceCode()))
@@ -179,17 +179,17 @@ public class ListingRecommendationServiceImpl implements ListingRecommendationSe
   }
 
   private ListingSearchRequest buildRequestFromSnapshot(SearchHistorySnapshot snap, LocationContext ctx, int pageSize) {
-    int ps = ElasticsearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
+    int ps = OpenSearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
 
     boolean hasKeyword = StringUtils.hasText(snap.getKeyword());
-    boolean geoOk = ElasticsearchNativeQueryHelper.hasGeoRadiusFilter(ctx.latitude, ctx.longitude, ctx.radiusMeters);
-    ElasticsearchSortBy sort;
+    boolean geoOk = OpenSearchNativeQueryHelper.hasGeoRadiusFilter(ctx.latitude, ctx.longitude, ctx.radiusMeters);
+    OpenSearchSortBy sort;
     if (hasKeyword) {
-      sort = ElasticsearchSortBy.RELEVANCE;
+      sort = OpenSearchSortBy.RELEVANCE;
     } else if (geoOk) {
-      sort = ElasticsearchSortBy.DISTANCE;
+      sort = OpenSearchSortBy.DISTANCE;
     } else {
-      sort = ElasticsearchSortBy.UPDATED_AT_DESC;
+      sort = OpenSearchSortBy.UPDATED_AT_DESC;
     }
 
     String pc =

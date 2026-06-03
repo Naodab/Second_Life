@@ -2,7 +2,7 @@ package com.naodab.productservice.dto.request;
 
 import java.util.List;
 
-import com.naodab.productservice.elasticsearch.ElasticsearchSortBy;
+import com.naodab.productservice.opensearch.OpenSearchSortBy;
 import com.naodab.productservice.models.Product.ProductStatus;
 
 import lombok.AllArgsConstructor;
@@ -23,7 +23,7 @@ public class ProductSearchRequest {
   String ownerId;
   List<String> categoryIds;
   List<String> subCategoryIds;
-  ElasticsearchSortBy sortBy;
+  OpenSearchSortBy sortBy;
   ProductStatus status;
   Integer page;
   Integer pageSize;

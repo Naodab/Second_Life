@@ -36,6 +36,27 @@ attributes:
       - id: val-yellow
         value: "Yellow"
         code: "YELLOW"
+      - id: val-green
+        value: "Green"
+        code: "GREEN"
+      - id: val-gray
+        value: "Gray"
+        code: "GRAY"
+      - id: val-pink
+        value: "Pink"
+        code: "PINK"
+      - id: val-silver
+        value: "Silver"
+        code: "SILVER"
+      - id: val-gold
+        value: "Gold"
+        code: "GOLD"
+      - id: val-purple
+        value: "Purple"
+        code: "PURPLE"
+      - id: val-orange
+        value: "Orange"
+        code: "ORANGE"
 
   - id: attr-material
     name: "Material"
@@ -55,6 +76,12 @@ attributes:
       - id: val-fabric
         value: "Fabric"
         code: "FABRIC"
+      - id: val-glass
+        value: "Glass"
+        code: "GLASS"
+      - id: val-rubber
+        value: "Rubber"
+        code: "RUBBER"
 
   - id: attr-usage-type
     name: "Usage Type"
@@ -81,22 +108,191 @@ attributes:
       - id: val-large
         value: "Large"
         code: "L"
+      - id: val-xlarge
+        value: "X-Large"
+        code: "XL"
+      - id: val-xxlarge
+        value: "XX-Large"
+        code: "XXL"
+      - id: val-free-size
+        value: "Free Size"
+        code: "FREE"
+
+  - id: attr-capacity
+    name: "Capacity"
+    attributeValues:
+      - id: val-cap-16gb
+        value: "16 GB"
+        code: "16GB"
+      - id: val-cap-32gb
+        value: "32 GB"
+        code: "32GB"
+      - id: val-cap-64gb
+        value: "64 GB"
+        code: "64GB"
+      - id: val-cap-128gb
+        value: "128 GB"
+        code: "128GB"
+      - id: val-cap-256gb
+        value: "256 GB"
+        code: "256GB"
+      - id: val-cap-512gb
+        value: "512 GB"
+        code: "512GB"
+      - id: val-cap-1tb
+        value: "1 TB"
+        code: "1TB"
+      - id: val-cap-na
+        value: "Không áp dụng"
+        code: "NA"
 
   - id: attr-brand
     name: "Brand"
     attributeValues:
-      - id: val-ikea
-        value: "IKEA"
-        code: "IKEA"
-      - id: val-sony
-        value: "Sony"
-        code: "SONY"
-      - id: val-samsung
-        value: "Samsung"
-        code: "SAMSUNG"
       - id: val-apple
         value: "Apple"
         code: "APPLE"
+      - id: val-samsung
+        value: "Samsung"
+        code: "SAMSUNG"
+      - id: val-xiaomi
+        value: "Xiaomi"
+        code: "XIAOMI"
+      - id: val-oppo
+        value: "Oppo"
+        code: "OPPO"
+      - id: val-vivo
+        value: "Vivo"
+        code: "VIVO"
+      - id: val-huawei
+        value: "Huawei"
+        code: "HUAWEI"
+      - id: val-nokia
+        value: "Nokia"
+        code: "NOKIA"
+      - id: val-sony
+        value: "Sony"
+        code: "SONY"
+      - id: val-asus
+        value: "Asus"
+        code: "ASUS"
+      - id: val-dell
+        value: "Dell"
+        code: "DELL"
+      - id: val-hp
+        value: "HP"
+        code: "HP"
+      - id: val-lenovo
+        value: "Lenovo"
+        code: "LENOVO"
+      - id: val-acer
+        value: "Acer"
+        code: "ACER"
+      - id: val-msi
+        value: "MSI"
+        code: "MSI"
+      - id: val-canon
+        value: "Canon"
+        code: "CANON"
+      - id: val-nikon
+        value: "Nikon"
+        code: "NIKON"
+      - id: val-fujifilm
+        value: "Fujifilm"
+        code: "FUJIFILM"
+      - id: val-panasonic
+        value: "Panasonic"
+        code: "PANASONIC"
+      - id: val-lg
+        value: "LG"
+        code: "LG"
+      - id: val-ikea
+        value: "IKEA"
+        code: "IKEA"
       - id: val-other
         value: "Other"
         code: "OTHER"
+
+  - id: attr-origin
+    name: "Origin"
+    attributeValues:
+      - id: val-origin-unknown
+        value: "Không rõ"
+        code: "UNKNOWN"
+      - id: val-origin-official
+        value: "Chính hãng"
+        code: "OFFICIAL"
+      - id: val-origin-official-vn
+        value: "Chính hãng VN"
+        code: "OFFICIAL_VN"
+      - id: val-origin-imported
+        value: "Nhập khẩu"
+        code: "IMPORTED"
+      - id: val-origin-portable
+        value: "Xách tay"
+        code: "PORTABLE"
+      - id: val-origin-assembled
+        value: "Lắp ráp"
+        code: "ASSEMBLED"
+
+  - id: attr-warranty
+    name: "Warranty"
+    attributeValues:
+      - id: val-warranty-none
+        value: "Không bảo hành"
+        code: "NO_WARRANTY"
+      - id: val-warranty-active
+        value: "Còn bảo hành"
+        code: "ACTIVE"
+      - id: val-warranty-expired
+        value: "Hết bảo hành"
+        code: "EXPIRED"
+
+  - id: attr-region
+    name: "Region"
+    attributeValues:
+      - id: val-region-hcm
+        value: "Tp Hồ Chí Minh"
+        code: "HCM"
+      - id: val-region-hn
+        value: "Hà Nội"
+        code: "HN"
+      - id: val-region-bd
+        value: "Bình Dương"
+        code: "BD"
+      - id: val-region-dn
+        value: "Đà Nẵng"
+        code: "DN"
+      - id: val-region-ct
+        value: "Cần Thơ"
+        code: "CT"
+      - id: val-region-hp
+        value: "Hải Phòng"
+        code: "HP"
+      - id: val-region-dong-nai
+        value: "Đồng Nai"
+        code: "DONG_NAI"
+      - id: val-region-lam-dong
+        value: "Lâm Đồng"
+        code: "LAM_DONG"
+      - id: val-region-dak-lak
+        value: "Đắk Lắk"
+        code: "DAK_LAK"
+      - id: val-region-tien-giang
+        value: "Tiền Giang"
+        code: "TIEN_GIANG"
+      - id: val-region-an-giang
+        value: "An Giang"
+        code: "AN_GIANG"
+      - id: val-region-hue
+        value: "Thừa Thiên Huế"
+        code: "HUE"
+      - id: val-region-br-vt
+        value: "Bà Rịa - Vũng Tàu"
+        code: "BR_VT"
+      - id: val-region-dong-thap
+        value: "Đồng Tháp"
+        code: "DONG_THAP"
+      - id: val-region-soc-trang
+        value: "Sóc Trăng"
+        code: "SOC_TRANG"

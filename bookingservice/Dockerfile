@@ -26,6 +26,9 @@ COPY commonjpa commonjpa
 COPY commonservice commonservice
 COPY bookingservice bookingservice
 
+RUN cp bookingservice/src/main/resources/application-prod.yml.example \
+    bookingservice/src/main/resources/application-prod.yml
+
 # build
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -pl bookingservice -am clean package -DskipTests -B

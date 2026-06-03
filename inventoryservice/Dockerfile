@@ -26,6 +26,9 @@ COPY commonjpa commonjpa
 COPY commonservice commonservice
 COPY inventoryservice inventoryservice
 
+RUN cp inventoryservice/src/main/resources/application-prod.yml.example \
+    inventoryservice/src/main/resources/application-prod.yml
+
 # build
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -pl inventoryservice -am clean package -DskipTests -B

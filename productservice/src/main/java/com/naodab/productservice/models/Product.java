@@ -47,6 +47,8 @@ public class Product extends BaseEntity {
   @Column(length = 8096)
   String description;
 
+  Integer manufactureYear;
+
   @Column(name = "owner_id", nullable = false)
   String ownerId;
 

@@ -26,6 +26,9 @@ COPY commonjpa commonjpa
 COPY commonservice commonservice
 COPY productservice productservice
 
+RUN cp productservice/src/main/resources/application-prod.yml.example \
+    productservice/src/main/resources/application-prod.yml
+
 # build
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -pl productservice -am clean package -DskipTests -B

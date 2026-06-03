@@ -21,6 +21,8 @@ public abstract class ProductUpsertRequest {
   @Size(max = 8096, message = "DESCRIPTION_INVALID")
   String description;
 
+  Integer manufactureYear;
+
   @NotEmpty(message = "REQUIRED_FIELD")
   List<String> subCategoryIds;
 

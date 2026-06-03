@@ -1,0 +1,97 @@
+# Production overlay — https://secondlifeonline.xyz
+# Traefik :80/:443 only on host. UI via static-web-server. Kafka in-network only. No MySQL container.
+
+services:
+  traefik:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.prod.yml:/etc/traefik/dynamic.yml:ro
+      - traefik-letsencrypt:/letsencrypt
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-admin@secondlifeonline.xyz}
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      mail-service:
+        condition: service_healthy
+      profile-service:
+        condition: service_healthy
+      location-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      second-life-ui:
+        condition: service_started
+
+  second-life-ui:
+    image: second-life-ui:latest
+    container_name: second-life-ui
+    restart: unless-stopped
+    build:
+      context: ./ui
+      dockerfile: artifacts/second-life/Dockerfile
+      args:
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-}
+        VITE_CLOUDINARY_CLOUD_NAME: ${VITE_CLOUDINARY_CLOUD_NAME:-}
+        VITE_CLOUDINARY_UPLOAD_PRESET: ${VITE_CLOUDINARY_UPLOAD_PRESET:-}
+        VITE_CLOUDINARY_MAX_VIDEO_BYTES: ${VITE_CLOUDINARY_MAX_VIDEO_BYTES:-}
+        BASE_PATH: ${UI_BASE_PATH:-/}
+    networks:
+      - second_life_network
+
+  auth-service:
+    ports: []
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+  mail-service:
+    ports: []
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+  profile-service:
+    ports: []
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+  location-service:
+    ports: []
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+  product-service:
+    ports: []
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+  inventory-service:
+    ports: []
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+  booking-service:
+    ports: []
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+  kafka:
+    ports: []
+    restart: unless-stopped
+
+  redis:
+    ports: []
+
+volumes:
+  traefik-letsencrypt:

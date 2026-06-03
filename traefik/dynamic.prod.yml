@@ -1,0 +1,181 @@
+# Production: secondlifeonline.xyz — Traefik (HTTPS) → API services + second-life-ui (static).
+# Không cần nginx trên VPS; chỉ Traefik listen 80/443.
+
+http:
+  middlewares:
+    gateway-jwt:
+      forwardAuth:
+        address: "http://auth-service:8081/api/v1/auth/forward-auth"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-Profile-Id"
+          - "X-User-Email"
+          - "role"
+        authRequestHeaders:
+          - "Authorization"
+
+  routers:
+    auth-api-options:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`) || PathPrefix(`/oauth2`) || PathPrefix(`/login/oauth2`)) && Method(`OPTIONS`)"
+      service: auth-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+    auth-api:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`) || PathPrefix(`/oauth2`) || PathPrefix(`/login/oauth2`))"
+      service: auth-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 1
+    profile-api-options:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/profiles`) && Method(`OPTIONS`)"
+      service: profile-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+    profile-api:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/profiles`)"
+      service: profile-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - gateway-jwt
+      priority: 1
+    mail-api-options:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/test`) && Method(`OPTIONS`)"
+      service: mail-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+    mail-api:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/test`)"
+      service: mail-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - gateway-jwt
+      priority: 1
+    location-api-options:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`)) && Method(`OPTIONS`)"
+      service: location-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+    location-api:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`))"
+      service: location-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 1
+    product-api-options:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`) || PathPrefix(`/api/v1/attributes`) || PathPrefix(`/api/v1/products`) || PathPrefix(`/api/v1/listings`) || PathPrefix(`/api/v1/ai`)) && Method(`OPTIONS`)"
+      service: product-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+    product-api:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`) || PathPrefix(`/api/v1/attributes`) || PathPrefix(`/api/v1/products`) || PathPrefix(`/api/v1/listings`) || PathPrefix(`/api/v1/ai`))"
+      service: product-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - gateway-jwt
+      priority: 1
+    inventory-api-options:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/listing-variants`) && Method(`OPTIONS`)"
+      service: inventory-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+    inventory-api:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/listing-variants`)"
+      service: inventory-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - gateway-jwt
+      priority: 50
+    booking-api-options:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`)) && Method(`OPTIONS`)"
+      service: booking-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+    booking-api:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`))"
+      service: booking-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - gateway-jwt
+      priority: 50
+    ui-spa:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/`)"
+      service: second-life-ui
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 0
+
+  services:
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:8081"
+    profile-service:
+      loadBalancer:
+        servers:
+          - url: "http://profile-service:8082"
+    mail-service:
+      loadBalancer:
+        servers:
+          - url: "http://mail-service:8083"
+    location-service:
+      loadBalancer:
+        servers:
+          - url: "http://location-service:8085"
+    product-service:
+      loadBalancer:
+        servers:
+          - url: "http://product-service:8086"
+    inventory-service:
+      loadBalancer:
+        servers:
+          - url: "http://inventory-service:8087"
+    booking-service:
+      loadBalancer:
+        servers:
+          - url: "http://booking-service:8088"
+    second-life-ui:
+      loadBalancer:
+        servers:
+          - url: "http://second-life-ui:80"

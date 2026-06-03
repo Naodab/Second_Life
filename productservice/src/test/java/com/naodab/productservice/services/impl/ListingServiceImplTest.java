@@ -45,7 +45,7 @@ import com.naodab.productservice.repositories.ListingRepository;
 import com.naodab.productservice.repositories.ListingVariantRepository;
 import com.naodab.productservice.repositories.ProductRepository;
 import com.naodab.productservice.repositories.ProductVariantRepository;
-import com.naodab.productservice.elasticsearch.ElasticsearchSortBy;
+import com.naodab.productservice.opensearch.OpenSearchSortBy;
 import com.naodab.productservice.kafka.CreateInventoryItemsEventProducer;
 import com.naodab.productservice.services.ListingSearchService;
 
@@ -275,7 +275,7 @@ class ListingServiceImplTest {
     listingService.listListingItemsForFacility("prof", "f1", 0, 10, "shoes ", null);
 
     verify(listingSearchService).searchListingsPaged(cap.capture());
-    assertThat(cap.getValue().getSortBy()).isEqualTo(ElasticsearchSortBy.RELEVANCE);
+    assertThat(cap.getValue().getSortBy()).isEqualTo(OpenSearchSortBy.RELEVANCE);
     assertThat(cap.getValue().getKeyword()).isEqualTo("shoes");
   }
 

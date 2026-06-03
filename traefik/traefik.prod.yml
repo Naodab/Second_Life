@@ -1,0 +1,37 @@
+# Traefik production — cổng 80/443 duy nhất trên VPS (không cài nginx trên host).
+# UI + API qua file provider (dynamic.prod.yml). TLS: Let's Encrypt TLS-ALPN-01.
+
+global:
+  checkNewVersion: false
+
+log:
+  level: WARN
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+
+api:
+  dashboard: false
+  insecure: false
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "${ACME_EMAIL}"
+      storage: /letsencrypt/acme.json
+      # TLS-ALPN-01: Traefik tự xử lý trên port 443, không cần agent ngoài
+      tlsChallenge: {}
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true

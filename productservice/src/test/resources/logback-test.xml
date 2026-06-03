@@ -6,5 +6,5 @@
 
   <logger name="com.naodab.productservice.services.impl.ListingSearchServiceImpl" level="OFF"/>
 
-  <logger name="com.naodab.productservice.elasticsearch.ElasticsearchNativeQueryHelper" level="WARN"/>
+  <logger name="com.naodab.productservice.opensearch.OpenSearchNativeQueryHelper" level="WARN"/>
 </configuration>

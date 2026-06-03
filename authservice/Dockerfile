@@ -26,6 +26,10 @@ COPY commonjpa commonjpa
 COPY commonservice commonservice
 COPY authservice authservice
 
+# production profile config (no secrets; secrets via env at runtime)
+RUN cp authservice/src/main/resources/application-prod.yml.example \
+    authservice/src/main/resources/application-prod.yml
+
 # build
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -pl authservice -am clean package -DskipTests -B

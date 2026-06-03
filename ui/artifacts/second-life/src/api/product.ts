@@ -85,6 +85,7 @@ export async function getFacilityPrimarySubcategories(
 export type ProductCreateBody = {
   name: string;
   description?: string;
+  manufactureYear?: number;
   subCategoryIds: string[];
   primarySubCategoryId: string;
   attributeIds: string[];
@@ -124,6 +125,7 @@ export type OwnedProductDetailResponse = {
   id: string;
   name: string;
   description?: string | null;
+  manufactureYear?: number | null;
   thumbnailUrl?: string | null;
   status?: ProductStatus;
   ownerId?: string | null;
@@ -148,6 +150,7 @@ export type ProductVariantUpdatePayload = {
 export type ProductUpdateBody = {
   name: string;
   description?: string | null;
+  manufactureYear?: number;
   subCategoryIds: string[];
   primarySubCategoryId: string;
   attributeIds: string[];

@@ -26,6 +26,9 @@ COPY commonjpa commonjpa
 COPY commonservice commonservice
 COPY profileservice profileservice
 
+RUN cp profileservice/src/main/resources/application-prod.yml.example \
+    profileservice/src/main/resources/application-prod.yml
+
 # build
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -pl profileservice -am clean package -DskipTests -B

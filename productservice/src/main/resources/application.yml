@@ -24,8 +24,10 @@ spring:
       write-dates-as-timestamps: false
     deserialization:
       fail-on-unknown-properties: false
-  elasticsearch:
-    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+  opensearch:
+    uris: ${OPENSEARCH_URIS:http://localhost:9200}
+    username: ${OPENSEARCH_USERNAME:}
+    password: ${OPENSEARCH_PASSWORD:}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -54,9 +56,8 @@ external:
 
 logging:
   level:
-    org.springframework.data.elasticsearch.core: DEBUG
-    org.springframework.data.elasticsearch.client.WIRE: TRACE
-    org.elasticsearch.client: DEBUG
+    root: INFO
+    "[org.opensearch.client]": WARN
 
 default:
   page-size: 20

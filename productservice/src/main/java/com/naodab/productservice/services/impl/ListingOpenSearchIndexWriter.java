@@ -21,14 +21,14 @@ import lombok.experimental.FieldDefaults;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public class ListingElasticsearchIndexWriter {
+public class ListingOpenSearchIndexWriter {
 
   static final IndexCoordinates LISTING_INDEX = IndexCoordinates.of("listings");
 
   ListingRepository listingRepository;
   ListingVariantRepository listingVariantRepository;
   ListingMapper listingMapper;
-  ElasticsearchOperations elasticsearchOperations;
+  ElasticsearchOperations openSearchOperations;
 
   @Transactional(readOnly = true)
   public void writeListingDocumentById(String listingId) {
@@ -43,7 +43,7 @@ public class ListingElasticsearchIndexWriter {
 
     Listing listing = opt.get();
     if (listing.getProduct() != null && listing.getProduct().getDeletedAt() != null) {
-      elasticsearchOperations.delete(listingId.trim(), LISTING_INDEX);
+      openSearchOperations.delete(listingId.trim(), LISTING_INDEX);
       return;
     }
 
@@ -52,7 +52,7 @@ public class ListingElasticsearchIndexWriter {
     java.util.List<ListingVariant> listingVariants = listingVariantRepository.findByListing_Id(listing.getId());
     var doc = listingMapper.toListingDocument(listing, listingVariants);
     if (doc != null && doc.getId() != null) {
-      elasticsearchOperations.save(doc, LISTING_INDEX);
+      openSearchOperations.save(doc, LISTING_INDEX);
     }
   }
 }

@@ -1,6 +1,6 @@
 # productservice
 
-Catalog sản phẩm (`Product`, variants, attributes), cơ sở/kho (`Facility`), tin đăng (`Listing`) gắn theo cơ sở, giá variant theo listing. `Product` thuộc chủ sở hữu (`owner_id`) thay vì gắn trực tiếp vào `Facility`. Tích hợp Elasticsearch cho search; persistence chính trên MySQL.
+Catalog sản phẩm (`Product`, variants, attributes), cơ sở/kho (`Facility`), tin đăng (`Listing`) gắn theo cơ sở, giá variant theo listing. `Product` thuộc chủ sở hữu (`owner_id`) thay vì gắn trực tiếp vào `Facility`. Tích hợp **OpenSearch** (Aiven) cho search; persistence chính trên MySQL.
 
 ## Công nghệ
 
@@ -9,7 +9,7 @@ Catalog sản phẩm (`Product`, variants, attributes), cơ sở/kho (`Facility`
 | Java | 21 |
 | Spring Boot | Web, Validation, Data JPA |
 | MySQL | |
-| Elasticsearch | Spring Data Elasticsearch |
+| OpenSearch | Spring Data OpenSearch (`spring-data-opensearch-starter`) + `opensearch-java` |
 | Jackson YAML | |
 | OpenAPI | springdoc |
 | Lombok | |

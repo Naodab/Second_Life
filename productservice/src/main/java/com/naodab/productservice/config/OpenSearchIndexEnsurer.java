@@ -15,9 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ElasticsearchIndexEnsurer implements ApplicationListener<ApplicationReadyEvent> {
+public class OpenSearchIndexEnsurer implements ApplicationListener<ApplicationReadyEvent> {
 
-  private final ElasticsearchOperations elasticsearchOperations;
+  private final ElasticsearchOperations openSearchOperations;
 
   @Override
   public void onApplicationEvent(@NonNull ApplicationReadyEvent event) {
@@ -27,15 +27,15 @@ public class ElasticsearchIndexEnsurer implements ApplicationListener<Applicatio
 
   private void ensureIndex(Class<?> documentClass) {
     try {
-      var indexOps = elasticsearchOperations.indexOps(documentClass);
+      var indexOps = openSearchOperations.indexOps(documentClass);
       if (indexOps.exists()) {
-        log.debug("Elasticsearch index already exists for {}", documentClass.getSimpleName());
+        log.debug("OpenSearch index already exists for {}", documentClass.getSimpleName());
         return;
       }
       indexOps.createWithMapping();
-      log.info("Created Elasticsearch index with explicit mapping for {}", documentClass.getSimpleName());
+      log.info("Created OpenSearch index with explicit mapping for {}", documentClass.getSimpleName());
     } catch (RuntimeException e) {
-      log.error("Could not ensure Elasticsearch index for {}", documentClass.getSimpleName(), e);
+      log.error("Could not ensure OpenSearch index for {}", documentClass.getSimpleName(), e);
     }
   }
 }

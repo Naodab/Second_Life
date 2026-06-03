@@ -19,7 +19,7 @@ import org.springframework.util.StringUtils;
 import com.naodab.productservice.documents.ListingDocument;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequestNormalizer;
-import com.naodab.productservice.elasticsearch.ElasticsearchNativeQueryHelper;
+import com.naodab.productservice.opensearch.OpenSearchNativeQueryHelper;
 import com.naodab.productservice.models.Listing;
 import com.naodab.productservice.repositories.ListingRepository;
 import com.naodab.productservice.services.ListingSearchService;
@@ -36,8 +36,8 @@ import lombok.experimental.NonFinal;
 public class ListingSearchServiceImpl implements ListingSearchService {
   static final IndexCoordinates LISTING_INDEX = IndexCoordinates.of("listings");
 
-  ElasticsearchOperations elasticsearchOperations;
-  ListingElasticsearchIndexWriter listingElasticsearchIndexWriter;
+  ElasticsearchOperations openSearchOperations;
+  ListingOpenSearchIndexWriter listingOpenSearchIndexWriter;
   ListingRepository listingRepository;
 
   @NonFinal
@@ -50,9 +50,9 @@ public class ListingSearchServiceImpl implements ListingSearchService {
       return;
     }
     try {
-      listingElasticsearchIndexWriter.writeListingDocumentById(listing.getId().trim());
+      listingOpenSearchIndexWriter.writeListingDocumentById(listing.getId().trim());
     } catch (Exception e) {
-      log.error("Elasticsearch sync failed for listing id={}", listing.getId(), e);
+      log.error("OpenSearch sync failed for listing id={}", listing.getId(), e);
     }
   }
 
@@ -64,22 +64,22 @@ public class ListingSearchServiceImpl implements ListingSearchService {
     Pageable pageable = PageRequest.of(0, batchSize);
     Page<String> idPage;
     do {
-      idPage = listingRepository.findIdsForElasticsearchReindex(pageable);
+      idPage = listingRepository.findIdsForOpenSearchReindex(pageable);
       List<String> ids = idPage.getContent();
       if (ids.isEmpty()) {
         break;
       }
       for (String id : ids) {
         try {
-          listingElasticsearchIndexWriter.writeListingDocumentById(id);
+          listingOpenSearchIndexWriter.writeListingDocumentById(id);
           total++;
         } catch (Exception e) {
-          log.error("Elasticsearch listing reindex failed for id={}", id, e);
+          log.error("OpenSearch listing reindex failed for id={}", id, e);
         }
       }
       pageable = idPage.nextPageable();
     } while (idPage.hasNext());
-    log.info("Elasticsearch listings reindex finished: {} documents written", total);
+    log.info("OpenSearch listings reindex finished: {} documents written", total);
     return total;
   }
 
@@ -90,9 +90,9 @@ public class ListingSearchServiceImpl implements ListingSearchService {
     }
     for (String id : listingRepository.findIdsByProductId(productId.trim())) {
       try {
-        listingElasticsearchIndexWriter.writeListingDocumentById(id);
+        listingOpenSearchIndexWriter.writeListingDocumentById(id);
       } catch (Exception e) {
-        log.error("Elasticsearch reindex failed for listing id={} productId={}", id, productId, e);
+        log.error("OpenSearch reindex failed for listing id={} productId={}", id, productId, e);
       }
     }
   }
@@ -106,7 +106,7 @@ public class ListingSearchServiceImpl implements ListingSearchService {
       try {
         delete(id);
       } catch (Exception e) {
-        log.error("Elasticsearch delete listing index failed id={} productId={}", id, productId, e);
+        log.error("OpenSearch delete listing index failed id={} productId={}", id, productId, e);
       }
     }
   }
@@ -117,7 +117,7 @@ public class ListingSearchServiceImpl implements ListingSearchService {
       return;
     }
 
-    elasticsearchOperations.delete(listingId.trim(), LISTING_INDEX);
+    openSearchOperations.delete(listingId.trim(), LISTING_INDEX);
   }
 
   @Override
@@ -130,16 +130,16 @@ public class ListingSearchServiceImpl implements ListingSearchService {
       for (String id : idPage.getContent()) {
         if (StringUtils.hasText(id)) {
           try {
-            elasticsearchOperations.delete(id.trim(), LISTING_INDEX);
+            openSearchOperations.delete(id.trim(), LISTING_INDEX);
             removed++;
           } catch (Exception e) {
-            log.warn("Elasticsearch delete listing id={} failed: {}", id, e.getMessage());
+            log.warn("OpenSearch delete listing id={} failed: {}", id, e.getMessage());
           }
         }
       }
       pageable = idPage.nextPageable();
     } while (idPage.hasNext());
-    log.info("Removed {} listing document(s) from Elasticsearch index", removed);
+    log.info("Removed {} listing document(s) from OpenSearch index", removed);
     return removed;
   }
 
@@ -147,16 +147,16 @@ public class ListingSearchServiceImpl implements ListingSearchService {
   public ListingDocumentPage searchListingsPaged(ListingSearchRequest request) {
     ListingSearchRequest safeRequest = request == null ? ListingSearchRequest.builder().build() : request;
     ListingSearchRequestNormalizer.normalizeCategoryScope(safeRequest);
-    int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(safeRequest.getPage());
-    int normalizedPageSize = ElasticsearchNativeQueryHelper.normalizePageSize(safeRequest.getPageSize(),
+    int normalizedPage = OpenSearchNativeQueryHelper.normalizePage(safeRequest.getPage());
+    int normalizedPageSize = OpenSearchNativeQueryHelper.normalizePageSize(safeRequest.getPageSize(),
         defaultPageSize);
-    boolean geoRadiusFilterEnabled = ElasticsearchNativeQueryHelper.hasGeoRadiusFilter(safeRequest.getLatitude(),
+    boolean geoRadiusFilterEnabled = OpenSearchNativeQueryHelper.hasGeoRadiusFilter(safeRequest.getLatitude(),
         safeRequest.getLongitude(),
         safeRequest.getRadiusMeters());
     Pageable pageable = PageRequest.of(normalizedPage, normalizedPageSize);
     NativeQuery query = buildNativeQuery(safeRequest, pageable, geoRadiusFilterEnabled);
 
-    SearchHits<ListingDocument> hits = elasticsearchOperations.search(query, ListingDocument.class, LISTING_INDEX);
+    SearchHits<ListingDocument> hits = openSearchOperations.search(query, ListingDocument.class, LISTING_INDEX);
     List<ListingDocument> results = new ArrayList<>();
     for (SearchHit<ListingDocument> hit : hits) {
       results.add(hit.getContent());
@@ -177,36 +177,36 @@ public class ListingSearchServiceImpl implements ListingSearchService {
     float lon = geoRadiusFilterEnabled ? request.getLongitude() : 0f;
     float radiusMeters = geoRadiusFilterEnabled ? request.getRadiusMeters() : 0f;
 
-    return ElasticsearchNativeQueryHelper.buildPagedSearchQuery(
+    return OpenSearchNativeQueryHelper.buildPagedSearchQuery(
         pageable,
         request.getSortBy(),
         geoRadiusFilterEnabled,
         request.getLatitude(),
         request.getLongitude(),
-        must -> ElasticsearchNativeQueryHelper.addKeywordMultiMatchMust(
+        must -> OpenSearchNativeQueryHelper.addKeywordMultiMatchMust(
             must,
             request.getKeyword(),
-            ElasticsearchNativeQueryHelper.listingKeywordSearchFields()),
+            OpenSearchNativeQueryHelper.listingKeywordSearchFields()),
         filter -> {
-          ElasticsearchNativeQueryHelper.addStandardLocationFilters(
+          OpenSearchNativeQueryHelper.addStandardLocationFilters(
               filter, request.getFacilityId(), request.getProvinceCode(), request.getWardCode());
-          ElasticsearchNativeQueryHelper.addTermIfTextPresent(filter, "productId", request.getProductId());
+          OpenSearchNativeQueryHelper.addTermIfTextPresent(filter, "productId", request.getProductId());
           if (StringUtils.hasText(request.getSubCategoryId())) {
-            ElasticsearchNativeQueryHelper.addSubCategoryIdsMatchAllFilterIfPresent(
+            OpenSearchNativeQueryHelper.addSubCategoryIdsMatchAllFilterIfPresent(
                 filter, List.of(request.getSubCategoryId().trim()));
           } else if (StringUtils.hasText(request.getCategoryId())) {
-            ElasticsearchNativeQueryHelper.addCategoryIdsMatchAllFilterIfPresent(
+            OpenSearchNativeQueryHelper.addCategoryIdsMatchAllFilterIfPresent(
                 filter, List.of(request.getCategoryId().trim()));
           }
-          ElasticsearchNativeQueryHelper.addTermIfPresent(filter, "status", request.getProductStatus());
-          ElasticsearchNativeQueryHelper.addTermIfPresent(filter, "listingType", request.getListingType());
-          ElasticsearchNativeQueryHelper.addTermIfPresent(filter, "listingStatus", request.getListingStatus());
+          OpenSearchNativeQueryHelper.addTermIfPresent(filter, "status", request.getProductStatus());
+          OpenSearchNativeQueryHelper.addTermIfPresent(filter, "listingType", request.getListingType());
+          OpenSearchNativeQueryHelper.addTermIfPresent(filter, "listingStatus", request.getListingStatus());
           Double priceMin = request.getPriceMin();
           Double priceMax = request.getPriceMax();
           if (priceMin != null || priceMax != null) {
-            filter.add(ElasticsearchNativeQueryHelper.overlapPriceRangeQuery(priceMin, priceMax));
+            filter.add(OpenSearchNativeQueryHelper.overlapPriceRangeQuery(priceMin, priceMax));
           }
-          ElasticsearchNativeQueryHelper.addGeoDistanceFilterIfEnabled(
+          OpenSearchNativeQueryHelper.addGeoDistanceFilterIfEnabled(
               filter, geoRadiusFilterEnabled, lat, lon, radiusMeters);
         });
   }

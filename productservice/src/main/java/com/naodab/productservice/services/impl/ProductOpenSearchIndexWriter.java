@@ -17,13 +17,13 @@ import lombok.experimental.FieldDefaults;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public class ProductElasticsearchIndexWriter {
+public class ProductOpenSearchIndexWriter {
 
   static final IndexCoordinates PRODUCT_INDEX = IndexCoordinates.of("products");
 
   ProductRepository productRepository;
   ProductMapper productMapper;
-  ElasticsearchOperations elasticsearchOperations;
+  ElasticsearchOperations openSearchOperations;
 
   @Transactional(readOnly = true)
   public void writeProductDocumentById(String productId) {
@@ -40,7 +40,7 @@ public class ProductElasticsearchIndexWriter {
 
     var doc = productMapper.toProductDocument(product);
     if (doc != null && doc.getId() != null) {
-      elasticsearchOperations.save(doc, PRODUCT_INDEX);
+      openSearchOperations.save(doc, PRODUCT_INDEX);
     }
   }
 }

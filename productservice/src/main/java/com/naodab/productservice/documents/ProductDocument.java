@@ -50,6 +50,9 @@ public class ProductDocument {
   @Field(type = FieldType.Text, analyzer = "standard")
   String description;
 
+  @Field(type = FieldType.Integer)
+  Integer manufactureYear;
+
   @Field(type = FieldType.Keyword)
   String thumbnailUrl;
 

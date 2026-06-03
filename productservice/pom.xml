@@ -43,8 +43,25 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+			<groupId>org.opensearch.client</groupId>
+			<artifactId>spring-data-opensearch-starter</artifactId>
+			<version>${opensearch.spring.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.opensearch.client</groupId>
+					<artifactId>opensearch-rest-high-level-client</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- Query DSL types for NativeQuery (Spring Data OpenSearch 2.x reuses spring-data-elasticsearch API) -->
+		<dependency>
+			<groupId>co.elastic.clients</groupId>
+			<artifactId>elasticsearch-java</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.opensearch.client</groupId>
+			<artifactId>opensearch-java</artifactId>
+			<version>${opensearch-java.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

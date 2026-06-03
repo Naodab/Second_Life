@@ -14,6 +14,7 @@ export interface PendingProduct {
 export interface AddProductSubmitPayload {
   name: string;
   description: string;
+  manufactureYear?: number;
   facilityId: string;
   subCategoryIds: string[];
   primarySubCategoryId: string;

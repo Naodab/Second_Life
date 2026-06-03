@@ -218,6 +218,7 @@ export default function Listings() {
       const created = await createProduct({
         name: data.name.trim(),
         description: data.description.trim() || undefined,
+        manufactureYear: data.manufactureYear,
         subCategoryIds: data.subCategoryIds,
         primarySubCategoryId: data.primarySubCategoryId,
         attributeIds: data.attributeIds,

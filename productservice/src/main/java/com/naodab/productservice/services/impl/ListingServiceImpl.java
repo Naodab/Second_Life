@@ -34,7 +34,7 @@ import com.naodab.productservice.mapper.ListingMapper;
 import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Listing;
 import com.naodab.productservice.models.ListingVariant;
-import com.naodab.productservice.elasticsearch.ElasticsearchSortBy;
+import com.naodab.productservice.opensearch.OpenSearchSortBy;
 import com.naodab.productservice.models.Product;
 import com.naodab.productservice.models.Product.ProductStatus;
 import com.naodab.productservice.models.ProductVariant;
@@ -43,7 +43,7 @@ import com.naodab.productservice.repositories.FacilityRepository;
 import com.naodab.productservice.repositories.ListingVariantRepository;
 import com.naodab.productservice.repositories.ProductRepository;
 import com.naodab.productservice.repositories.ProductVariantRepository;
-import com.naodab.productservice.elasticsearch.ElasticsearchNativeQueryHelper;
+import com.naodab.productservice.opensearch.OpenSearchNativeQueryHelper;
 import com.naodab.productservice.kafka.CreateInventoryItemsEventProducer;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
@@ -218,19 +218,19 @@ public class ListingServiceImpl implements ListingService {
     if (r.getProductStatus() == null) {
       r.setProductStatus(ProductStatus.PUBLISHED);
     }
-    ElasticsearchSortBy sort = r.getSortBy() == null ? ElasticsearchSortBy.UPDATED_AT_DESC : r.getSortBy();
-    if (sort == ElasticsearchSortBy.RELEVANCE && !StringUtils.hasText(r.getKeyword())) {
-      sort = ElasticsearchSortBy.UPDATED_AT_DESC;
+    OpenSearchSortBy sort = r.getSortBy() == null ? OpenSearchSortBy.UPDATED_AT_DESC : r.getSortBy();
+    if (sort == OpenSearchSortBy.RELEVANCE && !StringUtils.hasText(r.getKeyword())) {
+      sort = OpenSearchSortBy.UPDATED_AT_DESC;
     }
-    if (sort == ElasticsearchSortBy.DISTANCE
-        && !ElasticsearchNativeQueryHelper.hasGeoRadiusFilter(
+    if (sort == OpenSearchSortBy.DISTANCE
+        && !OpenSearchNativeQueryHelper.hasGeoRadiusFilter(
             r.getLatitude(), r.getLongitude(), r.getRadiusMeters())) {
-      sort = ElasticsearchSortBy.UPDATED_AT_DESC;
+      sort = OpenSearchSortBy.UPDATED_AT_DESC;
     }
     r.setSortBy(sort);
 
-    int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(r.getPage());
-    int normalizedSize = ElasticsearchNativeQueryHelper.normalizePageSize(r.getPageSize(), defaultListingPageSize);
+    int normalizedPage = OpenSearchNativeQueryHelper.normalizePage(r.getPage());
+    int normalizedSize = OpenSearchNativeQueryHelper.normalizePageSize(r.getPageSize(), defaultListingPageSize);
     r.setPage(normalizedPage);
     r.setPageSize(normalizedSize);
 
@@ -258,7 +258,7 @@ public class ListingServiceImpl implements ListingService {
         .keyword(keyword.trim())
         .page(0)
         .pageSize(Math.min(cap * 4, 40))
-        .sortBy(ElasticsearchSortBy.RELEVANCE)
+        .sortBy(OpenSearchSortBy.RELEVANCE)
         .build();
     List<ListingItemResponse> items = searchPublicListingItems(r).getItems();
     List<ListingSuggestionResponse> out = new ArrayList<>(cap);
@@ -293,8 +293,8 @@ public class ListingServiceImpl implements ListingService {
     facilityRepository
         .findByOwnerIdAndIdAndDeletedAtIsNull(profileId, fid)
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
-    int normalizedPage = ElasticsearchNativeQueryHelper.normalizePage(page);
-    int normalizedSize = ElasticsearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
+    int normalizedPage = OpenSearchNativeQueryHelper.normalizePage(page);
+    int normalizedSize = OpenSearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
     String kw = trimToNull(keyword);
     String pid = trimToNull(productId);
 
@@ -304,7 +304,7 @@ public class ListingServiceImpl implements ListingService {
         .productId(pid)
         .page(normalizedPage)
         .pageSize(normalizedSize)
-        .sortBy(kw != null ? ElasticsearchSortBy.RELEVANCE : ElasticsearchSortBy.CREATED_AT_DESC)
+        .sortBy(kw != null ? OpenSearchSortBy.RELEVANCE : OpenSearchSortBy.CREATED_AT_DESC)
         .build();
 
     ListingSearchService.ListingDocumentPage esPage = listingSearchService.searchListingsPaged(searchRequest);

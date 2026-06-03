@@ -1,4 +1,4 @@
-package com.naodab.productservice.elasticsearch;
+package com.naodab.productservice.opensearch;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,7 +21,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public final class ElasticsearchNativeQueryHelper {
+public final class OpenSearchNativeQueryHelper {
 
   private static final String DEFAULT_GEO_FIELD = "location";
 
@@ -35,20 +35,20 @@ public final class ElasticsearchNativeQueryHelper {
       "listingType",
       "listingStatus");
 
-  private ElasticsearchNativeQueryHelper() {
+  private OpenSearchNativeQueryHelper() {
   }
 
   public static Set<String> keywordScalarFilterFieldNames() {
     return KNOWN_SCALAR_FILTER_FIELDS;
   }
 
-  public static String exactTermElasticsearchField(String baseFilterFieldName) {
+  public static String exactTermOpenSearchField(String baseFilterFieldName) {
     return baseFilterFieldName;
   }
 
   public static Query exactTermQuery(String baseFilterFieldName, String value) {
     FieldValue fv = FieldValue.of(value);
-    String path = exactTermElasticsearchField(baseFilterFieldName);
+    String path = exactTermOpenSearchField(baseFilterFieldName);
     return Query.of(q -> q.term(t -> t.field(path).value(fv)));
   }
 
@@ -107,7 +107,7 @@ public final class ElasticsearchNativeQueryHelper {
     if (distinct.isEmpty()) {
       return;
     }
-    String esField = exactTermElasticsearchField(arrayFieldName);
+    String esField = exactTermOpenSearchField(arrayFieldName);
     if (distinct.size() == 1) {
       String single = distinct.iterator().next();
       filterQueries.add(
@@ -211,13 +211,13 @@ public final class ElasticsearchNativeQueryHelper {
   }
 
   public static Consumer<NativeQueryBuilder> standardSortAppender(
-      ElasticsearchSortBy sortByInput,
+      OpenSearchSortBy sortByInput,
       boolean geoRadiusFilterEnabled,
       Float latitude,
       Float longitude) {
     return queryBuilder -> appendStandardSort(
         queryBuilder,
-        sortByInput == null ? ElasticsearchSortBy.RELEVANCE : sortByInput,
+        sortByInput == null ? OpenSearchSortBy.RELEVANCE : sortByInput,
         geoRadiusFilterEnabled,
         latitude == null ? 0f : latitude,
         longitude == null ? 0f : longitude);
@@ -225,32 +225,32 @@ public final class ElasticsearchNativeQueryHelper {
 
   public static void appendStandardSort(
       NativeQueryBuilder queryBuilder,
-      ElasticsearchSortBy sortBy,
+      OpenSearchSortBy sortBy,
       boolean geoRadiusFilterEnabled,
       float latitude,
       float longitude) {
-    if (sortBy == ElasticsearchSortBy.DISTANCE && geoRadiusFilterEnabled) {
+    if (sortBy == OpenSearchSortBy.DISTANCE && geoRadiusFilterEnabled) {
       queryBuilder.withSort(distanceSort(DEFAULT_GEO_FIELD, latitude, longitude));
       return;
     }
 
-    if (sortBy == ElasticsearchSortBy.RELEVANCE) {
+    if (sortBy == OpenSearchSortBy.RELEVANCE) {
       queryBuilder.withSort(SortOptions.of(s -> s.score(sc -> sc.order(SortOrder.Desc))));
       queryBuilder.withSort(fieldSort("updatedAt", SortOrder.Desc));
       return;
     }
 
-    if (sortBy == ElasticsearchSortBy.UPDATED_AT_DESC) {
+    if (sortBy == OpenSearchSortBy.UPDATED_AT_DESC) {
       queryBuilder.withSort(fieldSort("updatedAt", SortOrder.Desc));
       return;
     }
 
-    if (sortBy == ElasticsearchSortBy.CREATED_AT_DESC) {
+    if (sortBy == OpenSearchSortBy.CREATED_AT_DESC) {
       queryBuilder.withSort(fieldSort("createdAt", SortOrder.Desc));
       return;
     }
 
-    if (sortBy == ElasticsearchSortBy.NAME_ASC) {
+    if (sortBy == OpenSearchSortBy.NAME_ASC) {
       queryBuilder.withSort(fieldSort("name", SortOrder.Asc));
     }
   }
@@ -286,7 +286,7 @@ public final class ElasticsearchNativeQueryHelper {
 
   public static NativeQuery buildPagedSearchQuery(
       Pageable pageable,
-      ElasticsearchSortBy sortBy,
+      OpenSearchSortBy sortBy,
       boolean geoRadiusFilterEnabled,
       Float latitude,
       Float longitude,

@@ -47,6 +47,7 @@ export function AddProductPage({
   const [form, setForm] = useState({
     name: "",
     description: "",
+    manufactureYear: "",
     selectedCategoryIds: [""],
     selectedAttributeIds: [] as string[],
     subCategoryIds: [] as string[],
@@ -391,6 +392,7 @@ export function AddProductPage({
       await onSubmit({
         name: form.name,
         description: form.description,
+        manufactureYear: form.manufactureYear ? Number(form.manufactureYear) : undefined,
         facilityId,
         subCategoryIds: form.subCategoryIds,
         primarySubCategoryId: form.primarySubCategoryId,
@@ -572,6 +574,19 @@ export function AddProductPage({
             placeholder="Mô tả tình trạng, thông số kỹ thuật... (AI sẽ tự điền nếu bạn dùng 'Phân tích ảnh')"
             value={form.description}
             onChange={(e) => setField("description", e.target.value)}
+          />
+        </div>
+
+        <div className="rounded-2xl border border-emerald-100 bg-white/90 backdrop-blur dark:border-emerald-900/45 dark:bg-card/95 p-4 sm:p-5 space-y-2">
+          <label className="text-sm font-semibold block">Năm sản xuất</label>
+          <Input
+            type="number"
+            min={1990}
+            max={2100}
+            placeholder="2023"
+            value={form.manufactureYear}
+            onChange={(e) => setField("manufactureYear", e.target.value)}
+            className="rounded-xl border-emerald-200 bg-background focus-visible:ring-emerald-500 dark:border-emerald-900/50 dark:bg-card"
           />
         </div>
 

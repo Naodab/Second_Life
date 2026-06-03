@@ -71,6 +71,7 @@ public class ProductServiceImpl implements ProductService {
     Product product = Product.builder()
         .name(request.getName())
         .description(request.getDescription())
+        .manufactureYear(request.getManufactureYear())
         .ownerId(profileId)
         .primarySubCategory(requestData.primarySubCategory())
         .status(Product.ProductStatus.DRAFT)
@@ -123,6 +124,7 @@ public class ProductServiceImpl implements ProductService {
 
     product.setName(request.getName());
     product.setDescription(request.getDescription());
+    product.setManufactureYear(request.getManufactureYear());
     product.setPrimarySubCategory(requestData.primarySubCategory());
 
     product.getProductSubCategories().clear();
