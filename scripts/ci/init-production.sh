@@ -28,14 +28,6 @@ fi
 
 chmod +x scripts/ci/*.sh 2>/dev/null || true
 
-spring_http_healthy() {
-  local port="$1"
-  local path="${2:-/api/v1/}"
-  local code
-  code="$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 "http://127.0.0.1:${port}${path}" 2>/dev/null || true)"
-  [[ -n "$code" && "$code" != "000" && "$code" -lt 500 ]]
-}
-
 echo "=== [1/4] Infrastructure: kafka, redis ==="
 "${COMPOSE[@]}" up -d kafka redis
 
@@ -67,24 +59,22 @@ echo "=== [2/4] Build & start backend + UI ==="
 
 echo "=== [3/4] Đợi backend healthy (tối đa ~10 phút) ==="
 BACKEND=(
-  auth-service:8081:/api/v1/
-  mail-service:8083:/api/v1/
-  profile-service:8082:/api/v1/
-  location-service:8085:/api/v1/provinces
-  product-service:8086:/api/v1/
-  inventory-service:8087:/api/v1/
-  booking-service:8088:/api/v1/
+  auth-service:8081
+  mail-service:8083
+  profile-service:8082
+  location-service:8085
+  product-service:8086
+  inventory-service:8087
+  booking-service:8088
 )
 
 for entry in "${BACKEND[@]}"; do
   svc="${entry%%:*}"
-  rest="${entry#*:}"
-  port="${rest%%:*}"
-  path="${rest#*:}"
+  port="${entry##*:}"
   echo "  waiting ${svc}..."
   for i in $(seq 1 72); do
     if docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T "$svc" \
-      sh -c "code=\$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:${port}${path}); test -n \"\$code\" && test \"\$code\" != 000 && test \"\$code\" -lt 500" 2>/dev/null; then
+      curl -sf "http://127.0.0.1:${port}/actuator/health" -o /dev/null 2>/dev/null; then
       echo "  ${svc} OK"
       break
     fi

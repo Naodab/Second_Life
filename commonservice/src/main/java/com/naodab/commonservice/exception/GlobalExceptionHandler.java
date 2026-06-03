@@ -4,12 +4,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.naodab.commonservice.response.ApiResponse;
 
@@ -43,6 +45,15 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.builder()
             .code(ErrorCode.INVALID_INPUT.getCode())
             .message(ErrorCode.INVALID_INPUT.getMessage())
+            .build());
+  }
+
+  @ExceptionHandler(NoResourceFoundException.class)
+  public ResponseEntity<ApiResponse<?>> handleNoResourceFound(NoResourceFoundException ex) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.builder()
+            .code(HttpStatus.NOT_FOUND.value())
+            .message("Resource not found")
             .build());
   }
 

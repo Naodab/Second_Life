@@ -1,5 +1,5 @@
 # Search: product-service dùng OpenSearch (Aiven) qua OPENSEARCH_* trong .env
-# Prod disables springdoc — healthcheck must not rely on /v3/api-docs (404 ≠ down).
+# Health: Spring Boot actuator at /actuator/health (not under context-path /api/v1).
 x-spring-healthcheck: &spring-healthcheck
   interval: 15s
   timeout: 10s
@@ -105,7 +105,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8081/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
+          "curl -sf http://127.0.0.1:8081/actuator/health -o /dev/null || exit 1",
         ]
     networks:
       - second_life_network
@@ -133,7 +133,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8083/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
+          "curl -sf http://127.0.0.1:8083/actuator/health -o /dev/null || exit 1",
         ]
     networks:
       - second_life_network
@@ -162,7 +162,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8082/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
+          "curl -sf http://127.0.0.1:8082/actuator/health -o /dev/null || exit 1",
         ]
     networks:
       - second_life_network
@@ -189,7 +189,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8085/api/v1/provinces); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
+          "curl -sf http://127.0.0.1:8085/actuator/health -o /dev/null || exit 1",
         ]
     networks:
       - second_life_network
@@ -217,7 +217,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8086/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
+          "curl -sf http://127.0.0.1:8086/actuator/health -o /dev/null || exit 1",
         ]
     networks:
       - second_life_network
@@ -245,7 +245,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8087/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
+          "curl -sf http://127.0.0.1:8087/actuator/health -o /dev/null || exit 1",
         ]
     networks:
       - second_life_network
@@ -277,7 +277,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "code=$$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://127.0.0.1:8088/api/v1/); test -n \"$$code\" && test \"$$code\" != 000 && test \"$$code\" -lt 500",
+          "curl -sf http://127.0.0.1:8088/actuator/health -o /dev/null || exit 1",
         ]
     networks:
       - second_life_network

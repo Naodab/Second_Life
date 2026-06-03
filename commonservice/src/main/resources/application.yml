@@ -1,3 +1,14 @@
 spring:
   application:
     name: commonservice
+
+# Merged into all services that depend on commonservice (classpath config).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
