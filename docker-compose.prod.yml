@@ -89,6 +89,20 @@ services:
   kafka:
     ports: []
     restart: unless-stopped
+    # Small VPS: cap heap so broker+controller heartbeats stay stable under many Spring containers.
+    environment:
+      KAFKA_HEAP_OPTS: "-Xmx384m -Xms256m"
+    mem_limit: 512m
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 20s
+      timeout: 25s
+      retries: 15
+      start_period: 120s
 
   redis:
     ports: []

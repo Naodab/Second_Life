@@ -26,12 +26,12 @@ services:
       test:
         [
           "CMD-SHELL",
-          "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1",
+          "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1",
         ]
-      interval: 10s
-      timeout: 10s
-      retries: 6
-      start_period: 45s
+      interval: 15s
+      timeout: 20s
+      retries: 10
+      start_period: 90s
     networks:
       - second_life_network
 
