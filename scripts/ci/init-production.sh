@@ -74,7 +74,7 @@ for entry in "${BACKEND[@]}"; do
   echo "  waiting ${svc}..."
   for i in $(seq 1 72); do
     if docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T "$svc" \
-      curl -sf "http://127.0.0.1:${port}/actuator/health" -o /dev/null 2>/dev/null; then
+      curl -sf "http://127.0.0.1:${port}/api/v1/v3/api-docs" -o /dev/null 2>/dev/null; then
       echo "  ${svc} OK"
       break
     fi
