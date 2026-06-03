@@ -1,13 +1,12 @@
 # syntax=docker/dockerfile:1
-# Build Vite UI; phục vụ file tĩnh bằng static-web-server (chỉ trong Docker network).
-# Traefik trên VPS là reverse proxy duy nhất — không cài nginx trên host.
-# Context: thư mục ui/
+# Build Vite UI; serve static files via static-web-server (Traefik reverse proxy on VPS).
+# Context: ui/
 
 FROM node:22-alpine AS builder
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json tsconfig.json ./
 COPY lib lib
 COPY artifacts/second-life artifacts/second-life
 

@@ -35,6 +35,13 @@ minimumReleaseAgeExclude:
   - '@replit/*'
   - stripe-replit-sync
 
+# pnpm 10.9+ / 11: allowBuilds replaces onlyBuiltDependencies for install scripts
+allowBuilds:
+  '@swc/core': true
+  esbuild: true
+  msw: true
+  unrs-resolver: true
+
 onlyBuiltDependencies:
   - '@swc/core'
   - esbuild
