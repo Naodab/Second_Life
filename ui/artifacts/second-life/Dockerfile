@@ -29,5 +29,7 @@ RUN pnpm install --frozen-lockfile \
 
 FROM ghcr.io/static-web-server/static-web-server:2-alpine
 COPY --from=builder /app/artifacts/second-life/dist/public /public
+# Fallback path is NOT relative to --root; must point at the real index.html file.
+ENV SERVER_FALLBACK_PAGE=/public/index.html
 EXPOSE 80
-CMD ["--root", "/public", "--host", "0.0.0.0", "--port", "80", "--page-fallback", "index.html", "--compression", "true"]
+CMD ["--root", "/public", "--host", "0.0.0.0", "--port", "80", "--page-fallback", "/public/index.html", "--compression", "true"]
