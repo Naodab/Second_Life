@@ -66,32 +66,41 @@ if [[ "$needs_backend" == true ]]; then
   "${COMPOSE[@]}" up -d kafka redis
 fi
 
-deploy_one() {
-  local svc="$1"
-  echo "=== Deploy: ${svc} ==="
+BUILD_SERVICES=()
+UP_TRAEFIK=false
 
+for svc in "${SERVICES[@]}"; do
   case "$svc" in
     traefik)
-      "${COMPOSE[@]}" up -d traefik
+      UP_TRAEFIK=true
       ;;
     second-life-ui)
-      "${COMPOSE[@]}" build "$svc"
-      "${COMPOSE[@]}" up -d --no-deps "$svc"
+      BUILD_SERVICES+=("$svc")
       ;;
     auth-service|mail-service|profile-service|location-service|product-service|inventory-service|booking-service)
-      "${COMPOSE[@]}" build "$svc"
-      "${COMPOSE[@]}" up -d --no-deps "$svc"
+      BUILD_SERVICES+=("$svc")
       ;;
     *)
       echo "Service không hỗ trợ: ${svc}" >&2
       exit 1
       ;;
   esac
-}
-
-for svc in "${SERVICES[@]}"; do
-  deploy_one "$svc"
 done
+
+if [[ ${#BUILD_SERVICES[@]} -gt 0 ]]; then
+  echo "=== Build (${#BUILD_SERVICES[@]} services, parallel) ==="
+  echo "${BUILD_SERVICES[*]}"
+  DOCKER_BUILDKIT=1 COMPOSE_PARALLEL_LIMIT=2 "${COMPOSE[@]}" build --parallel "${BUILD_SERVICES[@]}"
+  for svc in "${BUILD_SERVICES[@]}"; do
+    echo "=== Up: ${svc} ==="
+    "${COMPOSE[@]}" up -d --no-deps "$svc"
+  done
+fi
+
+if [[ "$UP_TRAEFIK" == true ]]; then
+  echo "=== Up: traefik ==="
+  "${COMPOSE[@]}" up -d traefik
+fi
 
 HAS_API=false
 HAS_TRAEFIK=false

@@ -66,6 +66,7 @@ jobs:
     needs: detect
     if: needs.detect.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 150
     environment: production
     steps:
       - name: Init VPS (first time)
@@ -75,6 +76,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 120m
           script_stop: true
           script: |
             set -euo pipefail
@@ -98,6 +100,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 120m
           script_stop: true
           script: |
             set -euo pipefail

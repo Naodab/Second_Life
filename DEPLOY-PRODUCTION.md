@@ -146,6 +146,17 @@ Push `main` chạy `deploy-production.sh`, script yêu cầu file **`.deploy-ini
 
 Log `entrypoint.sh` / drone-ssh từ bước **Deploy selective** là bình thường; lỗi xảy ra ngay sau `git pull` khi thiếu marker và stack chưa chạy.
 
+## Troubleshooting CI: `Run Command Timeout`
+
+`appleboy/ssh-action` mặc định **10 phút** cho toàn bộ script SSH. Build nhiều service Maven trên VPS (đặc biệt khi diff chạm `commonservice/` → deploy 7 backend) dễ vượt giới hạn.
+
+| Cách xử lý | Chi tiết |
+|------------|----------|
+| Đã cấu hình trong workflow | `command_timeout: 120m`, job `timeout-minutes: 150` |
+| Push nhỏ hơn | Chỉ sửa service cần thiết; tránh đổi `commonservice/` nếu không cần rebuild all |
+| Deploy thủ công trên VPS | `git pull` rồi `./scripts/ci/deploy-production.sh traefik` (hoặc danh sách service) — không giới hạn 10 phút |
+| Deploy all một lần | Actions → **deploy_all** — vẫn cần đủ thời gian; VPS yếu có thể cần chạy script trực tiếp |
+
 ## Troubleshooting: Google login → `/oauth2/callback/google` HTTP 404
 
 Đăng nhập Google thành công (URL có `?token=…`) nhưng trang callback 404: Traefik **không** được route `PathPrefix(/oauth2)` tới `auth-service`. Đường `/oauth2/callback/google` là route **SPA** (UI); API OAuth chỉ ở `/api/v1/oauth2/...` và `/api/v1/login/oauth2/...`.
