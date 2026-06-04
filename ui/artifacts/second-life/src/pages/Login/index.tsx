@@ -7,15 +7,7 @@ import { UnverifiedEmailError, useAuth } from "@/context/AuthContext";
 import { redirectToGoogleOAuth } from "@/api";
 import { sanitizeReturnTo } from "@/hooks/use-require-auth";
 import { toast } from "@/hooks/use-toast";
-import { ApiError } from "@workspace/api-client-react";
-
-function readErrorCode(err: unknown): number | undefined {
-  if (!(err instanceof ApiError) || err.data == null || typeof err.data !== "object") {
-    return undefined;
-  }
-  const code = (err.data as { code?: unknown }).code;
-  return typeof code === "number" ? code : undefined;
-}
+import { mapLoginError } from "@/lib/api-error";
 
 function readReturnToFromSearch(): string {
   const params = new URLSearchParams(window.location.search);
@@ -78,20 +70,12 @@ export default function Login() {
         });
         return;
       }
-      const code = readErrorCode(error);
-      if (code === 1027) {
-        toast({
-          title: "Hãy đăng nhập bằng Google",
-          description: "Tài khoản này được tạo với Google. Dùng nút “Đăng nhập bằng Gmail” bên trên.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Đăng nhập thất bại",
-          description: error instanceof Error ? error.message : "Email hoặc mật khẩu không đúng.",
-          variant: "destructive",
-        });
-      }
+      const { title, description } = mapLoginError(error);
+      toast({
+        title,
+        description,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

@@ -13,10 +13,35 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
-if [[ ! -f "$MARKER" ]]; then
+# Marker is gitignored and only written by init-production.sh. VPS set up manually
+# (or init before this check existed) may run Docker without the file.
+is_production_stack_running() {
+  local id
+  for svc in traefik auth-service second-life-ui kafka; do
+    id="$("${COMPOSE[@]}" ps -q "$svc" 2>/dev/null | head -n1 || true)"
+    if [[ -n "$id" ]] && docker inspect --format='{{.State.Running}}' "$id" 2>/dev/null | grep -q true; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+ensure_deploy_initialized() {
+  if [[ -f "$MARKER" ]]; then
+    return 0
+  fi
+  if is_production_stack_running; then
+    date -u +"%Y-%m-%dT%H:%M:%SZ" >"$MARKER"
+    echo "=== Đã tạo .deploy-initialized (stack đang chạy, init trước đó không qua CI) ===" >&2
+    return 0
+  fi
   echo "VPS not initialized — run production init first." >&2
+  echo "  • GitHub Actions: Deploy Production → init_vps = true" >&2
+  echo "  • Hoặc trên VPS: ./scripts/ci/init-production.sh" >&2
   exit 1
-fi
+}
+
+ensure_deploy_initialized
 
 if [[ $# -lt 1 || -z "${1// }" ]]; then
   echo "Không có service nào để deploy."

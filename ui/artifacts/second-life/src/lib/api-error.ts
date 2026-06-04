@@ -4,6 +4,7 @@ export const ApiErrorCodes = {
   INVALID_INPUT: 1000,
   PROFILE_NOT_FOUND: 1002,
   USER_NOT_FOUND: 1009,
+  SIGN_IN_WITH_GOOGLE: 1027,
   CATEGORY_NOT_FOUND: 1040,
   FACILITY_NOT_FOUND: 1044,
   INVENTORY_ITEM_NOT_FOUND: 1054,
@@ -29,6 +30,45 @@ export type MapApiErrorOptions = {
   fallbackTitle?: string;
   fallbackMessage?: string;
 };
+
+export type AuthErrorToast = {
+  title: string;
+  description: string;
+};
+
+const LOGIN_INVALID_CREDENTIALS_MESSAGE = "Email hoặc mật khẩu không đúng.";
+
+/** User-facing copy for login failures — never expose raw HTTP / English API messages. */
+export function mapLoginError(err: unknown): AuthErrorToast {
+  const code = readApiErrorCode(err);
+
+  if (code === ApiErrorCodes.SIGN_IN_WITH_GOOGLE) {
+    return {
+      title: "Hãy đăng nhập bằng Google",
+      description:
+        "Tài khoản này được tạo với Google. Dùng nút “Đăng nhập bằng Gmail” bên trên.",
+    };
+  }
+
+  if (code === ApiErrorCodes.USER_NOT_FOUND || (err instanceof ApiError && err.status === 404)) {
+    return {
+      title: "Đăng nhập thất bại",
+      description: LOGIN_INVALID_CREDENTIALS_MESSAGE,
+    };
+  }
+
+  if (err instanceof ApiError) {
+    return {
+      title: "Đăng nhập thất bại",
+      description: LOGIN_INVALID_CREDENTIALS_MESSAGE,
+    };
+  }
+
+  return {
+    title: "Đăng nhập thất bại",
+    description: LOGIN_INVALID_CREDENTIALS_MESSAGE,
+  };
+}
 
 export function readApiErrorCode(err: unknown): number | undefined {
   if (!(err instanceof ApiError) || err.data == null || typeof err.data !== "object") {

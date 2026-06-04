@@ -85,6 +85,18 @@ Secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_DEPLOY_PATH`; optional `VPS
 
 Unrelated paths (e.g. `scripts/pricing/`) do not trigger deploy. Detection: `scripts/ci/detect-changed-services.sh`.
 
+## Troubleshooting CI: `VPS not initialized`
+
+Push `main` chạy `deploy-production.sh`, script yêu cầu file **`.deploy-initialized`** tại thư mục deploy trên VPS (ví dụ `/opt/second-life`). File này **không** nằm trong git (`.gitignore`).
+
+| Tình huống | Cách xử lý |
+|------------|------------|
+| Chưa từng init | Actions → **Deploy Production** → bật **init_vps**, hoặc SSH: `./scripts/ci/init-production.sh` |
+| Đã chạy Docker thủ công / init cũ không tạo marker | Script deploy tự tạo marker nếu phát hiện `traefik`, `auth-service`, `second-life-ui` hoặc `kafka` đang chạy; hoặc SSH: `date -u +%Y-%m-%dT%H:%M:%SZ > .deploy-initialized` |
+| Sai `VPS_DEPLOY_PATH` | Secret trỏ khác thư mục clone thực tế → marker và `.env` không khớp |
+
+Log `entrypoint.sh` / drone-ssh từ bước **Deploy selective** là bình thường; lỗi xảy ra ngay sau `git pull` khi thiếu marker và stack chưa chạy.
+
 ## Verification
 
 - HTTP → HTTPS redirect (301)
