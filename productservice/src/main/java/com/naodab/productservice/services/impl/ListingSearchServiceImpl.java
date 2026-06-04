@@ -156,12 +156,20 @@ public class ListingSearchServiceImpl implements ListingSearchService {
     Pageable pageable = PageRequest.of(normalizedPage, normalizedPageSize);
     NativeQuery query = buildNativeQuery(safeRequest, pageable, geoRadiusFilterEnabled);
 
-    SearchHits<ListingDocument> hits = openSearchOperations.search(query, ListingDocument.class, LISTING_INDEX);
-    List<ListingDocument> results = new ArrayList<>();
-    for (SearchHit<ListingDocument> hit : hits) {
-      results.add(hit.getContent());
+    try {
+      SearchHits<ListingDocument> hits = openSearchOperations.search(query, ListingDocument.class, LISTING_INDEX);
+      List<ListingDocument> results = new ArrayList<>();
+      for (SearchHit<ListingDocument> hit : hits) {
+        results.add(hit.getContent());
+      }
+      return new ListingDocumentPage(results, hits.getTotalHits());
+    } catch (RuntimeException e) {
+      log.error(
+          "OpenSearch listing search failed (check OPENSEARCH_* and index 'listings'): {}",
+          e.getMessage(),
+          e);
+      return new ListingDocumentPage(List.of(), 0);
     }
-    return new ListingDocumentPage(results, hits.getTotalHits());
   }
 
   @Override

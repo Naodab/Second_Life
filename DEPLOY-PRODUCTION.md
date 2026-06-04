@@ -85,6 +85,40 @@ Secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_DEPLOY_PATH`; optional `VPS
 
 Unrelated paths (e.g. `scripts/pricing/`) do not trigger deploy. Detection: `scripts/ci/detect-changed-services.sh`.
 
+## Troubleshooting: `GET /api/v1/listings/search` → 500
+
+Stack trace tại `ListingController.searchListingItems` → `listingSearchService.searchListingsPaged` → **OpenSearch** (index `listings`).
+
+Trên VPS, lấy **dòng `Caused by:`** (phần trên stack trace):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail=200 product-service \
+  | grep -E 'Caused by:|OpenSearch|listings|Connection|index_not_found|authentication'
+```
+
+| `Caused by` thường gặp | Việc cần làm |
+|------------------------|----------------|
+| Connection refused / timeout | `OPENSEARCH_URIS` sai; firewall Aiven chưa allow IP VPS |
+| Unauthorized / 401 | `OPENSEARCH_USERNAME` / `OPENSEARCH_PASSWORD` trong `.env` |
+| SSL / certificate | URI phải `https://...`; kiểm tra CA trên Aiven |
+| `index_not_found_exception` | Index chưa có dữ liệu — reindex (bên dưới) |
+
+Kiểm tra biến trong container:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec product-service \
+  sh -c 'echo OPENSEARCH_URIS=$OPENSEARCH_URIS'
+```
+
+Sau khi OpenSearch kết nối OK, **reindex** (cần JWT admin):
+
+```bash
+curl -sS -X POST "https://secondlifeonline.xyz/api/v1/listings/admin/search/reindex" \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT"
+```
+
+Log startup: `Created OpenSearch index` / `Could not ensure OpenSearch index` — chạy ngay sau deploy `product-service`.
+
 ## Troubleshooting CI: `VPS not initialized`
 
 Push `main` chạy `deploy-production.sh`, script yêu cầu file **`.deploy-initialized`** tại thư mục deploy trên VPS (ví dụ `/opt/second-life`). File này **không** nằm trong git (`.gitignore`).

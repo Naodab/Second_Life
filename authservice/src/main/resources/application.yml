@@ -85,6 +85,7 @@ protected_paths:
     - /api/v1/sub-categories
     - /api/v1/products
     - /api/v1/listings
+    - /api/v1/listings/admin
     - /api/v1/attributes
     - /api/v1/profiles
     - /api/v1/customers
