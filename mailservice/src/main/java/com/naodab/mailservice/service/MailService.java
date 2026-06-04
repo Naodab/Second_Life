@@ -4,6 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -14,6 +15,7 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
+import com.naodab.commonservice.util.PublicUrlHelper;
 import com.naodab.mailservice.dto.EmailVerificationEvent;
 import com.naodab.mailservice.dto.ForgotPasswordEvent;
 
@@ -48,9 +50,11 @@ public class MailService {
   @Async
   public void sendEmailVerification(EmailVerificationEvent event) {
     String subject = "Please verify your email address";
-    String link = (event.getVerificationLink() != null)
-        ? event.getVerificationLink()
-        : mailBaseUrl + "/verify-email?token=" + event.getVerificationToken();
+    String link = StringUtils.hasText(event.getVerificationLink())
+        ? event.getVerificationLink().trim()
+        : PublicUrlHelper.buildVerifyEmailUrl(
+            PublicUrlHelper.resolveAuthPublicApiBase(null, mailBaseUrl),
+            event.getVerificationToken());
     Context context = new Context();
     context.setVariable("username", event.getUsername());
     context.setVariable("verificationLink", link);

@@ -21,7 +21,8 @@ app:
 
 external:
   frontend_url: ${FRONTEND_URL}
-  auth_service_public_base_url: ${AUTH_SERVICE_PUBLIC_BASE_URL}
+  gateway_url: ${GATEWAY_URL}
+  auth_service_public_base_url: ${AUTH_SERVICE_PUBLIC_BASE_URL:${GATEWAY_URL}/api/v1}
   cors_allowed_origins: ${CORS_ALLOWED_ORIGINS}
 
 profile-service:

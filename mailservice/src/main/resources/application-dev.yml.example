@@ -12,6 +12,7 @@ spring:
 
 app:
   mail:
+    # Phải trùng GATEWAY_URL trong .env — link xác thực: {base-url}/api/v1/auth/verify-email?verificationToken=…
     base-url: ${GATEWAY_URL:http://localhost:8080}
   frontend:
     url: ${FRONTEND_URL:http://localhost:5173}

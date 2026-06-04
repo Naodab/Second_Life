@@ -1,5 +1,6 @@
 server:
   port: ${SERVER_PORT_AUTH_SERVICE:8081}
+  forward-headers-strategy: native
   servlet:
     multipart:
       max-file-size: 10MB
@@ -66,8 +67,10 @@ app:
   forgot-password-token-expiration: 8640000
 
 external:
-  frontend_url: ${FRONTEND_URL:}
-  auth_service_public_base_url: ${AUTH_SERVICE_PUBLIC_BASE_URL:}
+  frontend_url: ${FRONTEND_URL:http://localhost:5173}
+  # Public verify link in email: {base}/auth/verify-email?verificationToken=… (via Traefik / GATEWAY_URL)
+  auth_service_public_base_url: ${AUTH_SERVICE_PUBLIC_BASE_URL:${GATEWAY_URL:http://localhost:8080}/api/v1}
+  gateway_url: ${GATEWAY_URL:http://localhost:8080}
   cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}
 
 profile-service:

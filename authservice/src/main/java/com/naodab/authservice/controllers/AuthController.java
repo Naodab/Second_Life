@@ -22,6 +22,7 @@ import com.naodab.authservice.dto.request.RefreshTokenRequest;
 import com.naodab.authservice.dto.request.ForgotPasswordRequest;
 import com.naodab.authservice.dto.request.ResetPasswordRequest;
 import com.naodab.authservice.services.AuthService;
+import com.naodab.commonservice.util.PublicUrlHelper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -62,8 +63,8 @@ public class AuthController {
   @GetMapping("/verify-email")
   public ResponseEntity<Void> verifyEmail(@RequestParam String verificationToken) {
     AuthResponse auth = authService.verifyEmail(verificationToken);
-    String redirect = UriComponentsBuilder.fromUriString(frontendUrl)
-        .path("/email-verified")
+    String redirect = UriComponentsBuilder.fromUriString(
+            PublicUrlHelper.buildEmailVerifiedRedirectUrl(frontendUrl))
         .queryParam("token", auth.getAccessToken())
         .queryParam("refresh_token", auth.getRefreshToken())
         .encode()

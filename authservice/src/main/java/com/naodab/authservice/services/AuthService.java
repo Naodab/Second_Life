@@ -24,6 +24,7 @@ import com.naodab.authservice.repositories.AccountRepository;
 import com.naodab.authservice.security.JwtTokenProvider;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
+import com.naodab.commonservice.util.PublicUrlHelper;
 
 import java.util.Optional;
 
@@ -54,6 +55,10 @@ public class AuthService {
   @NonFinal
   @Value("${external.auth_service_public_base_url}")
   String authServicePublicBaseUrl;
+
+  @NonFinal
+  @Value("${external.gateway_url}")
+  String gatewayUrl;
 
   @Transactional
   public AuthResponse register(RegisterRequest request) {
@@ -239,11 +244,13 @@ public class AuthService {
   }
 
   private String buildVerificationUrl(String verificationToken) {
-    return authServicePublicBaseUrl + "/auth/verify-email?verificationToken=" + verificationToken;
+    String base = PublicUrlHelper.resolveAuthPublicApiBase(authServicePublicBaseUrl, gatewayUrl);
+    return PublicUrlHelper.buildVerifyEmailUrl(base, verificationToken);
   }
 
   private String buildResetPasswordUrl(String resetPasswordToken) {
-    return frontendUrl + "/api/v1/auth/reset-password?token=" + resetPasswordToken;
+    return PublicUrlHelper.stripTrailingSlash(frontendUrl)
+        + "/reset-password?token=" + resetPasswordToken;
   }
 
   private AuthResponse emptyAuthResponse() {

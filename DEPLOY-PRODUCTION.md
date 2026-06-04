@@ -33,12 +33,27 @@ No host nginx required.
 
 1. Clone repo on the VPS.
 2. Copy `.env.production.example` to `.env` (never commit `.env`).
-3. Google OAuth redirect: `https://secondlifeonline.xyz/oauth2/callback/google`
+3. Google Cloud Console — **Authorized redirect URIs** (Google → backend, bắt buộc khớp từng host):
+   - `https://secondlifeonline.xyz/api/v1/login/oauth2/code/google`
+   - `https://www.secondlifeonline.xyz/api/v1/login/oauth2/code/google`
+   - Dev (Traefik cổng 80): `http://localhost/api/v1/login/oauth2/code/google`
+   - Dev (Vite): **Authorized JavaScript origins** `http://localhost:5173` — không cần thêm `/oauth2/callback/google` vào Google redirect.
+   - `.env`: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS` (auth-service tự whitelist `{origin}/oauth2/callback/google` cho www/apex).
 4. Import DB schemas before first run (`ddl-auto=validate`).
 5. Import location DB from the locationservice data archive.
 6. Add CI deploy SSH key to the deploy user when using GitHub Actions.
 
 Variables: see `.env.production.example`. Leave `VITE_BACKEND_URL` empty for same-origin API via Traefik.
+
+### Email verification URLs
+
+| Variable | Role |
+|----------|------|
+| `GATEWAY_URL` | Public API origin (prod: `https://secondlifeonline.xyz`) |
+| `AUTH_SERVICE_PUBLIC_BASE_URL` | `{GATEWAY_URL}/api/v1` — link trong email |
+| `FRONTEND_URL` | Redirect sau verify → `{FRONTEND_URL}/email-verified?token=…` |
+
+Link trong email: `{AUTH_SERVICE_PUBLIC_BASE_URL}/auth/verify-email?verificationToken=…` (không phải `/verify-email` trên cổng gateway).
 
 ## First-time init
 
@@ -130,6 +145,16 @@ Push `main` chạy `deploy-production.sh`, script yêu cầu file **`.deploy-ini
 | Sai `VPS_DEPLOY_PATH` | Secret trỏ khác thư mục clone thực tế → marker và `.env` không khớp |
 
 Log `entrypoint.sh` / drone-ssh từ bước **Deploy selective** là bình thường; lỗi xảy ra ngay sau `git pull` khi thiếu marker và stack chưa chạy.
+
+## Troubleshooting: Google login → `/oauth2/callback/google` HTTP 404
+
+Đăng nhập Google thành công (URL có `?token=…`) nhưng trang callback 404: Traefik **không** được route `PathPrefix(/oauth2)` tới `auth-service`. Đường `/oauth2/callback/google` là route **SPA** (UI); API OAuth chỉ ở `/api/v1/oauth2/...` và `/api/v1/login/oauth2/...`.
+
+Sau khi sửa `traefik/dynamic.prod.yml`, restart Traefik (file provider watch có thể đủ):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d traefik
+```
 
 ## Troubleshooting: `/search`, `/login` → HTTP 404
 

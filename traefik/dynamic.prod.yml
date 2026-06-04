@@ -16,7 +16,7 @@ http:
 
   routers:
     auth-api-options:
-      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`) || PathPrefix(`/oauth2`) || PathPrefix(`/login/oauth2`)) && Method(`OPTIONS`)"
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`)) && Method(`OPTIONS`)"
       service: auth-service
       entryPoints:
         - websecure
@@ -24,7 +24,7 @@ http:
         certResolver: letsencrypt
       priority: 200
     auth-api:
-      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`) || PathPrefix(`/oauth2`) || PathPrefix(`/login/oauth2`))"
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`))"
       service: auth-service
       entryPoints:
         - websecure
