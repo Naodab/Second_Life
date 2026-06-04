@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,8 @@ import lombok.experimental.FieldDefaults;
 public class ForwardAuthController {
   JwtTokenProvider jwtTokenProvider;
   ProtectedPathsProperties protectedPathsProperties;
+
+  private static final Set<String> EXACT_PATH_PREFIXES = Set.of("/api/v1/listings");
 
   private static final String HEADER_FORWARDED_METHOD = "X-Forwarded-Method";
 
@@ -76,6 +79,9 @@ public class ForwardAuthController {
   }
 
   private static boolean pathMatches(String path, String prefix) {
+    if (EXACT_PATH_PREFIXES.contains(prefix)) {
+      return path.equals(prefix);
+    }
     return path.equals(prefix) || path.startsWith(prefix + "/");
   }
 
