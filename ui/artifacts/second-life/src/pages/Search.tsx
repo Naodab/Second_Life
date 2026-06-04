@@ -33,6 +33,7 @@ import {
   LISTING_GEO_RADIUS_METERS,
   listingGeoParamsFromVisitor,
 } from "@/lib/listing-geo";
+import { mapApiError } from "@/lib/api-error";
 
 const DEFAULT_SORT: ListingSearchSort = "UPDATED_AT_DESC";
 
@@ -460,7 +461,12 @@ export default function Search() {
         if (!cancelled) {
           setListings([]);
           setSearchTotalCount(0);
-          setFetchError(e instanceof Error ? e.message : "Không tải được tin đăng.");
+          setFetchError(
+            mapApiError(e, {
+              fallbackTitle: "Không tải được tin đăng",
+              fallbackMessage: "Không tải được danh sách tin đăng. Vui lòng thử lại sau.",
+            }).message,
+          );
         }
       } finally {
         if (!cancelled) setIsLoading(false);

@@ -31,19 +31,19 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@workspace/api-client-react";
 import type { FacilityWithPlaceNames } from "@/api/facility";
-
-function readErrorCode(err: unknown): number | undefined {
-  if (!(err instanceof ApiError) || err.data == null || typeof err.data !== "object") {
-    return undefined;
-  }
-  const code = (err.data as { code?: unknown }).code;
-  return typeof code === "number" ? code : undefined;
-}
+import { readApiErrorCode } from "@/lib/api-error";
 
 const DEFAULT_PRODUCT_THUMB =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop";
 
 const PRODUCT_PICK_PAGE_SIZE = 200;
+
+type ProductPickOption = {
+  id: string;
+  name: string;
+  thumb: string;
+  status?: ProductStatus;
+};
 
 const RENT_UNIT_OPTIONS: { value: RentUnit; label: string }[] = [
   { value: "HOUR", label: "Mỗi giờ" },
@@ -79,9 +79,7 @@ export function CreateListingPage({
 
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
-  const [productOptions, setProductOptions] = useState<
-    { id: string; name: string; thumb: string; status?: ProductStatus }[]
-  >([]);
+  const [productOptions, setProductOptions] = useState<ProductPickOption[]>([]);
 
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>(initialFacilityId ?? "");
@@ -123,7 +121,7 @@ export function CreateListingPage({
           if (ap !== bp) return ap - bp;
           return String(a.name).localeCompare(String(b.name), "vi");
         });
-        let options = rows.map((p) => ({
+        let options: ProductPickOption[] = rows.map((p) => ({
           id: p.id,
           name: p.name,
           status: p.status,
@@ -383,7 +381,7 @@ export function CreateListingPage({
       onCreated?.();
       onBack();
     } catch (err) {
-      const code = readErrorCode(err);
+      const code = readApiErrorCode(err);
       if (code === 1051) {
         toast({
           title: "Sản phẩm chưa đăng",

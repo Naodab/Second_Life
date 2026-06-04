@@ -3,16 +3,9 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckCircle2 } from "lucide-react";
-import { ApiError, registerWithEmailPassword, redirectToGoogleOAuth } from "@/api";
+import { registerWithEmailPassword, redirectToGoogleOAuth } from "@/api";
 import { toast } from "@/hooks/use-toast";
-
-function readErrorCode(err: unknown): number | undefined {
-  if (!(err instanceof ApiError) || err.data == null || typeof err.data !== "object") {
-    return undefined;
-  }
-  const code = (err.data as { code?: unknown }).code;
-  return typeof code === "number" ? code : undefined;
-}
+import { mapRegisterError } from "@/lib/api-error";
 
 export default function Register() {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -73,27 +66,12 @@ export default function Register() {
       await registerWithEmailPassword({ email, password });
       setIsSubmitted(true);
     } catch (err) {
-      const code = readErrorCode(err);
-      if (code === 1026) {
-        toast({
-          title: "Email đã dùng với Google",
-          description:
-            "Địa chỉ này đã đăng ký bằng Google. Hãy đăng nhập bằng Google ở trang đăng nhập.",
-          variant: "destructive",
-        });
-      } else if (code === 1011) {
-        toast({
-          title: "Email đã được dùng",
-          description: "Tài khoản với email này đã tồn tại. Bạn có thể đăng nhập hoặc dùng Quên mật khẩu.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Đăng ký không thành công",
-          description: err instanceof Error ? err.message : "Đã có lỗi xảy ra.",
-          variant: "destructive",
-        });
-      }
+      const { title, description } = mapRegisterError(err);
+      toast({
+        title,
+        description,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

@@ -4,6 +4,8 @@ export const ApiErrorCodes = {
   INVALID_INPUT: 1000,
   PROFILE_NOT_FOUND: 1002,
   USER_NOT_FOUND: 1009,
+  EMAIL_ALREADY_EXISTS: 1011,
+  EMAIL_REGISTERED_WITH_GOOGLE: 1026,
   SIGN_IN_WITH_GOOGLE: 1027,
   CATEGORY_NOT_FOUND: 1040,
   FACILITY_NOT_FOUND: 1044,
@@ -67,6 +69,39 @@ export function mapLoginError(err: unknown): AuthErrorToast {
   return {
     title: "Đăng nhập thất bại",
     description: LOGIN_INVALID_CREDENTIALS_MESSAGE,
+  };
+}
+
+/** User-facing copy for register failures — avoid raw HTTP messages in toasts. */
+export function mapRegisterError(err: unknown): AuthErrorToast {
+  const code = readApiErrorCode(err);
+
+  if (code === ApiErrorCodes.EMAIL_REGISTERED_WITH_GOOGLE) {
+    return {
+      title: "Email đã dùng với Google",
+      description:
+        "Địa chỉ này đã đăng ký bằng Google. Hãy đăng nhập bằng Google ở trang đăng nhập.",
+    };
+  }
+
+  if (code === ApiErrorCodes.EMAIL_ALREADY_EXISTS) {
+    return {
+      title: "Email đã được dùng",
+      description: "Tài khoản với email này đã tồn tại. Bạn có thể đăng nhập hoặc dùng Quên mật khẩu.",
+    };
+  }
+
+  const apiMessage = readApiErrorMessage(err);
+  if (apiMessage) {
+    return {
+      title: "Đăng ký không thành công",
+      description: apiMessage,
+    };
+  }
+
+  return {
+    title: "Đăng ký không thành công",
+    description: "Đã có lỗi xảy ra. Vui lòng thử lại.",
   };
 }
 

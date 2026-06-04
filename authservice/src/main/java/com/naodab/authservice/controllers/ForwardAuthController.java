@@ -71,15 +71,15 @@ public class ForwardAuthController {
       if (!StringUtils.hasText(prefix)) {
         continue;
       }
-      if (pathMatches(path, prefix.trim())) {
+      if (pathMatches(path, prefix.trim(), key)) {
         return true;
       }
     }
     return false;
   }
 
-  private static boolean pathMatches(String path, String prefix) {
-    if (EXACT_PATH_PREFIXES.contains(prefix)) {
+  private static boolean pathMatches(String path, String prefix, String httpMethod) {
+    if ("POST".equals(httpMethod) && EXACT_PATH_PREFIXES.contains(prefix)) {
       return path.equals(prefix);
     }
     return path.equals(prefix) || path.startsWith(prefix + "/");
