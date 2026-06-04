@@ -67,14 +67,58 @@ export function searchPathsQueryEqual(a: string, b: string): boolean {
   return canonicalQueryString(qa) === canonicalQueryString(qb);
 }
 
+/** Map legacy / duplicate query keys to one canonical name (prevents URL sync loops). */
+function canonicalParamKey(rawKey: string): string {
+  const key = rawKey.replace(/\[\]$/, "");
+  switch (key) {
+    case "WardCode":
+    case "ward":
+      return "wardCode";
+    case "province":
+      return "provinceCode";
+    case "type":
+      return "listingType";
+    case "q":
+      return "keyword";
+    case "categoryIds":
+    case "categoryId":
+      return "categoryId";
+    case "subCategoryIds":
+    case "subCategoryId":
+      return "subCategoryId";
+    default:
+      return key;
+  }
+}
+
+function canonicalParamValue(key: string, value: string): string {
+  if (key === "listingType") {
+    const t = value.trim().toLowerCase();
+    if (t === "buy" || t === "rent") return t;
+    const u = value.trim().toUpperCase();
+    if (u === "BUY") return "buy";
+    if (u === "RENT") return "rent";
+  }
+  return value.trim();
+}
+
 function canonicalQueryString(q: string): string {
   const p = new URLSearchParams(q);
-  const keys = [...new Set([...p.keys()])].sort();
+  const merged = new Map<string, string>();
+  for (const [rawKey, rawValue] of p.entries()) {
+    const key = canonicalParamKey(rawKey);
+    const value = canonicalParamValue(key, rawValue);
+    if (!value) continue;
+    merged.set(key, value);
+  }
+  // Default sort is omitted from desired paths; treat explicit default as absent.
+  if (merged.get("sortBy") === "UPDATED_AT_DESC") {
+    merged.delete("sortBy");
+  }
+  const keys = [...merged.keys()].sort();
   const out = new URLSearchParams();
   for (const k of keys) {
-    for (const v of [...p.getAll(k)].sort()) {
-      out.append(k, v);
-    }
+    out.set(k, merged.get(k)!);
   }
   return out.toString();
 }

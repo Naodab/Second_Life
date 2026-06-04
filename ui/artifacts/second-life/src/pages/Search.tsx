@@ -342,7 +342,7 @@ export default function Search() {
       categoryId: categoryId ?? null,
       subCategoryId: subCategoryId ?? null,
       provinceCode: provinceCode ?? null,
-      WardCode: wardCode ?? null,
+      wardCode: wardCode ?? null,
       priceMin: priceMinNum != null ? String(priceMinNum) : null,
       priceMax: priceMaxNum != null ? String(priceMaxNum) : null,
     });
@@ -360,11 +360,19 @@ export default function Search() {
     priceMaxNum,
   ]);
 
+  const lastUrlSyncPathRef = useRef<string | null>(null);
   useEffect(() => {
     if (!desiredSearchPath) return;
-    if (!searchPathsQueryEqual(desiredSearchPath, pathStubForSearchQueryCompare(search))) {
-      setLocation(desiredSearchPath);
+    const currentStub = pathStubForSearchQueryCompare(search);
+    if (searchPathsQueryEqual(desiredSearchPath, currentStub)) {
+      lastUrlSyncPathRef.current = null;
+      return;
     }
+    if (lastUrlSyncPathRef.current === desiredSearchPath) {
+      return;
+    }
+    lastUrlSyncPathRef.current = desiredSearchPath;
+    setLocation(desiredSearchPath);
   }, [desiredSearchPath, search, setLocation]);
 
   const [debouncedKeyword, setDebouncedKeyword] = useState(keyword);
