@@ -10,8 +10,13 @@ services:
       - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic.prod.yml:/etc/traefik/dynamic.yml:ro
       - traefik-letsencrypt:/letsencrypt
+    env_file:
+      - .env
     environment:
       ACME_EMAIL: ${ACME_EMAIL:-admin@secondlifeonline.xyz}
+    # Compose expands ${ACME_EMAIL} from .env here (Traefik does not expand env in mounted traefik.yml).
+    command:
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@secondlifeonline.xyz}
     depends_on:
       auth-service:
         condition: service_healthy

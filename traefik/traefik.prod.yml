@@ -26,7 +26,8 @@ api:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: "${ACME_EMAIL}"
+      # Email set via docker-compose.prod.yml command (Compose substitutes .env at deploy time).
+      email: admin@secondlifeonline.xyz
       storage: /letsencrypt/acme.json
       # TLS-ALPN-01: Traefik tự xử lý trên port 443, không cần agent ngoài
       tlsChallenge: {}

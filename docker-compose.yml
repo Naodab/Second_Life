@@ -59,7 +59,7 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-      - "9080:8080"
+      - "443:443"
     volumes:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml

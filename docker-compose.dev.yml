@@ -1,5 +1,7 @@
 services:
   traefik:
+    ports:
+      - "9080:8080"
     volumes:
       - ./traefik/traefik.dev.yml:/etc/traefik/traefik.yml
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml
