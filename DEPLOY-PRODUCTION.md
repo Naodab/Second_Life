@@ -131,6 +131,17 @@ Push `main` chạy `deploy-production.sh`, script yêu cầu file **`.deploy-ini
 
 Log `entrypoint.sh` / drone-ssh từ bước **Deploy selective** là bình thường; lỗi xảy ra ngay sau `git pull` khi thiếu marker và stack chưa chạy.
 
+## Troubleshooting: `/search`, `/login` → HTTP 404
+
+SPA dùng **static-web-server** với `--page-fallback`. Đường dẫ fallback phải là file thật (ví dụ `/public/index.html`), **không** chỉ `index.html` — nếu sai, mọi deep link (`/search`, `/listing/...`) trả 404 dù `/` vẫn 200.
+
+Sửa xong cần **rebuild** `second-life-ui`:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build second-life-ui
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d second-life-ui
+```
+
 ## Verification
 
 - HTTP → HTTPS redirect (301)
