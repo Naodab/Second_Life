@@ -22,6 +22,7 @@ import com.naodab.bookingservice.models.enums.BookingOrderStatus;
 import com.naodab.bookingservice.repositories.BookingOrderRepository;
 import com.naodab.bookingservice.services.BookingOrderService;
 import com.naodab.bookingservice.services.CustomerService;
+import com.naodab.bookingservice.services.OrderNotificationPublisher;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 
@@ -44,6 +45,7 @@ public class BookingOrderServiceImpl implements BookingOrderService {
   CustomerService customerService;
   InventoryClients inventoryClients;
   ProductClients productClients;
+  OrderNotificationPublisher orderNotificationPublisher;
 
   @Override
   @Transactional
@@ -66,6 +68,9 @@ public class BookingOrderServiceImpl implements BookingOrderService {
       inventoryClients.releaseBuyReservation(bookingOrder.getId());
       throw e;
     }
+
+    orderNotificationPublisher.publishBuyOrderCreated(
+        bookingOrder.getId(), bookingOrder.getListingVariantId(), profileId, customer);
 
     return bookingOrderMapper.toBookingOrderResponse(bookingOrder, customer);
   }
@@ -126,6 +131,25 @@ public class BookingOrderServiceImpl implements BookingOrderService {
     bookingOrderRepository.save(order);
     if (currentStatus == BookingOrderStatus.PENDING && targetStatus == BookingOrderStatus.CANCELLED) {
       inventoryClients.releaseBuyReservation(order.getId());
+      orderNotificationPublisher.publishBuyOrderCancelledBySeller(
+          order.getId(),
+          order.getListingVariantId(),
+          order.getCustomer().getProfileId(),
+          order.getCustomer());
+    } else if (targetStatus == BookingOrderStatus.CONFIRMED) {
+      orderNotificationPublisher.publishBuyOrderConfirmed(
+          order.getId(),
+          order.getListingVariantId(),
+          order.getCustomer().getProfileId(),
+          order.getCustomer());
+    } else if (targetStatus == BookingOrderStatus.SHIPPED || targetStatus == BookingOrderStatus.DELIVERED) {
+      orderNotificationPublisher.publishBuyOrderStatusChanged(
+          order.getId(),
+          order.getListingVariantId(),
+          order.getCustomer().getProfileId(),
+          order.getCustomer(),
+          currentStatus.name(),
+          targetStatus.name());
     }
     return bookingOrderMapper.toBookingOrderResponse(order, order.getCustomer());
   }
@@ -152,6 +176,8 @@ public class BookingOrderServiceImpl implements BookingOrderService {
     order.setStatus(BookingOrderStatus.CANCELLED);
     bookingOrderRepository.save(order);
     inventoryClients.releaseBuyReservation(order.getId());
+    orderNotificationPublisher.publishBuyOrderCancelledByBuyer(
+        order.getId(), order.getListingVariantId(), profileId, order.getCustomer());
   }
 
   private boolean validBuyInventory(String listingVariantId, int quantity) {

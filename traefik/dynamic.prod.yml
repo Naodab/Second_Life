@@ -67,6 +67,32 @@ http:
       middlewares:
         - gateway-jwt
       priority: 100
+    notification-api-options:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/notifications`) && Method(`OPTIONS`)"
+      service: mail-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+    notification-api:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/notifications`)"
+      service: mail-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - gateway-jwt
+      priority: 100
+    notification-ws:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/ws/notifications`)"
+      service: mail-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
     location-api-options:
       rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`)) && Method(`OPTIONS`)"
       service: location-service

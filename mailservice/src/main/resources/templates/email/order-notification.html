@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8">
+  <title th:text="${title}">Thông báo đơn hàng</title>
+</head>
+
+<body style="margin:0;padding:0;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;background:#f5f7fb;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;overflow:hidden;
+box-shadow:0 8px 25px rgba(0,0,0,0.05);">
+          <tr>
+            <td align="center" style="background:linear-gradient(135deg,#5a8dee,#7aa9f7);padding:36px 20px;">
+              <img src="cid:logo" width="60" style="display:block;margin-bottom:12px;">
+              <h1 style="color:white;margin:0;font-size:26px;font-weight:700;" th:text="${title}">
+                Thông báo đơn hàng
+              </h1>
+              <p style="color:white;margin-top:8px;font-size:14px;opacity:0.92;" th:if="${orderLabel}">
+                Mã đơn #<span th:text="${orderLabel}">abc12345</span>
+              </p>
+            </td>
+          </tr>
+
+          <tr th:if="${hasProductImage}">
+            <td align="center" style="padding:24px 24px 0;">
+              <img src="cid:productImage" alt="Sản phẩm"
+                style="display:block;width:100%;max-width:320px;height:220px;object-fit:cover;border-radius:12px;border:1px solid #eee;">
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:32px 35px;color:#333;">
+              <p th:if="${productTitle}" style="font-size:17px;font-weight:700;margin:0 0 12px;color:#222;"
+                th:text="${productTitle}">
+                Tên sản phẩm
+              </p>
+              <p style="font-size:15px;line-height:1.7;margin:0 0 28px;color:#555;" th:text="${body}">
+                Nội dung thông báo
+              </p>
+
+              <table width="100%" cellpadding="0" cellspacing="0" th:if="${actionLink}">
+                <tr>
+                  <td align="center">
+                    <a th:href="${actionLink}" style="
+                      background:#5a8dee;
+                      color:white;
+                      text-decoration:none;
+                      padding:14px 35px;
+                      border-radius:8px;
+                      font-weight:bold;
+                      font-size:15px;
+                      display:inline-block;
+                      box-shadow:0 3px 8px rgba(90,141,238,0.4);
+                    " th:text="${actionLabel}">
+                      Xem chi tiết
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin-top:28px;font-size:13px;color:#777;" th:if="${actionLink}">
+                Nếu nút trên không hoạt động, hãy mở liên kết sau:
+              </p>
+              <p style="word-break:break-all;font-size:13px;color:#5a8dee;" th:if="${actionLink}"
+                th:text="${actionLink}">
+                https://example.com/orders
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 35px;">
+              <hr style="border:none;border-top:1px solid #eee;">
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:25px;text-align:center;font-size:13px;color:#999;">
+              <p style="margin:0;">© 2026 Second Life</p>
+              <p style="margin:6px 0 0;">Bạn nhận email này vì có cập nhật liên quan đến đơn hàng của bạn.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>

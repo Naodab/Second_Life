@@ -52,6 +52,26 @@ http:
       middlewares:
         - gateway-jwt
       priority: 1
+    notification-api-options:
+      rule: "PathPrefix(`/api/v1/notifications`) && Method(`OPTIONS`)"
+      service: mail-service
+      entryPoints:
+        - web
+      priority: 100
+    notification-api:
+      rule: "PathPrefix(`/api/v1/notifications`)"
+      service: mail-service
+      entryPoints:
+        - web
+      middlewares:
+        - gateway-jwt
+      priority: 1
+    notification-ws:
+      rule: "PathPrefix(`/api/v1/ws/notifications`)"
+      service: mail-service
+      entryPoints:
+        - web
+      priority: 1
     location-api-options:
       rule: "(PathPrefix(`/api/v1/provinces`) || PathPrefix(`/api/v1/wards`)) && Method(`OPTIONS`)"
       service: location-service

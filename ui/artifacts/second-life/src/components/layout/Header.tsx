@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCart } from "@/hooks/use-cart";
+import { useNotifications, type UiNotification } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 import { buildFreshSearchPath, buildSearchPath } from "@/lib/search-url";
 import { pathnameEndsWithSegment, rawQueryFromBrowserSearch } from "@/lib/wouter-location";
@@ -29,7 +30,7 @@ import { vi } from "date-fns/locale";
 
 interface Notification {
   id: string;
-  type: 'order' | 'payment' | 'message' | 'system' | 'delivery';
+  type: UiNotification["type"];
   title: string;
   body: string;
   time: Date;
@@ -37,35 +38,14 @@ interface Notification {
   link?: string;
 }
 
-const EMPTY_SUGGESTION_ITEMS: ListingSuggestionResponse[] = [];
-
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: "n1", type: "payment", title: "Thanh toán thành công",
-    body: "Đơn hàng #o4 đã được thanh toán 1.200.000đ qua PayOS.",
-    time: new Date(Date.now() - 1000 * 60 * 5), read: false, link: "/orders"
-  },
-  {
-    id: "n2", type: "order", title: "Đơn hàng mới",
-    body: "Linh Nguyễn vừa đặt mua Ghế Mây Bohemian. Vui lòng xác nhận đơn.",
-    time: new Date(Date.now() - 1000 * 60 * 30), read: false, link: SELLER_HUB_HOME
-  },
-  {
-    id: "n3", type: "delivery", title: "Đơn hàng đang giao",
-    body: "Máy ảnh Film Vintage của bạn đang được vận chuyển. Dự kiến nhận hôm nay.",
-    time: new Date(Date.now() - 1000 * 60 * 60 * 2), read: false, link: "/orders"
-  },
-  {
-    id: "n4", type: "message", title: "Tin nhắn mới từ Tech Recycle",
-    body: "\"Bạn muốn thuê lều bao nhiêu ngày? Hiện còn 2 chiếc.\"",
-    time: new Date(Date.now() - 1000 * 60 * 60 * 5), read: true, link: "/messages"
-  },
-  {
-    id: "n5", type: "system", title: "Chào mừng đến Second Life!",
-    body: "Khám phá hàng nghìn sản phẩm đã qua sử dụng chất lượng cao. Mua, thuê, bán dễ dàng.",
-    time: new Date(Date.now() - 1000 * 60 * 60 * 24), read: true, link: "/"
-  },
-];
+function navigateNotificationLink(link: string, navigate: (path: string) => void) {
+  try {
+    const url = new URL(link, window.location.origin);
+    navigate(`${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    navigate(link);
+  }
+}
 
 const NOTIF_ICONS: Record<string, React.ReactNode> = {
   order: <ShoppingBag className="w-4 h-4 text-amber-500" />,
@@ -75,13 +55,22 @@ const NOTIF_ICONS: Record<string, React.ReactNode> = {
   delivery: <Truck className="w-4 h-4 text-purple-500" />,
 };
 
-function NotificationPanel({ onClose }: { onClose: () => void }) {
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+function NotificationPanel({
+  onClose,
+  notifications,
+  unreadCount,
+  isLoading,
+  onMarkRead,
+  onMarkAllRead,
+}: {
+  onClose: () => void;
+  notifications: Notification[];
+  unreadCount: number;
+  isLoading: boolean;
+  onMarkRead: (id: string) => void;
+  onMarkAllRead: () => void;
+}) {
   const [, navigate] = useLocation();
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  const markRead = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
 
   return (
     <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl border bg-card text-card-foreground shadow-xl z-50 overflow-hidden">
@@ -94,7 +83,7 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
         </div>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
-            <button onClick={markAllRead} className="text-xs text-primary hover:underline">Đọc tất cả</button>
+            <button onClick={onMarkAllRead} className="text-xs text-primary hover:underline">Đọc tất cả</button>
           )}
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
@@ -103,33 +92,53 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="overflow-y-auto max-h-[420px]">
-        {notifications.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-10 text-muted-foreground text-sm">Đang tải thông báo...</div>
+        ) : notifications.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground text-sm">
             <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
             Không có thông báo nào
           </div>
         ) : (
-          notifications.map(notif => (
+          notifications.map((notif) => (
             <div
               key={notif.id}
-              onClick={() => { markRead(notif.id); if (notif.link) navigate(notif.link); onClose(); }}
+              onClick={() => {
+                onMarkRead(notif.id);
+                if (notif.link) navigateNotificationLink(notif.link, navigate);
+                onClose();
+              }}
               className={cn(
                 "flex gap-3 px-4 py-3.5 cursor-pointer hover:bg-muted/60 transition-colors border-b last:border-0",
-                !notif.read && "bg-primary/3"
+                !notif.read && "bg-primary/3",
               )}
             >
-              <div className={cn(
-                "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5",
-                notif.type === 'payment' ? "bg-green-50" :
-                  notif.type === 'order' ? "bg-amber-50" :
-                    notif.type === 'message' ? "bg-blue-50" :
-                      notif.type === 'delivery' ? "bg-purple-50" : "bg-primary/10"
-              )}>
+              <div
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5",
+                  notif.type === "payment"
+                    ? "bg-green-50"
+                    : notif.type === "order"
+                      ? "bg-amber-50"
+                      : notif.type === "message"
+                        ? "bg-blue-50"
+                        : notif.type === "delivery"
+                          ? "bg-purple-50"
+                          : "bg-primary/10",
+                )}
+              >
                 {NOTIF_ICONS[notif.type]}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <p className={cn("text-sm leading-snug", !notif.read ? "font-semibold" : "font-medium text-muted-foreground")}>{notif.title}</p>
+                  <p
+                    className={cn(
+                      "text-sm leading-snug",
+                      !notif.read ? "font-semibold" : "font-medium text-muted-foreground",
+                    )}
+                  >
+                    {notif.title}
+                  </p>
                   {!notif.read && <span className="w-2 h-2 bg-primary rounded-full mt-1.5 flex-shrink-0" />}
                 </div>
                 <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">{notif.body}</p>
@@ -150,6 +159,8 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+const EMPTY_SUGGESTION_ITEMS: ListingSuggestionResponse[] = [];
 
 function SearchSuggestionPanel({
   open,
@@ -199,9 +210,15 @@ export function Header() {
     guardSellerHubNavigation(SELLER_HUB_HOME, { isLoggedIn, sellerHubProfileComplete }, setLocation);
   };
   const { cartItems } = useCart();
+  const {
+    notifications,
+    unreadCount,
+    isLoading: notificationsLoading,
+    markRead,
+    markAllRead,
+  } = useNotifications();
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
-  const unreadCount = MOCK_NOTIFICATIONS.filter((n) => !n.read).length;
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [debouncedDraft, setDebouncedDraft] = useState("");
 
@@ -361,7 +378,16 @@ export function Header() {
                       </span>
                     )}
                   </Button>
-                  {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+                  {notifOpen && (
+                    <NotificationPanel
+                      onClose={() => setNotifOpen(false)}
+                      notifications={notifications}
+                      unreadCount={unreadCount}
+                      isLoading={notificationsLoading}
+                      onMarkRead={markRead}
+                      onMarkAllRead={markAllRead}
+                    />
+                  )}
                 </div>
 
                 <DropdownMenu>

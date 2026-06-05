@@ -123,6 +123,9 @@ services:
     environment:
       SERVER_PORT_MAIL_SERVICE: "8083"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MONGODB_URI: ${MONGODB_URI:-mongodb://localhost:27017}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-secondlife}
+      AUTH_SERVICE_URL: http://auth-service:8081/api/v1
     env_file:
       - .env
     depends_on:
