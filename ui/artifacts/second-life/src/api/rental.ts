@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { customFetch } from "@workspace/api-client-react";
+import { normalizeBookingOrderCustomer, type BookingOrderCustomerResponse } from "@/api/booking";
 import { unwrapApiData, type ApiResponseEnvelope } from "./types";
 
 export type RentalOrderStatus =
@@ -22,6 +23,8 @@ export type RentalOrderResponse = {
   id: string;
   listingVariantId: string;
   customerId: string;
+  customer?: BookingOrderCustomerResponse | null;
+  price?: number | null;
   startTime: string;
   endTime: string;
   quantity: number;
@@ -52,10 +55,16 @@ function normalizeRentalOrder(raw: unknown): RentalOrderResponse | null {
     ? (statusRaw as RentalOrderStatus)
     : "PENDING";
 
+  const customerRaw = o.customer;
+  const customer =
+    customerRaw != null ? normalizeBookingOrderCustomer(customerRaw) : null;
+
   return {
     id,
     listingVariantId,
-    customerId: String(o.customerId ?? o.customer_id ?? ""),
+    customerId: String(o.customerId ?? o.customer_id ?? customer?.id ?? ""),
+    customer,
+    price: o.price != null ? Number(o.price) : null,
     startTime: String(o.startTime ?? o.start_time ?? ""),
     endTime: String(o.endTime ?? o.end_time ?? ""),
     quantity: Number(o.quantity ?? 1),

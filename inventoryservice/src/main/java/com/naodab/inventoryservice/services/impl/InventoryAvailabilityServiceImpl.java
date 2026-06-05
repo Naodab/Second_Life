@@ -49,6 +49,9 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
         .map(
             item -> {
               long physical = physicalQuantityForMode(item);
+              if (mode == InventoryItem.InventoryMode.RENT) {
+                return physical;
+              }
               long reserved = inventoryReservationRepository.sumActiveReservedQuantity(
                   listingVariantId,
                   mode,
@@ -196,6 +199,9 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
   @Transactional(readOnly = true)
   public long getAvailableQuantity(String listingVariantId, InventoryItem.InventoryMode mode) {
     long physical = getPhysicalStock(listingVariantId, mode);
+    if (mode == InventoryItem.InventoryMode.RENT) {
+      return physical;
+    }
     long reserved = getReservedQuantity(listingVariantId, mode);
     return Math.max(0L, physical - reserved);
   }
@@ -230,8 +236,7 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
     if (requestedQuantity < 1L) {
       throw new AppException(ErrorCode.QUANTITY_MIN);
     }
-    Optional<Long> minOpt =
-        findMinAvailableQuantityInOpenInterval(listingVariantId, mode, intervalStart, intervalEnd);
+    Optional<Long> minOpt = findMinAvailableQuantityInOpenInterval(listingVariantId, mode, intervalStart, intervalEnd);
     if (minOpt.isEmpty()) {
       throw new AppException(ErrorCode.INVENTORY_ITEM_NOT_FOUND);
     }

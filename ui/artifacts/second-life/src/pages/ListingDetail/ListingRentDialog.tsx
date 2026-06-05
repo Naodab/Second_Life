@@ -31,6 +31,9 @@ type Props = {
   variantSelection: Record<string, string>;
   onVariantSelectionChange: (axisKey: string, valueId: string) => void;
   rentUnit: RentUnit;
+  /** Base rent stock for overlap checks in the scheduler (does not lock date inputs). */
+  schedulerStock: number;
+  /** Max quantity for selected window (after range availability). */
   lineStock: number;
   lineUnitRentPrice: number;
   rentQty: number;
@@ -39,11 +42,15 @@ type Props = {
   onRentWindowChange: (w: RentScheduleWindow | null) => void;
   rentValidity: RentScheduleValidityPayload;
   onRentValidityChange: (p: RentScheduleValidityPayload) => void;
+  rentRangeError?: string | null;
   rentalPeriods: RentalPeriodDto[];
   rentalsLoading: boolean;
   schedulerResetKey: string;
   checkoutDisabled: boolean;
   onCheckout: () => void;
+  onAddToCart?: () => void;
+  addToCartDisabled?: boolean;
+  addToCartLoading?: boolean;
 };
 
 export function ListingRentDialog({
@@ -55,6 +62,7 @@ export function ListingRentDialog({
   variantSelection,
   onVariantSelectionChange,
   rentUnit,
+  schedulerStock,
   lineStock,
   lineUnitRentPrice,
   rentQty,
@@ -63,11 +71,15 @@ export function ListingRentDialog({
   onRentWindowChange,
   rentValidity,
   onRentValidityChange,
+  rentRangeError,
   rentalPeriods,
   rentalsLoading,
   schedulerResetKey,
   checkoutDisabled,
   onCheckout,
+  onAddToCart,
+  addToCartDisabled,
+  addToCartLoading,
 }: Props) {
   const bookings = useMemo(() => rentalPeriodsToBookings(rentalPeriods), [rentalPeriods]);
 
@@ -83,8 +95,6 @@ export function ListingRentDialog({
   const estimatedTotal = showUnitPrice && billUnits > 0 ? lineUnitRentPrice * billUnits * rentQty : 0;
 
   const unitLabelVu = rentUnitLabelVu(rentUnit);
-
-  const scheduleLocked = lineStock <= 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -160,7 +170,6 @@ export function ListingRentDialog({
                     <input
                       id="rent-hour-day"
                       type="date"
-                      disabled={scheduleLocked}
                       className={cn(
                         "h-10 w-full min-w-0 rounded-xl border-2 bg-muted/30 px-3 text-sm font-medium tabular-nums outline-none sm:w-[13.5rem]",
                         "border-border/50 shadow-sm transition-colors",
@@ -189,9 +198,8 @@ export function ListingRentDialog({
                   scheduleResourceLabel={cartBridge.name}
                   hourDay={rentUnit === "HOUR" ? hourRentDay : undefined}
                   onHourDayChange={rentUnit === "HOUR" ? setHourRentDay : undefined}
-                  disabled={scheduleLocked}
                   bookings={bookings}
-                  concurrencyCap={lineStock}
+                  concurrencyCap={schedulerStock}
                   rentQty={rentQty}
                   parentWindow={rentWindow}
                   onWindowChange={onRentWindowChange}
@@ -263,12 +271,28 @@ export function ListingRentDialog({
                 <span>{rentValidity.error}</span>
               </div>
             ) : null}
+            {rentRangeError ? (
+              <div className="flex items-start gap-2 rounded-xl border border-destructive/35 bg-destructive/10 p-3 text-sm text-destructive dark:border-destructive/40 dark:bg-destructive/15">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{rentRangeError}</span>
+              </div>
+            ) : null}
           </div>
         </div>
-        <DialogFooter className="mt-2 shrink-0 gap-2 border-t border-border/40 pt-4 dark:border-border/35 sm:gap-0">
+        <DialogFooter className="mt-2 shrink-0 gap-2 border-t border-border/40 pt-4 dark:border-border/35 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-full border-border/80">
             Hủy
           </Button>
+          {onAddToCart ? (
+            <Button
+              variant="outline"
+              onClick={onAddToCart}
+              disabled={addToCartDisabled || addToCartLoading}
+              className="rounded-full border-border/80"
+            >
+              {addToCartLoading ? "Đang thêm..." : "Thêm vào giỏ"}
+            </Button>
+          ) : null}
           <Button
             onClick={onCheckout}
             disabled={checkoutDisabled}

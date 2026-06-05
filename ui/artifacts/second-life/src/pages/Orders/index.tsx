@@ -13,8 +13,10 @@ import {
   canCancelOrder,
   formatOrderDate,
   formatPickupTime,
+  formatRentalPeriod,
   orderDisplayTitle,
   orderListingHref,
+  orderLineTotal,
   orderStatusBadgeClass,
   orderThumbnail,
   orderUnitPrice,
@@ -108,9 +110,8 @@ export default function Orders() {
                 filteredOrders.map((order) => {
                   const listingHref = orderListingHref(order);
                   const unitPrice = orderUnitPrice(order);
-                  const lineTotal =
-                    unitPrice != null ? unitPrice * order.quantity : null;
-                  const isRent = order.context?.listingType === "RENT";
+                  const lineTotal = orderLineTotal(order);
+                  const isRent = order.kind === "rent";
 
                   return (
                     <div
@@ -171,7 +172,11 @@ export default function Orders() {
 
                           <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
                             <Clock className="w-3.5 h-3.5 shrink-0" />
-                            <span>Nhận hàng dự kiến: {formatPickupTime(order.pickupTime)}</span>
+                            <span>
+                              {isRent
+                                ? `Thời gian thuê: ${formatRentalPeriod(order)}`
+                                : `Nhận hàng dự kiến: ${formatPickupTime(order.pickupTime)}`}
+                            </span>
                           </div>
 
                           {order.status === "PENDING" && (
@@ -185,7 +190,7 @@ export default function Orders() {
                           {lineTotal != null ? (
                             <>
                               <p className="font-bold text-xl">{formatCurrency(lineTotal)}</p>
-                              {order.quantity > 1 && unitPrice != null && (
+                              {!isRent && order.quantity > 1 && unitPrice != null && (
                                 <p className="text-[11px] text-muted-foreground mt-1">
                                   {formatCurrency(unitPrice)} × {order.quantity}
                                 </p>
@@ -198,7 +203,9 @@ export default function Orders() {
                       </div>
 
                       <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-border">
-                        {canCancelOrder(order.status) && <OrderCancelButton orderId={order.id} />}
+                        {canCancelOrder(order) && (
+                          <OrderCancelButton orderId={order.id} orderKind={order.kind} />
+                        )}
                         {listingHref && (
                           <Link href={listingHref}>
                             <Button variant="outline" size="sm" className="rounded-full">

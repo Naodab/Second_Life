@@ -8,10 +8,11 @@ import {
   fetchListingVariantAvailability,
   fetchListingVariantAvailabilityInRange,
 } from "@/api/inventory";
-import { useCart } from "@/hooks/use-mock-api";
+import { useCart } from "@/hooks/use-cart";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { buildCheckoutHref, setPendingCheckoutLine } from "@/checkout/checkout-session";
 import { useToast } from "@/hooks/use-toast";
+import { mapApiError } from "@/lib/api-error";
 import { ImageSlider } from "./ImageSlider";
 import { ListingBuyDialog } from "./ListingBuyDialog";
 import { ListingDetailBreadcrumb } from "./ListingDetailBreadcrumb";
@@ -34,6 +35,13 @@ import {
   productVariantStock,
 } from "./listing-variant-selection";
 import type { ListingReviewRow } from "./types";
+import {
+  buildBuyCartPayload,
+  buildBuyCheckoutLine,
+  buildRentCartPayload,
+  buildRentCheckoutLine,
+  shouldOpenRentModalForQuickAdd,
+} from "./listing-detail-actions";
 import { useListingDetailPage } from "./useListingDetailPage";
 
 export default function ListingDetail() {
@@ -66,7 +74,7 @@ export default function ListingDetail() {
   const [reviewLightbox, setReviewLightbox] = useState<{ media: string[]; idx: number } | null>(null);
   const [variantSelection, setVariantSelection] = useState<Record<string, string>>({});
 
-  const { addToCart } = useCart();
+  const { addToCart, isAdding } = useCart();
   const { requireAuth } = useRequireAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
@@ -143,11 +151,13 @@ export default function ListingDetail() {
       listingVariantId,
       rentWindow?.startMs,
       rentWindow?.endExclusiveMs,
+      rentQty,
     ] as const,
     queryFn: () =>
       fetchListingVariantAvailabilityInRange(listingVariantId!, {
         from: new Date(rentWindow!.startMs).toISOString(),
         to: new Date(rentWindow!.endExclusiveMs).toISOString(),
+        quantity: rentQty,
       }),
     enabled: Boolean(rentInventoryEnabled && listingVariantId && rentWindow),
     staleTime: 5_000,
@@ -166,7 +176,8 @@ export default function ListingDetail() {
     return Math.min(dialogCatalogStock, q.availableQuantity);
   }, [buyAvailabilityQuery.data, dialogCatalogStock]);
 
-  const effectiveRentStock = useMemo(() => {
+  /** Max concurrent rent units (catalog / physical stock). Interval overlap is checked separately. */
+  const rentConcurrencyCap = useMemo(() => {
     const q = rentAvailabilityQuery.data;
     if (!q || !q.tracked || q.availableQuantity == null) {
       return dialogCatalogStock;
@@ -174,14 +185,32 @@ export default function ListingDetail() {
     return Math.min(dialogCatalogStock, q.availableQuantity);
   }, [dialogCatalogStock, rentAvailabilityQuery.data]);
 
-  const effectiveRentStockCapped = useMemo(() => {
-    if (!rentWindow) return effectiveRentStock;
+  const rentQtyCap = useMemo(() => {
+    if (!rentWindow) return rentConcurrencyCap;
     const r = rentWindowRangeAvailabilityQuery.data;
     if (r?.tracked && r.availableQuantity != null) {
-      return Math.min(effectiveRentStock, r.availableQuantity);
+      return Math.min(rentConcurrencyCap, r.availableQuantity);
     }
-    return effectiveRentStock;
-  }, [effectiveRentStock, rentWindow, rentWindowRangeAvailabilityQuery.data]);
+    return rentConcurrencyCap;
+  }, [rentConcurrencyCap, rentWindow, rentWindowRangeAvailabilityQuery.data]);
+
+  const rentRangeBlocked = useMemo(() => {
+    if (!rentWindow) return false;
+    if (rentWindowRangeAvailabilityQuery.isFetching) return false;
+    const r = rentWindowRangeAvailabilityQuery.data;
+    if (!r?.tracked || r.availableQuantity == null) return false;
+    return r.availableQuantity < rentQty;
+  }, [rentWindow, rentQty, rentWindowRangeAvailabilityQuery.data, rentWindowRangeAvailabilityQuery.isFetching]);
+
+  const rentRangeBlockMessage = useMemo(() => {
+    if (!rentRangeBlocked) return null;
+    const r = rentWindowRangeAvailabilityQuery.data;
+    const avail = r?.availableQuantity ?? 0;
+    if (avail <= 0) {
+      return "Không còn đủ số lượng trong khung thời gian đã chọn.";
+    }
+    return `Chỉ còn ${avail} sản phẩm trong khung thời gian đã chọn.`;
+  }, [rentRangeBlocked, rentWindowRangeAvailabilityQuery.data]);
 
   const buyAvailabilityLoading = buyInventoryEnabled && buyAvailabilityQuery.isFetching;
   const rentAvailabilityLoading = rentInventoryEnabled && rentAvailabilityQuery.isFetching;
@@ -213,42 +242,40 @@ export default function ListingDetail() {
   }, [effectiveBuyStock]);
 
   useEffect(() => {
-    const rentCap = effectiveRentStockCapped > 0 ? effectiveRentStockCapped : 1;
-    setRentQty((q) => (effectiveRentStockCapped <= 0 ? 1 : Math.min(Math.max(1, q), rentCap)));
-  }, [effectiveRentStockCapped]);
+    const rentCap = rentQtyCap > 0 ? rentQtyCap : 1;
+    setRentQty((q) => (rentQtyCap <= 0 ? 1 : Math.min(Math.max(1, q), rentCap)));
+  }, [rentQtyCap]);
 
   const handleVariantAxisChange = (axisKey: string, valueId: string) => {
     setVariantSelection((prev) => ({ ...prev, [axisKey]: valueId }));
   };
 
+  const rentUnit = anchorVariantRow?.lv.rentUnit ?? "DAY";
+
   const handleCheckoutNow = (mode: "buy" | "rent") => {
-    if (!requireAuth()) return;
-    if (!data || !listingVariantId) return;
-    if (mode === "buy" && (effectiveBuyStock <= 0 || dialogBuyUnitPrice <= 0)) return;
-    if (
-      mode === "rent" &&
-      (effectiveRentStockCapped <= 0 || dialogRentUnitPrice <= 0 || !rentWindow || !rentValidity.ok)
-    ) {
-      return;
-    }
+    if (!requireAuth() || !data) return;
 
     const line =
       mode === "buy"
-        ? {
+        ? buildBuyCheckoutLine({
             listingId: data.listing.id,
             listingVariantId,
             quantity: buyQty,
-            mode: "buy" as const,
-          }
-        : {
+            effectiveBuyStock,
+            dialogBuyUnitPrice,
+          })
+        : buildRentCheckoutLine({
             listingId: data.listing.id,
             listingVariantId,
             quantity: rentQty,
-            mode: "rent" as const,
-            rentalStart: new Date(rentWindow!.startMs).toISOString(),
-            rentalEnd: new Date(rentWindow!.endExclusiveMs).toISOString(),
+            dialogRentUnitPrice,
+            rentWindow,
+            rentValidityOk: rentValidity.ok,
+            rentRangeBlocked,
             rentUnit,
-          };
+          });
+
+    if (!line) return;
 
     setPendingCheckoutLine(line);
 
@@ -257,13 +284,6 @@ export default function ListingDetail() {
     setRentWindow(null);
     setRentValidity({ ok: false, billUnits: 0 });
     navigate(buildCheckoutHref(line));
-  };
-
-  const handleQuickAddToCart = () => {
-    if (!requireAuth()) return;
-    if (!cartBridge) return;
-    addToCart(cartBridge, 1);
-    toast({ title: "Đã thêm vào giỏ hàng!", description: `${cartBridge.name} đã được thêm vào giỏ.` });
   };
 
   const setRentModalOpen = (open: boolean) => {
@@ -300,12 +320,72 @@ export default function ListingDetail() {
 
   const buyCheckoutDisabled = effectiveBuyStock <= 0 || dialogBuyUnitPrice <= 0;
   const rentCheckoutDisabled =
-    !rentValidity.ok ||
-    effectiveRentStockCapped <= 0 ||
     dialogRentUnitPrice <= 0 ||
-    !rentWindow;
+    !rentWindow ||
+    !rentValidity.ok ||
+    rentRangeBlocked;
 
-  const rentUnit = anchorVariantRow?.lv.rentUnit ?? "DAY";
+  const handleAddBuyToCart = async (quantity = buyQty) => {
+    if (!requireAuth()) return;
+    const payload = buildBuyCartPayload({
+      listingId: listing.id,
+      listingVariantId,
+      quantity,
+      effectiveBuyStock,
+      dialogBuyUnitPrice,
+    });
+    if (!payload) return;
+    try {
+      await addToCart(payload);
+      toast({
+        title: "Đã thêm vào giỏ hàng!",
+        description: `${cartBridge.name} đã được thêm vào giỏ.`,
+      });
+      setIsBuyModalOpen(false);
+    } catch (err) {
+      const mapped = mapApiError(err);
+      toast({ title: mapped.title, description: mapped.message, variant: "destructive" });
+    }
+  };
+
+  const handleAddRentToCart = async () => {
+    if (!requireAuth()) return;
+    const payload = buildRentCartPayload({
+      listingId: listing.id,
+      listingVariantId,
+      quantity: rentQty,
+      dialogRentUnitPrice,
+      rentWindow,
+      rentValidityOk: rentValidity.ok,
+      rentRangeBlocked,
+      rentUnit,
+    });
+    if (!payload) return;
+    try {
+      await addToCart(payload);
+      toast({
+        title: "Đã thêm vào giỏ hàng!",
+        description: `${cartBridge.name} đã được thêm vào giỏ.`,
+      });
+      setIsRentModalOpen(false);
+      setRentWindow(null);
+      setRentValidity({ ok: false, billUnits: 0 });
+    } catch (err) {
+      const mapped = mapApiError(err);
+      toast({ title: mapped.title, description: mapped.message, variant: "destructive" });
+    }
+  };
+
+  const handleQuickAddToCart = () => {
+    if (!requireAuth()) return;
+    if (shouldOpenRentModalForQuickAdd(listing.listingType)) {
+      setIsRentModalOpen(true);
+      setRentWindow(null);
+      setRentValidity({ ok: false, billUnits: 0 });
+      return;
+    }
+    void handleAddBuyToCart(1);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/25 pb-20 dark:from-background dark:via-background dark:to-muted/15">
@@ -345,6 +425,7 @@ export default function ListingDetail() {
                 setRentValidity({ ok: false, billUnits: 0 });
               }}
               onQuickAddToCart={handleQuickAddToCart}
+              quickAddLoading={isAdding}
             />
           </div>
         </div>
@@ -386,6 +467,9 @@ export default function ListingDetail() {
         availabilityLoading={buyAvailabilityLoading}
         checkoutDisabled={buyCheckoutDisabled}
         onCheckout={() => handleCheckoutNow("buy")}
+        onAddToCart={() => void handleAddBuyToCart()}
+        addToCartDisabled={buyCheckoutDisabled}
+        addToCartLoading={isAdding}
       />
 
       <ListingRentDialog
@@ -397,7 +481,8 @@ export default function ListingDetail() {
         variantSelection={variantSelection}
         onVariantSelectionChange={handleVariantAxisChange}
         rentUnit={rentUnit}
-        lineStock={effectiveRentStockCapped}
+        schedulerStock={rentConcurrencyCap}
+        lineStock={rentQtyCap}
         lineUnitRentPrice={dialogRentUnitPrice}
         rentQty={rentQty}
         onRentQtyChange={setRentQty}
@@ -405,6 +490,7 @@ export default function ListingDetail() {
         onRentWindowChange={setRentWindow}
         rentValidity={rentValidity}
         onRentValidityChange={onRentValidityChange}
+        rentRangeError={rentRangeBlockMessage}
         rentalPeriods={stableRentalPeriods}
         rentalsLoading={
           (rentAvailabilityLoading ||
@@ -415,6 +501,9 @@ export default function ListingDetail() {
         schedulerResetKey={rentSchedulerResetKey}
         checkoutDisabled={rentCheckoutDisabled}
         onCheckout={() => handleCheckoutNow("rent")}
+        onAddToCart={() => void handleAddRentToCart()}
+        addToCartDisabled={rentCheckoutDisabled}
+        addToCartLoading={isAdding}
       />
 
       {reviewLightbox ? (

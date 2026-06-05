@@ -208,7 +208,11 @@ public class ListingSearchServiceImpl implements ListingSearchService {
           }
           OpenSearchNativeQueryHelper.addTermIfPresent(filter, "status", request.getProductStatus());
           OpenSearchNativeQueryHelper.addTermIfPresent(filter, "listingType", request.getListingType());
-          OpenSearchNativeQueryHelper.addTermIfPresent(filter, "listingStatus", request.getListingStatus());
+          if (request.getListingStatus() != null) {
+            OpenSearchNativeQueryHelper.addTermIfPresent(filter, "listingStatus", request.getListingStatus());
+          } else {
+            OpenSearchNativeQueryHelper.addTermsIfPresent(filter, "listingStatus", request.getListingStatuses());
+          }
           Double priceMin = request.getPriceMin();
           Double priceMax = request.getPriceMax();
           if (priceMin != null || priceMax != null) {

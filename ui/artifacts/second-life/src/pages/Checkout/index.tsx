@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   AlertCircle,
@@ -12,11 +12,15 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { formatCurrency, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { removeCartItem } from "@/api/cart";
 import { createBookingOrder, buildDefaultPickupTime } from "@/api/booking";
 import { createRentalOrder, formatRentalDateTime } from "@/api/rental";
+import { CART_QUERY_KEY } from "@/hooks/use-cart";
 import { buildCheckoutSuccessContext, type CheckoutSuccessContext } from "./checkout-success-context";
 import { SuccessScreen } from "./SuccessScreen";
 import { CheckoutOrderInfoForm, type CheckoutOrderInfoFormRef } from "./CheckoutOrderInfoForm";
@@ -35,8 +39,23 @@ import {
   checkoutPrimaryTextClass,
 } from "./checkout-utils";
 
+function CheckoutReadonlyField({ label, value, className }: { label: string; value: string; className?: string }) {
+  return (
+    <div className={cn("space-y-1", className)}>
+      <Label className="text-[11px] font-medium text-muted-foreground">{label}</Label>
+      <Input
+        value={value}
+        readOnly
+        disabled
+        className="h-9 bg-muted/40 text-sm disabled:cursor-default disabled:opacity-100"
+      />
+    </div>
+  );
+}
+
 export default function Checkout() {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const { items, isLoading, isError, errorView, ownerNameLoading, placeNamesLoading, clearSession, refetch } =
     useCheckoutPage();
   const [successContext, setSuccessContext] = useState<CheckoutSuccessContext | null>(null);
@@ -44,13 +63,13 @@ export default function Checkout() {
   const orderInfoFormRef = useRef<CheckoutOrderInfoFormRef>(null);
 
   const facilityGroups = groupByFacility(items);
-  const subOrderCount = facilityGroups.size;
+  const facilityCount = facilityGroups.size;
+  const orderCount = items.length;
 
   const subtotal = items.reduce((s, i) => s + itemTotal(i), 0);
-  const hasRentals = items.some((i) => i.mode === "rent");
 
   const placeOrderMutation = useMutation({
-    mutationFn: async (payload: { customerId: string; orderItems: typeof items; orderSubCount: number }) => {
+    mutationFn: async (payload: { customerId: string; orderItems: typeof items }) => {
       const pickupTime = buildDefaultPickupTime();
       const orders = await Promise.all(
         payload.orderItems.map((item) => {
@@ -72,10 +91,17 @@ export default function Checkout() {
           });
         }),
       );
-      return { orders, orderItems: payload.orderItems, orderSubCount: payload.orderSubCount };
+      return { orders, orderItems: payload.orderItems };
     },
-    onSuccess: (result) => {
-      setSuccessContext(buildCheckoutSuccessContext(result.orderItems, result.orderSubCount));
+    onSuccess: async (result) => {
+      const cartIds = result.orderItems
+        .map((item) => item.cartItemId?.trim())
+        .filter((id): id is string => Boolean(id));
+      if (cartIds.length > 0) {
+        await Promise.allSettled(cartIds.map((id) => removeCartItem(id)));
+        await queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY });
+      }
+      setSuccessContext(buildCheckoutSuccessContext(result.orderItems, result.orderItems.length));
       clearSession();
     },
   });
@@ -83,7 +109,7 @@ export default function Checkout() {
   const handlePlaceOrder = async () => {
     const result = await orderInfoFormRef.current?.validate();
     if (!result) return;
-    placeOrderMutation.mutate({ customerId: result.customerId, orderItems: items, orderSubCount: subOrderCount });
+    placeOrderMutation.mutate({ customerId: result.customerId, orderItems: items });
   };
 
   const handleGoBack = () => {
@@ -135,14 +161,20 @@ export default function Checkout() {
 
         <h1 className="text-3xl font-display font-bold mb-8">Thanh toán</h1>
 
-        {subOrderCount > 1 && (
+        {orderCount > 1 && (
           <div className={cn(checkoutAlertClass, "flex items-start gap-3 p-4 mb-6")}>
             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold">Đơn từ nhiều cơ sở</p>
+              <p className="font-semibold">Thanh toán nhiều sản phẩm</p>
               <p className="mt-0.5 opacity-90">
-                Sản phẩm từ <strong>{subOrderCount} cơ sở</strong> khác nhau — hệ thống sẽ tách thành{" "}
-                <strong>{subOrderCount} đơn hàng riêng</strong>.
+                Hệ thống sẽ tạo <strong>{orderCount} đơn hàng</strong> riêng
+                {facilityCount > 1 ? (
+                  <>
+                    {" "}
+                    từ <strong>{facilityCount} cơ sở</strong> khác nhau
+                  </>
+                ) : null}
+                .
               </p>
             </div>
           </div>
@@ -168,7 +200,7 @@ export default function Checkout() {
                     <CheckoutFacilityCollapseHeader
                       item={facilityItems[0]}
                       subOrderIndex={idx}
-                      showSubOrderBadge={subOrderCount > 1}
+                      showSubOrderBadge={facilityCount > 1}
                       ownerNameLoading={ownerNameLoading}
                     />
                     <div className="flex items-center gap-3 shrink-0">
@@ -197,57 +229,61 @@ export default function Checkout() {
                         const price = itemTotal(item);
                         const isHourly = item.rentUnit === "HOUR";
                         const dateFormatStr = isHourly ? "HH:mm dd/MM/yyyy" : "dd/MM/yyyy";
+                        const startLabel = item.rentalDates
+                          ? format(item.rentalDates.start, dateFormatStr, { locale: vi })
+                          : "";
+                        const endLabel = item.rentalDates
+                          ? format(item.rentalDates.end, dateFormatStr, { locale: vi })
+                          : "";
+
                         return (
-                          <div key={item.lineId} className="py-4 flex gap-4">
-                            <img src={item.images[0]} className="w-16 h-16 rounded-xl object-cover border border-border flex-shrink-0" alt={item.name} />
+                          <div key={item.lineId} className="py-4 flex gap-5">
+                            <img
+                              src={item.images[0]}
+                              className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl object-cover border border-border flex-shrink-0"
+                              alt={item.name}
+                            />
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-sm text-foreground line-clamp-1">{item.name}</h4>
+                              <div className="flex items-start justify-between gap-3">
+                                <h4 className="font-semibold text-sm text-foreground line-clamp-2">{item.name}</h4>
+                                <p className="font-semibold text-sm text-foreground shrink-0">{formatCurrency(price)}</p>
+                              </div>
+
                               {item.mode === "rent" && item.rentalDates ? (
-                                <div className={cn("flex items-start gap-1.5 mt-1.5", checkoutRentAccentClass)}>
-                                  <Clock className="w-3 h-3 flex-shrink-0 mt-[3px]" />
-                                  <div className="flex flex-col gap-0.5">
+                                <>
+                                  <div className={cn("flex items-center gap-1.5 mt-2", checkoutRentAccentClass)}>
+                                    <Clock className="w-3.5 h-3.5 flex-shrink-0" />
                                     <p className="text-xs font-semibold">
                                       Thuê {duration} {unitLabel}
                                     </p>
-                                    <p className="text-[11px] font-medium">
-                                      Nhận:{" "}
-                                      <span className="font-semibold">
-                                        {format(item.rentalDates.start, isHourly ? "HH:mm" : "dd/MM", { locale: vi })}
-                                      </span>
-                                      {!isHourly && <>{" — "}{format(item.rentalDates.start, "yyyy", { locale: vi })}</>}
-                                      {isHourly && <>{" "}{format(item.rentalDates.start, "dd/MM/yyyy", { locale: vi })}</>}
-                                    </p>
-                                    <p className="text-[11px] font-medium">
-                                      Trả:{" "}
-                                      <span className="font-semibold">
-                                        {format(item.rentalDates.end, isHourly ? "HH:mm" : "dd/MM", { locale: vi })}
-                                      </span>
-                                      {!isHourly && <>{" — "}{format(item.rentalDates.end, "yyyy", { locale: vi })}</>}
-                                      {isHourly && <>{" "}{format(item.rentalDates.end, "dd/MM/yyyy", { locale: vi })}</>}
-                                    </p>
                                   </div>
-                                </div>
+                                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                    <CheckoutReadonlyField label="Số lượng" value={String(item.quantity)} />
+                                    <CheckoutReadonlyField label="Ngày bắt đầu" value={startLabel} />
+                                    <CheckoutReadonlyField label="Ngày kết thúc" value={endLabel} />
+                                  </div>
+                                  {duration > 0 && (
+                                    <p className="text-[11px] text-muted-foreground mt-2">
+                                      {formatCurrency(item.rentPrice)}/{unitLabel} × {duration} {unitLabel} × {item.quantity} sp
+                                    </p>
+                                  )}
+                                </>
                               ) : (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Tag className="w-3 h-3 text-primary flex-shrink-0" />
-                                  <p className={cn("text-xs font-medium", checkoutPrimaryTextClass)}>Mua đứt</p>
-                                </div>
+                                <>
+                                  <div className="flex items-center gap-1 mt-2">
+                                    <Tag className="w-3 h-3 text-primary flex-shrink-0" />
+                                    <p className={cn("text-xs font-medium", checkoutPrimaryTextClass)}>Mua đứt</p>
+                                  </div>
+                                  <div className="mt-3 max-w-[140px]">
+                                    <CheckoutReadonlyField label="Số lượng" value={String(item.quantity)} />
+                                  </div>
+                                  {item.unitPrice > 0 && (
+                                    <p className="text-[11px] text-muted-foreground mt-2">
+                                      {formatCurrency(item.unitPrice)} × {item.quantity} sp
+                                    </p>
+                                  )}
+                                </>
                               )}
-                              <p className="text-xs text-muted-foreground mt-0.5">Số lượng: {item.quantity}</p>
-                              {item.mode === "buy" && item.unitPrice > 0 && (
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  {formatCurrency(item.unitPrice)} × {item.quantity} sp
-                                </p>
-                              )}
-                              {item.mode === "rent" && duration > 0 && (
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  {formatCurrency(item.rentPrice)}/{unitLabel} × {duration} {unitLabel} × {item.quantity} sp
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <p className="font-semibold text-sm text-foreground">{formatCurrency(price)}</p>
-                              {item.mode === "rent" && <p className="text-[10px] text-muted-foreground mt-1">+cọc 30%</p>}
                             </div>
                           </div>
                         );
@@ -258,23 +294,6 @@ export default function Checkout() {
                 </div>
               );
             })}
-
-            {hasRentals && (
-              <div className={cn(checkoutAlertClass, "p-5")}>
-                <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold mb-1">Chính sách đặt cọc thuê đồ</p>
-                    <ul className="text-sm space-y-1 leading-relaxed opacity-90">
-                      <li>• Khi thuê đồ, bạn cần <strong>đặt cọc trước 30%</strong> tổng giá trị thuê.</li>
-                      <li>• Phần còn lại (<strong>70%</strong>) được thanh toán khi nhận hàng.</li>
-                      <li>• Tiền cọc được hoàn trả sau khi trả đồ trong tình trạng tốt.</li>
-                      <li>• Nếu đồ bị hư hỏng, cọc có thể bị giữ một phần hoặc toàn bộ.</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className={cn(checkoutAlertClass, "p-5")}>
               <div className="flex items-start gap-3">
@@ -329,9 +348,9 @@ export default function Checkout() {
                 )}
               </Button>
 
-              {subOrderCount > 1 && (
+              {orderCount > 1 && (
                 <p className="text-xs text-muted-foreground text-center mt-4 pt-4 border-t border-border">
-                  Tách thành <strong>{subOrderCount} đơn hàng</strong> riêng
+                  Tạo <strong>{orderCount} đơn hàng</strong> riêng (mỗi sản phẩm một đơn)
                 </p>
               )}
             </div>

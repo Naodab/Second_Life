@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import {
-  LayoutDashboard,
   LogOut,
   Store,
   Building2,
@@ -20,7 +19,6 @@ import type { PendingProduct } from "./types";
 import type { ManageRouteParsed } from "./manageRoutes";
 import {
   facilityScopeActive,
-  manageDashboardPath,
   manageListingsPath,
   manageProductsPath,
   manageFacilityPath,
@@ -84,14 +82,8 @@ export function ListingsSidebar({
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navLink(
-          "Dashboard",
-          <LayoutDashboard className="w-4 h-4" />,
-          manageDashboardPath(),
-          route?.tag === "dashboard",
-        )}
-        {navLink("Products", <Package className="w-4 h-4" />, manageProductsPath(), route?.tag === "products")}
-        {navLink("Listings", <FileText className="w-4 h-4" />, manageListingsPath(), route?.tag === "listings")}
+        {navLink("Sản phẩm", <Package className="w-4 h-4" />, manageProductsPath(), route?.tag === "products")}
+        {navLink("Bài đăng", <FileText className="w-4 h-4" />, manageListingsPath(), route?.tag === "listings")}
 
         <div>
           <button

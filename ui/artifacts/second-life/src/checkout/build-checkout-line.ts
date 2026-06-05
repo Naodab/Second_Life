@@ -7,6 +7,7 @@ import type { CheckoutLineInput } from "./checkout-session";
 
 export type CheckoutLineItem = {
   lineId: string;
+  cartItemId?: string;
   listingId: string;
   listingVariantId: string;
   name: string;
@@ -77,7 +78,8 @@ export function buildCheckoutLineItem(
   }
 
   return {
-    lineId: `${input.listingVariantId}:${input.mode}`,
+    lineId: input.cartItemId ?? `${input.listingVariantId}:${input.mode}`,
+    cartItemId: input.cartItemId,
     listingId: input.listingId,
     listingVariantId: input.listingVariantId,
     name,

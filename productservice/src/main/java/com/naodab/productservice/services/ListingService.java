@@ -29,10 +29,5 @@ public interface ListingService {
   List<ListingSuggestionResponse> suggestSearch(String keyword, Integer limit);
 
   PagedItemsResponse<ListingItemResponse> listListingItemsForFacility(
-      String profileId,
-      String facilityId,
-      Integer page,
-      Integer pageSize,
-      String keyword,
-      String productId);
+      String profileId, ListingSearchRequest request);
 }

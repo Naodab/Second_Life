@@ -5,13 +5,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { searchListings, type ListingItemResponse, type ListingStatus, type ListingType } from "@/api/listing";
+import {
+  getFacilityListingPage,
+  MANAGE_LISTING_STATUSES,
+  type ListingItemResponse,
+  type ListingStatus,
+  type ListingType,
+} from "@/api/listing";
 import type { FacilityWithPlaceNames } from "@/api/facility";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 12;
 
 const DEFAULT_THUMB = "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop";
+
+const MANAGE_STATUS_LABELS: Record<ListingStatus, string> = {
+  ACTIVE: "Đang đăng",
+  INACTIVE: "Tạm ẩn",
+  PENDING: "Chưa duyệt",
+  REJECTED: "Từ chối",
+};
 
 function formatPrice(min: number | null | undefined, max: number | null | undefined): string {
   if (min == null && max == null) return "—";
@@ -25,14 +38,16 @@ function formatPrice(min: number | null | undefined, max: number | null | undefi
 
 function statusConfig(s: ListingStatus): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } {
   switch (s) {
-    case "ACTIVE": return { label: "Đang bán", variant: "default" };
-    case "INACTIVE": return { label: "Tạm ẩn", variant: "secondary" };
-    case "SOLD": return { label: "Đã bán", variant: "outline" };
-    case "RENTED": return { label: "Đang thuê", variant: "outline" };
-    case "PENDING": return { label: "Chờ duyệt", variant: "secondary" };
-    case "APPROVED": return { label: "Đã duyệt", variant: "default" };
-    case "REJECTED": return { label: "Từ chối", variant: "destructive" };
-    default: return { label: s, variant: "outline" };
+    case "ACTIVE":
+      return { label: MANAGE_STATUS_LABELS.ACTIVE, variant: "default" };
+    case "INACTIVE":
+      return { label: MANAGE_STATUS_LABELS.INACTIVE, variant: "secondary" };
+    case "PENDING":
+      return { label: MANAGE_STATUS_LABELS.PENDING, variant: "secondary" };
+    case "REJECTED":
+      return { label: MANAGE_STATUS_LABELS.REJECTED, variant: "destructive" };
+    default:
+      return { label: s, variant: "outline" };
   }
 }
 
@@ -59,7 +74,7 @@ export function ManageListingsView({
     if (!facilityId && facilities.length > 0) {
       setFacilityId(facilities[0].id);
     }
-  }, [facilities]);
+  }, [facilities, facilityId]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedKeyword(keyword.trim()), 350);
@@ -76,11 +91,10 @@ export function ManageListingsView({
     (async () => {
       setLoading(true);
       try {
-        const data = await searchListings({
+        const data = await getFacilityListingPage(facilityId, {
           page,
           pageSize: PAGE_SIZE,
           keyword: debouncedKeyword || undefined,
-          facilityId,
           listingStatus: status === "ALL" ? undefined : status,
           listingType: listingType === "ALL" ? undefined : listingType,
         });
@@ -92,7 +106,9 @@ export function ManageListingsView({
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [page, debouncedKeyword, facilityId, status, listingType]);
 
   const createFacilityId = facilityId || defaultFacilityId;
@@ -102,7 +118,7 @@ export function ManageListingsView({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xl font-bold">Listings</h2>
+        <h2 className="text-xl font-bold">Bài đăng</h2>
         <Button
           disabled={!createFacilityId}
           onClick={() => onCreateListing(createFacilityId)}
@@ -125,13 +141,17 @@ export function ManageListingsView({
             />
           </div>
         </div>
-          <div>
+        <div>
           <Label className="text-xs text-muted-foreground">Cơ sở</Label>
           <Select value={facilityId} onValueChange={setFacilityId}>
-            <SelectTrigger className="mt-1 h-9 bg-background"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="mt-1 h-9 bg-background">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {facilities.map((f) => (
-                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                <SelectItem key={f.id} value={f.id}>
+                  {f.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -139,23 +159,25 @@ export function ManageListingsView({
         <div>
           <Label className="text-xs text-muted-foreground">Trạng thái</Label>
           <Select value={status} onValueChange={(v) => setStatus(v as "ALL" | ListingStatus)}>
-            <SelectTrigger className="mt-1 h-9 bg-background"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="mt-1 h-9 bg-background">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Tất cả</SelectItem>
-              <SelectItem value="ACTIVE">Đang bán</SelectItem>
-              <SelectItem value="INACTIVE">Tạm ẩn</SelectItem>
-              <SelectItem value="SOLD">Đã bán</SelectItem>
-              <SelectItem value="RENTED">Đang thuê</SelectItem>
-              <SelectItem value="PENDING">Chờ duyệt</SelectItem>
-              <SelectItem value="APPROVED">Đã duyệt</SelectItem>
-              <SelectItem value="REJECTED">Từ chối</SelectItem>
+              {MANAGE_LISTING_STATUSES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {MANAGE_STATUS_LABELS[value]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">Hình thức</Label>
           <Select value={listingType} onValueChange={(v) => setListingType(v as "ALL" | ListingType)}>
-            <SelectTrigger className="mt-1 h-9 bg-background"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="mt-1 h-9 bg-background">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Tất cả</SelectItem>
               <SelectItem value="BUY">Bán</SelectItem>
@@ -166,9 +188,13 @@ export function ManageListingsView({
       </div>
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>{totalCount} listing{totalCount !== 1 ? "s" : ""}</span>
+        <span>
+          {totalCount} listing{totalCount !== 1 ? "s" : ""}
+        </span>
         {totalPages > 1 && (
-          <span>Trang {page + 1} / {totalPages}</span>
+          <span>
+            Trang {page + 1} / {totalPages}
+          </span>
         )}
       </div>
 
@@ -185,7 +211,7 @@ export function ManageListingsView({
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {rows.map((l) => {
             const st = statusConfig(l.listingStatus);
-            const thumb = (l.thumbnailImage?.trim()) || DEFAULT_THUMB;
+            const thumb = l.thumbnailImage?.trim() || DEFAULT_THUMB;
             const price = formatPrice(l.minPrice, l.maxPrice);
             return (
               <div
@@ -199,23 +225,28 @@ export function ManageListingsView({
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute top-2 left-2 flex gap-1.5 flex-wrap">
-                    <Badge
-                      variant={st.variant}
-                      className="text-[10px] px-2 py-0.5 shadow-sm"
-                    >
+                    <Badge variant={st.variant} className="text-[10px] px-2 py-0.5 shadow-sm">
                       {st.label}
                     </Badge>
                     <Badge
                       variant="outline"
                       className={cn(
                         "text-[10px] px-2 py-0.5 shadow-sm bg-background/90",
-                        l.listingType === "RENT" ? "border-blue-300 text-blue-700" : "border-emerald-300 text-emerald-700",
+                        l.listingType === "RENT"
+                          ? "border-blue-300 text-blue-700"
+                          : "border-emerald-300 text-emerald-700",
                       )}
                     >
                       {l.listingType === "RENT" ? (
-                        <><Calendar className="w-2.5 h-2.5 mr-1 inline" />Thuê</>
+                        <>
+                          <Calendar className="w-2.5 h-2.5 mr-1 inline" />
+                          Thuê
+                        </>
                       ) : (
-                        <><ShoppingBag className="w-2.5 h-2.5 mr-1 inline" />Bán</>
+                        <>
+                          <ShoppingBag className="w-2.5 h-2.5 mr-1 inline" />
+                          Bán
+                        </>
                       )}
                     </Badge>
                   </div>

@@ -1,4 +1,23 @@
-import type { CartItem } from "@/hooks/use-mock-api";
+import { format } from "date-fns";
+
+import type { RentUnit } from "@/api/listing";
+
+export type CartItemView = {
+  cartItemId: string;
+  listingId: string;
+  listingVariantId: string;
+  name: string;
+  images: string[];
+  facilityId: string;
+  buyPrice: number;
+  rentPrice: number;
+  stock: number;
+  type: "buy" | "rent";
+  quantity: number;
+  rentalDates?: { start: Date; end: Date };
+  rentUnit?: RentUnit;
+  addedAt: string;
+};
 
 export type ModeKey = `${string}:buy` | `${string}:rent`;
 
@@ -13,15 +32,20 @@ export interface ItemState {
   rentMsg: string;
 }
 
-export function defaultState(item: CartItem): ItemState {
+export function defaultState(item: CartItemView): ItemState {
+  const rentStart = item.rentalDates?.start
+    ? format(item.rentalDates.start, "yyyy-MM-dd")
+    : "";
+  const rentEnd = item.rentalDates?.end ? format(item.rentalDates.end, "yyyy-MM-dd") : "";
+
   return {
-    buyQty: item.quantity || 1,
-    rentQty: item.quantity || 1,
-    rentStart: "",
-    rentEnd: "",
+    buyQty: item.type === "buy" ? item.quantity || 1 : 1,
+    rentQty: item.type === "rent" ? item.quantity || 1 : 1,
+    rentStart,
+    rentEnd,
     buyStatus: "idle",
     buyMsg: "",
-    rentStatus: "idle",
+    rentStatus: rentStart && rentEnd ? "ok" : "idle",
     rentMsg: "",
   };
 }

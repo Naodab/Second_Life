@@ -29,7 +29,6 @@ type Props = {
   scheduleResourceLabel?: string;
   hourDay?: Date;
   onHourDayChange?: (day: Date) => void;
-  disabled?: boolean;
   bookings: BookingInterval[];
   concurrencyCap: number;
   rentQty: number;
@@ -56,7 +55,6 @@ export function ListingRentScheduler({
   scheduleResourceLabel = "Khung thuê",
   hourDay: hourDayProp,
   onHourDayChange,
-  disabled: scheduleDisabled = false,
   bookings,
   concurrencyCap,
   rentQty,
@@ -66,7 +64,6 @@ export function ListingRentScheduler({
   onValidityChange,
 }: Props) {
   const cap = Math.max(0, Math.floor(concurrencyCap));
-  const pickLocked = scheduleDisabled;
   const stepBase = stepMsForRentUnit(rentUnit);
   const scheduleDayUnit = rentUnit === "WEEK" ? "DAY" : rentUnit;
 
@@ -300,12 +297,7 @@ export function ListingRentScheduler({
 
     return (
       <div className="space-y-1.5">
-        <div
-          className={cn(
-            "isolate min-w-0 max-w-full overflow-hidden rounded-2xl border border-sky-200/50 bg-gradient-to-b from-sky-50/90 to-background shadow-inner dark:border-sky-900/40 dark:from-sky-950/30 dark:to-card",
-            pickLocked && "pointer-events-none opacity-45",
-          )}
-        >
+        <div className="isolate min-w-0 max-w-full overflow-hidden rounded-2xl border border-sky-200/50 bg-gradient-to-b from-sky-50/90 to-background shadow-inner dark:border-sky-900/40 dark:from-sky-950/30 dark:to-card">
           <div
             className="hide-scrollbar max-w-full overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch]"
             role="region"
@@ -361,7 +353,7 @@ export function ListingRentScheduler({
                     !insufficient && !inRange && "bg-background dark:bg-card",
                   );
 
-                  if (insufficient || cap <= 0 || pickLocked) {
+                  if (insufficient) {
                     return (
                       <div
                         key={`c-${h}`}
@@ -376,7 +368,6 @@ export function ListingRentScheduler({
                     <div key={`c-${h}`} className={cellClass}>
                       <button
                         type="button"
-                        disabled={pickLocked}
                         onClick={() => onHourClick(h)}
                         title={label}
                         className={cn(
@@ -405,17 +396,11 @@ export function ListingRentScheduler({
   if (rentUnit === "MONTH") {
     return (
       <div className="space-y-3">
-        <div
-          className={cn(
-            "min-w-0 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-b from-muted/25 to-background shadow-inner dark:border-border/45 dark:from-muted/15 dark:to-card",
-            pickLocked && "pointer-events-none opacity-45",
-          )}
-        >
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-b from-muted/25 to-background shadow-inner dark:border-border/45 dark:from-muted/15 dark:to-card">
           <div className="flex flex-wrap items-center gap-3 border-b border-border/40 px-4 py-3 dark:border-border/35">
             <span className="text-sm font-medium text-muted-foreground">Năm</span>
             <input
               type="number"
-              disabled={pickLocked}
               className={cn(
                 "h-10 w-28 rounded-xl border-2 bg-muted/30 px-3 text-base font-bold tabular-nums outline-none",
                 "border-border/50 shadow-sm transition-colors",
@@ -447,7 +432,6 @@ export function ListingRentScheduler({
                       <td key={label} className="p-0 align-middle text-center">
                         <button
                           type="button"
-                          disabled={cap <= 0 || pickLocked}
                           onClick={() => onMonthIndexClick(idx)}
                           title={label}
                           className={cn(
@@ -486,12 +470,7 @@ export function ListingRentScheduler({
 
   return (
     <div className="space-y-3">
-      <div
-        className={cn(
-          "min-w-0 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-b from-muted/30 to-background p-4 shadow-inner sm:p-5 dark:border-border/45 dark:from-muted/15 dark:to-card",
-          pickLocked && "pointer-events-none opacity-45",
-        )}
-      >
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-b from-muted/30 to-background p-4 shadow-inner sm:p-5 dark:border-border/45 dark:from-muted/15 dark:to-card">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-2">
             <label htmlFor="rent-day-start" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -503,7 +482,6 @@ export function ListingRentScheduler({
                 id="rent-day-start"
                 type="date"
                 min={todayStr}
-                disabled={pickLocked}
                 className={cn(
                   "h-11 w-full min-w-0 rounded-xl border-2 bg-muted/30 px-4 text-sm font-medium tabular-nums outline-none",
                   "border-border/50 shadow-sm transition-colors",
@@ -531,7 +509,6 @@ export function ListingRentScheduler({
                 id="rent-day-end"
                 type="date"
                 min={dayStartStr || todayStr}
-                disabled={pickLocked}
                 className={cn(
                   "h-11 w-full min-w-0 rounded-xl border-2 bg-muted/30 px-4 text-sm font-medium tabular-nums outline-none",
                   "border-border/50 shadow-sm transition-colors",

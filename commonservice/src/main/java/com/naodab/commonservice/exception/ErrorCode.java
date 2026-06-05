@@ -93,7 +93,8 @@ public enum ErrorCode {
 	ORDER_CANCEL_NOT_ALLOWED(1068, "Order can only be cancelled while pending", HttpStatus.BAD_REQUEST),
 	ORDER_STATUS_TRANSITION_NOT_ALLOWED(1069, "Order status transition is not allowed", HttpStatus.BAD_REQUEST),
 	AI_SERVICE_BUSY(1070, "AI đang bận, vui lòng thử lại sau vài giây.", HttpStatus.TOO_MANY_REQUESTS),
-	AI_SERVICE_UNAVAILABLE(1071, "Không thể xử lý yêu cầu AI lúc này. Vui lòng thử lại sau.", HttpStatus.SERVICE_UNAVAILABLE);
+	AI_SERVICE_UNAVAILABLE(1071, "Không thể xử lý yêu cầu AI lúc này. Vui lòng thử lại sau.", HttpStatus.SERVICE_UNAVAILABLE),
+	CART_ITEM_NOT_FOUND(1072, "Cart item not found", HttpStatus.NOT_FOUND);
 
 	private int code;
 	private String message;

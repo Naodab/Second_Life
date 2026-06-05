@@ -1,7 +1,6 @@
 export const MANAGE_BASE = "/manage";
 
 export type ManageRouteParsed =
-  | { tag: "dashboard" }
   | { tag: "products" }
   | { tag: "listings" }
   | { tag: "add-listing" }
@@ -11,8 +10,9 @@ export type ManageRouteParsed =
   | { tag: "product"; facilityId: string; productId: string }
   | { tag: "unpublished"; facilityId: string };
 
+/** @deprecated Use {@link manageProductsPath} — dashboard route removed. */
 export function manageDashboardPath(): string {
-  return `${MANAGE_BASE}/dashboard`;
+  return manageProductsPath();
 }
 
 export function manageFacilityPath(facilityId: string): string {
@@ -63,9 +63,6 @@ export function parseManageRoute(pathname: string): ManageRouteParsed | null {
 
   const second = segments[1];
 
-  if (second === "dashboard") {
-    return segments.length === 2 ? { tag: "dashboard" } : null;
-  }
   if (second === "products") {
     return segments.length === 2 ? { tag: "products" } : null;
   }
@@ -112,7 +109,6 @@ export function parseManageRoute(pathname: string): ManageRouteParsed | null {
 
 export function facilityScopeActive(route: ManageRouteParsed, facilityId: string): boolean {
   if (
-    route.tag === "dashboard" ||
     route.tag === "products" ||
     route.tag === "listings" ||
     route.tag === "add-listing" ||

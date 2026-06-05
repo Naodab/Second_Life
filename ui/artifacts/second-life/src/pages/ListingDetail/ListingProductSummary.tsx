@@ -24,6 +24,7 @@ type Props = {
   onOpenBuy: () => void;
   onOpenRent: () => void;
   onQuickAddToCart: () => void;
+  quickAddLoading?: boolean;
 };
 
 export function ListingProductSummary({
@@ -45,6 +46,7 @@ export function ListingProductSummary({
   onOpenBuy,
   onOpenRent,
   onQuickAddToCart,
+  quickAddLoading,
 }: Props) {
   return (
     <div
@@ -146,11 +148,11 @@ export function ListingProductSummary({
         <Button
           size="lg"
           variant="outline"
-          disabled={outOfStock}
+          disabled={outOfStock || quickAddLoading}
           className="flex-1 h-12 rounded-full border-border/80 bg-background/50 transition-all hover:bg-muted/80 active:scale-[0.99] dark:bg-background/30 dark:hover:bg-muted/40"
           onClick={onQuickAddToCart}
         >
-          <ShoppingCart className="w-4 h-4 mr-2" /> Thêm vào giỏ
+          <ShoppingCart className="w-4 h-4 mr-2" /> {quickAddLoading ? "Đang thêm..." : "Thêm vào giỏ"}
         </Button>
       </div>
     </div>

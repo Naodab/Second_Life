@@ -28,6 +28,9 @@ type Props = {
   availabilityLoading?: boolean;
   checkoutDisabled: boolean;
   onCheckout: () => void;
+  onAddToCart?: () => void;
+  addToCartDisabled?: boolean;
+  addToCartLoading?: boolean;
 };
 
 export function ListingBuyDialog({
@@ -45,6 +48,9 @@ export function ListingBuyDialog({
   availabilityLoading,
   checkoutDisabled,
   onCheckout,
+  onAddToCart,
+  addToCartDisabled,
+  addToCartLoading,
 }: Props) {
   const showVariantUi = variantAxes.length > 0;
   const showUnitPrice = !showVariantUi ? lineUnitBuyPrice > 0 : lineStock > 0 && lineUnitBuyPrice > 0;
@@ -164,10 +170,20 @@ export function ListingBuyDialog({
             )}
           </div>
         </div>
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-full border-border/80">
             Hủy
           </Button>
+          {onAddToCart ? (
+            <Button
+              variant="outline"
+              onClick={onAddToCart}
+              disabled={addToCartDisabled || addToCartLoading}
+              className="rounded-full border-border/80"
+            >
+              {addToCartLoading ? "Đang thêm..." : "Thêm vào giỏ"}
+            </Button>
+          ) : null}
           <Button onClick={onCheckout} className="rounded-full px-8 shadow-md shadow-primary/15 dark:shadow-primary/10" disabled={checkoutDisabled}>
             Mua ngay
           </Button>

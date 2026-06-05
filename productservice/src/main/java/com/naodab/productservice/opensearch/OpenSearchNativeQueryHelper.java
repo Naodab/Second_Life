@@ -137,6 +137,28 @@ public final class OpenSearchNativeQueryHelper {
     filterQueries.add(exactTermQuery(fieldName, value.name()));
   }
 
+  public static void addTermsIfPresent(List<Query> filterQueries, String fieldName, List<? extends Enum<?>> values) {
+    if (values == null || values.isEmpty()) {
+      return;
+    }
+    LinkedHashSet<String> distinct = new LinkedHashSet<>();
+    for (Enum<?> value : values) {
+      if (value != null) {
+        distinct.add(value.name());
+      }
+    }
+    if (distinct.isEmpty()) {
+      return;
+    }
+    if (distinct.size() == 1) {
+      filterQueries.add(exactTermQuery(fieldName, distinct.iterator().next()));
+      return;
+    }
+    String path = exactTermOpenSearchField(fieldName);
+    List<FieldValue> fieldValues = distinct.stream().map(FieldValue::of).toList();
+    filterQueries.add(Query.of(q -> q.terms(t -> t.field(path).terms(tv -> tv.value(fieldValues)))));
+  }
+
   public static Query termQuery(String fieldName, String value) {
     return Query.of(query -> query.term(term -> term.field(fieldName).value(FieldValue.of(value))));
   }

@@ -1,11 +1,8 @@
 import { useMemo, useState } from "react";
 import { Loader2, MapPin, ShoppingBag, Store } from "lucide-react";
 
-import {
-  customerAddressLine,
-  customerDisplayName,
-  type BookingOrderStatus,
-} from "@/api/booking";
+import { customerAddressLine, customerDisplayName } from "@/api/booking";
+import { Badge } from "@/components/ui/badge";
 import type { FacilityWithPlaceNames } from "@/api/facility";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ApiErrorState } from "@/components/errors";
@@ -24,10 +21,11 @@ import {
   FACILITY_ORDER_TABS,
   formatOrderDate,
   formatPickupTime,
+  formatRentalPeriod,
   orderDisplayTitle,
+  orderLineTotal,
   orderStatusBadgeClass,
   orderThumbnail,
-  orderUnitPrice,
   ORDER_STATUS_LABELS,
   useManageOrdersPage,
   type FacilityOrderTab,
@@ -140,9 +138,8 @@ export function OrdersView({
       ) : (
         <div className="space-y-3">
           {filteredOrders.map((order) => {
-            const unitPrice = orderUnitPrice(order);
-            const lineTotal =
-              unitPrice != null ? unitPrice * order.quantity : order.price ?? null;
+            const lineTotal = orderLineTotal(order);
+            const isRent = order.kind === "rent";
             const customerName = customerDisplayName(order.customer);
             const address = customerAddressLine(order.customer);
             const orderFacilityId = order.context?.facilityId?.trim() ?? "";
@@ -181,10 +178,10 @@ export function OrdersView({
                     <span
                       className={cn(
                         "px-2.5 py-1 rounded-full text-xs font-medium border",
-                        orderStatusBadgeClass(order.status as BookingOrderStatus),
+                        orderStatusBadgeClass(order.status),
                       )}
                     >
-                      {ORDER_STATUS_LABELS[order.status as BookingOrderStatus]}
+                      {ORDER_STATUS_LABELS[order.status]}
                     </span>
                     <p className="text-xs text-muted-foreground mt-1 break-all">#{order.id}</p>
                     <p className="text-xs text-muted-foreground">{formatOrderDate(order.createdAt)}</p>
@@ -198,9 +195,16 @@ export function OrdersView({
                     alt=""
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{orderDisplayTitle(order)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Lấy hàng: {formatPickupTime(order.pickupTime)} • x{order.quantity}
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium truncate">{orderDisplayTitle(order)}</p>
+                      <Badge variant="secondary" className="text-[10px] shrink-0">
+                        {isRent ? "Thuê" : "Mua"}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {isRent
+                        ? `Thời gian thuê: ${formatRentalPeriod(order)} • x${order.quantity}`
+                        : `Lấy hàng: ${formatPickupTime(order.pickupTime)} • x${order.quantity}`}
                     </p>
                   </div>
                   {contextsLoading && !order.context ? (
@@ -221,6 +225,7 @@ export function OrdersView({
                     <FacilityOrderActionButtons
                       facilityFilter={effectiveFilter}
                       orderId={order.id}
+                      orderKind={order.kind}
                       status={order.status}
                     />
                   ) : null}

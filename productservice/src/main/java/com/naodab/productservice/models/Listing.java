@@ -11,6 +11,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -53,7 +54,7 @@ public class Listing {
 
   @Enumerated(EnumType.STRING)
   @Builder.Default
-  ListingStatus listingStatus = ListingStatus.ACTIVE;
+  ListingStatus listingStatus = ListingStatus.PENDING;
 
   Double minPrice;
   Double maxPrice;
@@ -66,10 +67,10 @@ public class Listing {
   public enum ListingStatus {
     ACTIVE,
     INACTIVE,
-    SOLD,
-    RENTED,
     PENDING,
-    APPROVED,
-    REJECTED
+    REJECTED;
+
+    public static final List<ListingStatus> MANAGE_STATUSES =
+        List.of(ACTIVE, INACTIVE, PENDING, REJECTED);
   }
 }
