@@ -4,7 +4,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import com.naodab.commonservice.constant.OrderNotificationConstants;
 import com.naodab.commonservice.event.OrderNotificationEvent;
+import com.naodab.commonservice.event.OrderNotificationEvent.OrderNotificationKind;
 import com.naodab.mailservice.models.NotificationDocument;
 
 import lombok.AccessLevel;
@@ -19,10 +21,15 @@ import lombok.extern.slf4j.Slf4j;
 public class OrderNotificationEmailService {
 
   MailService mailService;
+  NotificationMessageFactory notificationMessageFactory;
 
   @Async
   public void sendOrderNotification(OrderNotificationEvent event, NotificationDocument document) {
     if (event == null || document == null || !StringUtils.hasText(event.getRecipientEmail())) {
+      return;
+    }
+    if (event.getKind() == OrderNotificationKind.ORDER_CREATED
+        && OrderNotificationConstants.ROLE_SELLER.equalsIgnoreCase(event.getRecipientRole())) {
       return;
     }
     try {
@@ -30,7 +37,7 @@ public class OrderNotificationEmailService {
           event.getRecipientEmail().trim(),
           document.getTitle(),
           document.getBody(),
-          document.getLink(),
+          notificationMessageFactory.toAbsoluteLink(document.getLink()),
           event.getProductTitle(),
           event.getThumbnailUrl(),
           event.getOrderId(),

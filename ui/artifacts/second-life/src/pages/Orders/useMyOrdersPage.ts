@@ -46,6 +46,20 @@ export const ORDER_TABS: { value: OrderTab; label: string }[] = [
   { value: "CANCELLED", label: ORDER_STATUS_LABELS.CANCELLED },
 ];
 
+export function parseOrderTabFromSearch(search: string): OrderTab {
+  const raw = search.startsWith("?") ? search.slice(1) : search;
+  const tab = new URLSearchParams(raw).get("tab")?.trim().toUpperCase();
+  if (tab && ORDER_TABS.some((entry) => entry.value === tab)) {
+    return tab as OrderTab;
+  }
+  return "all";
+}
+
+export function buildOrdersPath(tab: OrderTab = "all"): string {
+  if (tab === "all") return "/orders";
+  return `/orders?tab=${encodeURIComponent(tab)}`;
+}
+
 export function orderStatusBadgeClass(status: OrderDisplayStatus): string {
   switch (status) {
     case "COMPLETED":

@@ -10,6 +10,8 @@ import {
   resolveNotificationWebSocketUrl,
   type NotificationResponse,
 } from "@/api/notifications";
+import { toast } from "@/hooks/use-toast";
+import { openNotificationLink } from "@/lib/notification-navigation";
 import { useAuth } from "@/context/AuthContext";
 
 const NOTIFICATIONS_KEY = ["notifications"] as const;
@@ -58,10 +60,90 @@ function mergeNotification(existing: UiNotification[], incoming: UiNotification)
   return sortNotifications([incoming, ...withoutDuplicate]);
 }
 
-export function useNotifications() {
+function showNotificationAlert(
+  ui: UiNotification,
+  navigate: (path: string) => void,
+  queryClient: ReturnType<typeof useQueryClient>,
+) {
+  const hasLink = Boolean(ui.link);
+  toast({
+    title: ui.title,
+    description: ui.body,
+    duration: 8_000,
+    className: hasLink ? "cursor-pointer" : undefined,
+    onClick: hasLink
+      ? () => {
+          openNotificationLink(ui, navigate, queryClient);
+        }
+      : undefined,
+  });
+}
+
+function applyRealtimeNotification(
+  queryClient: ReturnType<typeof useQueryClient>,
+  payload: NotificationResponse,
+  showAlert: boolean,
+  navigate?: (path: string) => void,
+) {
+  const ui = toUiNotification(payload);
+  queryClient.setQueryData<UiNotification[]>(NOTIFICATIONS_KEY, (prev) =>
+    mergeNotification(prev ?? [], ui),
+  );
+  if (!ui.read) {
+    queryClient.setQueryData<number>(UNREAD_COUNT_KEY, (prev) => (prev ?? 0) + 1);
+    if (showAlert && navigate) {
+      showNotificationAlert(ui, navigate, queryClient);
+    }
+  }
+}
+
+/** Mount once at app root so WebSocket + toast work on every page (including seller hub). */
+export function useNotificationRealtimeSync(navigate: (path: string) => void) {
   const { isLoggedIn } = useAuth();
   const queryClient = useQueryClient();
   const socketRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      socketRef.current?.close();
+      socketRef.current = null;
+      return;
+    }
+
+    const accessToken = Cookies.get("accessToken");
+    if (!accessToken) {
+      return;
+    }
+
+    const socket = new WebSocket(resolveNotificationWebSocketUrl(accessToken));
+    socketRef.current = socket;
+
+    socket.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(String(event.data)) as {
+          type?: string;
+          notification?: NotificationResponse;
+        };
+        if (parsed.type === "NOTIFICATION" && parsed.notification) {
+          applyRealtimeNotification(queryClient, parsed.notification, true, navigate);
+        }
+      } catch {
+        // ignore malformed websocket payloads
+      }
+    };
+
+    return () => {
+      socket.close();
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
+    };
+  }, [isLoggedIn, navigate, queryClient]);
+}
+
+export function useNotifications() {
+  const { isLoggedIn } = useAuth();
+  const queryClient = useQueryClient();
 
   const notificationsQuery = useQuery({
     queryKey: NOTIFICATIONS_KEY,
@@ -99,55 +181,6 @@ export function useNotifications() {
       queryClient.setQueryData(UNREAD_COUNT_KEY, 0);
     },
   });
-
-  const upsertRealtimeNotification = useCallback(
-    (payload: NotificationResponse) => {
-      const ui = toUiNotification(payload);
-      queryClient.setQueryData<UiNotification[]>(NOTIFICATIONS_KEY, (prev) =>
-        mergeNotification(prev ?? [], ui),
-      );
-      if (!ui.read) {
-        queryClient.setQueryData<number>(UNREAD_COUNT_KEY, (prev) => (prev ?? 0) + 1);
-      }
-    },
-    [queryClient],
-  );
-
-  useEffect(() => {
-    if (!isLoggedIn) {
-      socketRef.current?.close();
-      socketRef.current = null;
-      return;
-    }
-
-    if (!Cookies.get("accessToken")) {
-      return;
-    }
-
-    const socket = new WebSocket(resolveNotificationWebSocketUrl());
-    socketRef.current = socket;
-
-    socket.onmessage = (event) => {
-      try {
-        const parsed = JSON.parse(String(event.data)) as {
-          type?: string;
-          notification?: NotificationResponse;
-        };
-        if (parsed.type === "NOTIFICATION" && parsed.notification) {
-          upsertRealtimeNotification(parsed.notification);
-        }
-      } catch {
-        // ignore malformed websocket payloads
-      }
-    };
-
-    return () => {
-      socket.close();
-      if (socketRef.current === socket) {
-        socketRef.current = null;
-      }
-    };
-  }, [isLoggedIn, upsertRealtimeNotification]);
 
   const notifications = notificationsQuery.data ?? [];
   const unreadCount = unreadCountQuery.data ?? notifications.filter((n) => !n.read).length;

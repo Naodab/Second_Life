@@ -70,16 +70,20 @@ class MailServiceOrderNotificationTest {
   @Test
   void orderNotificationEmailService_delegatesWhenRecipientEmailPresent() {
     MailService mailServiceMock = mock(MailService.class);
-    OrderNotificationEmailService emailService = new OrderNotificationEmailService(mailServiceMock);
+    NotificationMessageFactory factory = new NotificationMessageFactory();
+    ReflectionTestUtils.setField(factory, "frontendUrl", "http://localhost:5173");
+    OrderNotificationEmailService emailService =
+        new OrderNotificationEmailService(mailServiceMock, factory);
     NotificationDocument document = NotificationDocument.builder()
-        .title("Đơn hàng mới")
-        .body("Có đơn mới")
-        .link("http://localhost:5173/manage/products")
+        .title("Đơn hàng đã được xác nhận")
+        .body("Sản phẩm đã được xác nhận")
+        .link("/orders?tab=CONFIRMED")
         .type(NotificationType.ORDER)
         .build();
     OrderNotificationEvent event = OrderNotificationEvent.builder()
-        .kind(OrderNotificationKind.ORDER_CREATED)
-        .recipientEmail("seller@test.com")
+        .kind(OrderNotificationKind.ORDER_CONFIRMED)
+        .recipientRole("BUYER")
+        .recipientEmail("buyer@test.com")
         .orderId("order-1")
         .orderType("BUY")
         .productTitle("Áo khoác")
@@ -89,10 +93,10 @@ class MailServiceOrderNotificationTest {
     emailService.sendOrderNotification(event, document);
 
     verify(mailServiceMock).sendOrderNotification(
-        "seller@test.com",
-        "Đơn hàng mới",
-        "Có đơn mới",
-        "http://localhost:5173/manage/products",
+        "buyer@test.com",
+        "Đơn hàng đã được xác nhận",
+        "Sản phẩm đã được xác nhận",
+        "http://localhost:5173/orders?tab=CONFIRMED",
         "Áo khoác",
         "https://res.cloudinary.com/demo/image/upload/jacket.jpg",
         "order-1",

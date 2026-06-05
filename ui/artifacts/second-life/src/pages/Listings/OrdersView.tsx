@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { Loader2, MapPin, ShoppingBag, Store } from "lucide-react";
 
 import { customerAddressLine, customerDisplayName } from "@/api/booking";
@@ -19,6 +20,7 @@ import { FacilityOrderActionButtons } from "./FacilityOrderActionButtons";
 import {
   ALL_FACILITIES_FILTER,
   FACILITY_ORDER_TABS,
+  buildManageOrdersPath,
   formatOrderDate,
   formatPickupTime,
   formatRentalPeriod,
@@ -27,6 +29,7 @@ import {
   orderStatusBadgeClass,
   orderThumbnail,
   ORDER_STATUS_LABELS,
+  parseFacilityOrderTabFromSearch,
   useManageOrdersPage,
   type FacilityOrderTab,
 } from "./useFacilityOrdersPage";
@@ -40,10 +43,22 @@ export function OrdersView({
   embedded?: boolean;
   lockedFacilityId?: string;
 }) {
-  const [activeTab, setActiveTab] = useState<FacilityOrderTab>("PENDING");
+  const search = useSearch();
+  const [, setLocation] = useLocation();
+  const tabFromUrl = useMemo(() => parseFacilityOrderTabFromSearch(search), [search]);
+  const [embeddedTab, setEmbeddedTab] = useState<FacilityOrderTab>("PENDING");
+  const activeTab = embedded ? embeddedTab : tabFromUrl;
   const [facilityFilter, setFacilityFilter] = useState(
     lockedFacilityId?.trim() || ALL_FACILITIES_FILTER,
   );
+
+  const handleTabChange = (tab: FacilityOrderTab) => {
+    if (embedded) {
+      setEmbeddedTab(tab);
+      return;
+    }
+    setLocation(buildManageOrdersPath(tab), { replace: true });
+  };
 
   const effectiveFilter = lockedFacilityId?.trim() || facilityFilter;
 
@@ -87,7 +102,7 @@ export function OrdersView({
               <button
                 key={t.value}
                 type="button"
-                onClick={() => setActiveTab(t.value)}
+                onClick={() => handleTabChange(t.value)}
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5",
                   activeTab === t.value

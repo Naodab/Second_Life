@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, FormEvent, useCallback } from "react";
 import { Link, useLocation, useSearch } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search, ShoppingCart, Bell, MessageSquare, User, ChevronDown, LogOut,
   Package, Store, ShoppingBag, Truck, CheckCircle2, X, Info
@@ -23,6 +23,7 @@ import { buildFreshSearchPath, buildSearchPath } from "@/lib/search-url";
 import { pathnameEndsWithSegment, rawQueryFromBrowserSearch } from "@/lib/wouter-location";
 import { fetchListingSuggestions, type ListingSuggestionResponse } from "@/api/listing";
 import { guardSellerHubNavigation } from "@/components/SellerHubProfileGate";
+import { openNotificationLink } from "@/lib/notification-navigation";
 import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { formatDistanceToNow } from "date-fns";
@@ -38,15 +39,6 @@ interface Notification {
   link?: string;
 }
 
-function navigateNotificationLink(link: string, navigate: (path: string) => void) {
-  try {
-    const url = new URL(link, window.location.origin);
-    navigate(`${url.pathname}${url.search}${url.hash}`);
-  } catch {
-    navigate(link);
-  }
-}
-
 const NOTIF_ICONS: Record<string, React.ReactNode> = {
   order: <ShoppingBag className="w-4 h-4 text-amber-500" />,
   payment: <CheckCircle2 className="w-4 h-4 text-green-500" />,
@@ -60,18 +52,16 @@ function NotificationPanel({
   notifications,
   unreadCount,
   isLoading,
-  onMarkRead,
   onMarkAllRead,
+  onOpenNotification,
 }: {
   onClose: () => void;
   notifications: Notification[];
   unreadCount: number;
   isLoading: boolean;
-  onMarkRead: (id: string) => void;
   onMarkAllRead: () => void;
+  onOpenNotification: (notif: Notification) => void;
 }) {
-  const [, navigate] = useLocation();
-
   return (
     <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl border bg-card text-card-foreground shadow-xl z-50 overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/50">
@@ -104,8 +94,7 @@ function NotificationPanel({
             <div
               key={notif.id}
               onClick={() => {
-                onMarkRead(notif.id);
-                if (notif.link) navigateNotificationLink(notif.link, navigate);
+                onOpenNotification(notif);
                 onClose();
               }}
               className={cn(
@@ -210,13 +199,19 @@ export function Header() {
     guardSellerHubNavigation(SELLER_HUB_HOME, { isLoggedIn, sellerHubProfileComplete }, setLocation);
   };
   const { cartItems } = useCart();
+  const queryClient = useQueryClient();
   const {
     notifications,
     unreadCount,
     isLoading: notificationsLoading,
-    markRead,
     markAllRead,
   } = useNotifications();
+  const handleOpenNotification = useCallback(
+    (notif: UiNotification) => {
+      openNotificationLink(notif, setLocation, queryClient);
+    },
+    [queryClient, setLocation],
+  );
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const [suggestOpen, setSuggestOpen] = useState(false);
@@ -384,8 +379,8 @@ export function Header() {
                       notifications={notifications}
                       unreadCount={unreadCount}
                       isLoading={notificationsLoading}
-                      onMarkRead={markRead}
                       onMarkAllRead={markAllRead}
+                      onOpenNotification={handleOpenNotification}
                     />
                   )}
                 </div>

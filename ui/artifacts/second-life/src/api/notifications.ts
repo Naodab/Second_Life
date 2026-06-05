@@ -53,9 +53,24 @@ export async function markAllNotificationsRead(): Promise<void> {
   });
 }
 
-export function resolveNotificationWebSocketUrl(): string {
+function stripTrailingSlash(value: string): string {
+  let result = value;
+  while (result.endsWith("/")) {
+    result = result.slice(0, -1);
+  }
+  return result;
+}
+
+function resolveBackendBaseUrl(): string {
   const raw = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.trim();
-  const base = raw ? raw.replace(/\/+$/, "") : `${window.location.protocol}//${window.location.host}`;
-  const wsBase = base.replace(/^http/i, "ws");
-  return `${wsBase}/api/v1/ws/notifications`;
+  if (raw) {
+    return stripTrailingSlash(raw);
+  }
+  return window.location.origin;
+}
+
+export function resolveNotificationWebSocketUrl(accessToken: string): string {
+  const httpBase = resolveBackendBaseUrl();
+  const wsBase = httpBase.replace(/^http/i, "ws");
+  return `${wsBase}/api/v1/ws/notifications?access_token=${encodeURIComponent(accessToken)}`;
 }
