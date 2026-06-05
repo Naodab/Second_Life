@@ -1,12 +1,14 @@
+import { getWardsByLonLat } from "@/api/location";
+import { approximateCoordsFromIp } from "@/lib/ip-geolocation";
+
 const STORAGE_KEY = "secondlife.visitorLocation";
-const PROMPT_DONE_KEY = "secondlife.locationPromptV1";
 
 export type VisitorLocationPayload = {
   provinceCode: string | null;
   wardCode: string | null;
   latitude: number;
   longitude: number;
-  source: "browser" | "ip";
+  source: "ip";
 };
 
 export function loadVisitorLocation(): VisitorLocationPayload | null {
@@ -22,7 +24,7 @@ export function loadVisitorLocation(): VisitorLocationPayload | null {
       wardCode: parsed.wardCode?.trim() || null,
       latitude: lat,
       longitude: lon,
-      source: parsed.source === "browser" ? "browser" : "ip",
+      source: "ip",
     };
   } catch {
     return null;
@@ -37,18 +39,22 @@ export function persistVisitorLocation(payload: VisitorLocationPayload): void {
   }
 }
 
-export function isLocationConsentPromptDone(): boolean {
+/** Resolves approximate visitor location from IP and persists it. Returns true when stored. */
+export async function resolveVisitorLocationFromIp(): Promise<boolean> {
+  const coords = await approximateCoordsFromIp();
+  if (!coords) return false;
   try {
-    return sessionStorage.getItem(PROMPT_DONE_KEY) === "1";
+    const wards = await getWardsByLonLat(coords.longitude, coords.latitude);
+    const first = wards[0];
+    persistVisitorLocation({
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      provinceCode: first?.province?.code?.trim() ?? null,
+      wardCode: first?.code?.trim() ?? null,
+      source: "ip",
+    });
+    return true;
   } catch {
     return false;
-  }
-}
-
-export function markLocationConsentPromptDone(): void {
-  try {
-    sessionStorage.setItem(PROMPT_DONE_KEY, "1");
-  } catch {
-    /* ignore */
   }
 }

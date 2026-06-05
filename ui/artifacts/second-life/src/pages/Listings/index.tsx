@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { AddFacilityModal } from "./AddFacilityModal";
 import { AddProductPage } from "./AddProductPage";
 import { CreateListingPage } from "./CreateListingPage";
-import { DashboardView } from "./DashboardView";
 import { FacilityView } from "./FacilityView";
 import { ManageListingsView } from "./ManageListingsView";
 import { ManageProductsView } from "./ManageProductsView";
@@ -26,7 +25,6 @@ import { UploadingModal } from "./UploadingModal";
 import {
   manageAddListingPath,
   manageAddProductPath,
-  manageDashboardPath,
   manageFacilityPath,
   manageListingsPath,
   manageProductDetailPath,
@@ -44,7 +42,7 @@ function hasFacilityScope(
   | { tag: "add-product"; facilityId: string }
   | { tag: "product"; facilityId: string; productId: string }
   | { tag: "unpublished"; facilityId: string } {
-  return !!r && !["dashboard", "products", "listings", "add-listing", "orders"].includes(r.tag);
+  return !!r && !["products", "listings", "add-listing", "orders"].includes(r.tag);
 }
 
 async function attachPlaceNames(
@@ -149,7 +147,7 @@ export default function Listings() {
         description: "Cơ sở trong đường dẫn không tồn tại hoặc đã bị xóa.",
         variant: "destructive",
       });
-      setLocation(manageDashboardPath(), { replace: true });
+      setLocation(manageProductsPath(), { replace: true });
     }
   }, [facilitiesLoading, facilities, route, setLocation, toast]);
 
@@ -163,8 +161,8 @@ export default function Listings() {
       return;
     }
     const parsed = parseManageRoute(location);
-    if (!parsed) {
-      setLocation(manageDashboardPath(), { replace: true });
+    if (!parsed || location === "/manage/dashboard" || location.startsWith("/manage/dashboard?")) {
+      setLocation(manageProductsPath(), { replace: true });
     }
   }, [location, setLocation]);
 
@@ -339,9 +337,6 @@ export default function Listings() {
             </div>
           ) : (
             <>
-              {route?.tag === "dashboard" && !!contextFacilityId && (
-                <DashboardView facilityId={contextFacilityId} />
-              )}
               {route?.tag === "products" && (
                 <ManageProductsView
                   contextFacilityId={contextFacilityId}
@@ -350,7 +345,7 @@ export default function Listings() {
                   }
                   onCreateProduct={() =>
                     setLocation(
-                      contextFacilityId ? manageAddProductPath(contextFacilityId) : manageDashboardPath(),
+                      contextFacilityId ? manageAddProductPath(contextFacilityId) : manageProductsPath(),
                     )
                   }
                   onCreateListingForProduct={(productId) =>
@@ -368,19 +363,16 @@ export default function Listings() {
               )}
 
               {route?.tag === "facility" && activeFacility && (
-                <div className="space-y-4">
-                  <DashboardView facilityId={activeFacility.id} />
-                  <FacilityView
-                    facility={activeFacility}
-                    onManageProducts={() => setLocation(manageProductsPath())}
-                    onCreateListing={() => setLocation(manageListingsPath())}
-                    onViewUnpublished={() => setLocation(manageUnpublishedPath(activeFacility.id))}
-                    onUpdateAvatar={handleUpdateFacilityAvatar}
-                    pendingCount={
-                      pendingProducts.filter((p) => p.facilityId === activeFacility.id).length
-                    }
-                  />
-                </div>
+                <FacilityView
+                  facility={activeFacility}
+                  onManageProducts={() => setLocation(manageProductsPath())}
+                  onCreateListing={() => setLocation(manageListingsPath())}
+                  onViewUnpublished={() => setLocation(manageUnpublishedPath(activeFacility.id))}
+                  onUpdateAvatar={handleUpdateFacilityAvatar}
+                  pendingCount={
+                    pendingProducts.filter((p) => p.facilityId === activeFacility.id).length
+                  }
+                />
               )}
 
               {route?.tag === "add-product" && route.facilityId && (

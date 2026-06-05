@@ -1,5 +1,6 @@
 import { customFetch } from "@workspace/api-client-react";
 
+import { isInsufficientStockError } from "@/lib/api-error";
 import type { ApiResponseEnvelope } from "./types";
 import { unwrapApiData } from "./types";
 
@@ -67,9 +68,17 @@ export async function fetchListingVariantAvailabilityInRange(
     q.set("quantity", String(Math.floor(params.quantity)));
   }
   const path = `/api/v1/listing-variants/${encodeURIComponent(listingVariantId.trim())}/availability-in-range?${q.toString()}`;
-  const raw = await customFetch<ApiResponseEnvelope<ListingVariantIntervalAvailabilityDto>>(path, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  return unwrapApiData(raw);
+  try {
+    const raw = await customFetch<ApiResponseEnvelope<ListingVariantIntervalAvailabilityDto>>(path, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    return unwrapApiData(raw);
+  } catch (err) {
+    // Legacy servers throw 409 when quantity exceeds interval stock; treat as zero available.
+    if (isInsufficientStockError(err)) {
+      return { tracked: true, availableQuantity: 0 };
+    }
+    throw err;
+  }
 }

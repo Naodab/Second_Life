@@ -143,11 +143,13 @@ export default function ListingDetail() {
       listingVariantId,
       rentWindow?.startMs,
       rentWindow?.endExclusiveMs,
+      rentQty,
     ] as const,
     queryFn: () =>
       fetchListingVariantAvailabilityInRange(listingVariantId!, {
         from: new Date(rentWindow!.startMs).toISOString(),
         to: new Date(rentWindow!.endExclusiveMs).toISOString(),
+        quantity: rentQty,
       }),
     enabled: Boolean(rentInventoryEnabled && listingVariantId && rentWindow),
     staleTime: 5_000,
@@ -166,7 +168,8 @@ export default function ListingDetail() {
     return Math.min(dialogCatalogStock, q.availableQuantity);
   }, [buyAvailabilityQuery.data, dialogCatalogStock]);
 
-  const effectiveRentStock = useMemo(() => {
+  /** Max concurrent rent units (catalog / physical stock). Interval overlap is checked separately. */
+  const rentConcurrencyCap = useMemo(() => {
     const q = rentAvailabilityQuery.data;
     if (!q || !q.tracked || q.availableQuantity == null) {
       return dialogCatalogStock;
@@ -174,14 +177,32 @@ export default function ListingDetail() {
     return Math.min(dialogCatalogStock, q.availableQuantity);
   }, [dialogCatalogStock, rentAvailabilityQuery.data]);
 
-  const effectiveRentStockCapped = useMemo(() => {
-    if (!rentWindow) return effectiveRentStock;
+  const rentQtyCap = useMemo(() => {
+    if (!rentWindow) return rentConcurrencyCap;
     const r = rentWindowRangeAvailabilityQuery.data;
     if (r?.tracked && r.availableQuantity != null) {
-      return Math.min(effectiveRentStock, r.availableQuantity);
+      return Math.min(rentConcurrencyCap, r.availableQuantity);
     }
-    return effectiveRentStock;
-  }, [effectiveRentStock, rentWindow, rentWindowRangeAvailabilityQuery.data]);
+    return rentConcurrencyCap;
+  }, [rentConcurrencyCap, rentWindow, rentWindowRangeAvailabilityQuery.data]);
+
+  const rentRangeBlocked = useMemo(() => {
+    if (!rentWindow) return false;
+    if (rentWindowRangeAvailabilityQuery.isFetching) return false;
+    const r = rentWindowRangeAvailabilityQuery.data;
+    if (!r?.tracked || r.availableQuantity == null) return false;
+    return r.availableQuantity < rentQty;
+  }, [rentWindow, rentQty, rentWindowRangeAvailabilityQuery.data, rentWindowRangeAvailabilityQuery.isFetching]);
+
+  const rentRangeBlockMessage = useMemo(() => {
+    if (!rentRangeBlocked) return null;
+    const r = rentWindowRangeAvailabilityQuery.data;
+    const avail = r?.availableQuantity ?? 0;
+    if (avail <= 0) {
+      return "Không còn đủ số lượng trong khung thời gian đã chọn.";
+    }
+    return `Chỉ còn ${avail} sản phẩm trong khung thời gian đã chọn.`;
+  }, [rentRangeBlocked, rentWindowRangeAvailabilityQuery.data]);
 
   const buyAvailabilityLoading = buyInventoryEnabled && buyAvailabilityQuery.isFetching;
   const rentAvailabilityLoading = rentInventoryEnabled && rentAvailabilityQuery.isFetching;
@@ -213,9 +234,9 @@ export default function ListingDetail() {
   }, [effectiveBuyStock]);
 
   useEffect(() => {
-    const rentCap = effectiveRentStockCapped > 0 ? effectiveRentStockCapped : 1;
-    setRentQty((q) => (effectiveRentStockCapped <= 0 ? 1 : Math.min(Math.max(1, q), rentCap)));
-  }, [effectiveRentStockCapped]);
+    const rentCap = rentQtyCap > 0 ? rentQtyCap : 1;
+    setRentQty((q) => (rentQtyCap <= 0 ? 1 : Math.min(Math.max(1, q), rentCap)));
+  }, [rentQtyCap]);
 
   const handleVariantAxisChange = (axisKey: string, valueId: string) => {
     setVariantSelection((prev) => ({ ...prev, [axisKey]: valueId }));
@@ -227,7 +248,7 @@ export default function ListingDetail() {
     if (mode === "buy" && (effectiveBuyStock <= 0 || dialogBuyUnitPrice <= 0)) return;
     if (
       mode === "rent" &&
-      (effectiveRentStockCapped <= 0 || dialogRentUnitPrice <= 0 || !rentWindow || !rentValidity.ok)
+      (dialogRentUnitPrice <= 0 || !rentWindow || !rentValidity.ok || rentRangeBlocked)
     ) {
       return;
     }
@@ -300,10 +321,10 @@ export default function ListingDetail() {
 
   const buyCheckoutDisabled = effectiveBuyStock <= 0 || dialogBuyUnitPrice <= 0;
   const rentCheckoutDisabled =
-    !rentValidity.ok ||
-    effectiveRentStockCapped <= 0 ||
     dialogRentUnitPrice <= 0 ||
-    !rentWindow;
+    !rentWindow ||
+    !rentValidity.ok ||
+    rentRangeBlocked;
 
   const rentUnit = anchorVariantRow?.lv.rentUnit ?? "DAY";
 
@@ -397,7 +418,8 @@ export default function ListingDetail() {
         variantSelection={variantSelection}
         onVariantSelectionChange={handleVariantAxisChange}
         rentUnit={rentUnit}
-        lineStock={effectiveRentStockCapped}
+        schedulerStock={rentConcurrencyCap}
+        lineStock={rentQtyCap}
         lineUnitRentPrice={dialogRentUnitPrice}
         rentQty={rentQty}
         onRentQtyChange={setRentQty}
@@ -405,6 +427,7 @@ export default function ListingDetail() {
         onRentWindowChange={setRentWindow}
         rentValidity={rentValidity}
         onRentValidityChange={onRentValidityChange}
+        rentRangeError={rentRangeBlockMessage}
         rentalPeriods={stableRentalPeriods}
         rentalsLoading={
           (rentAvailabilityLoading ||

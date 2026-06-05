@@ -176,7 +176,7 @@ class ListingServiceImplTest {
   void listListingItemsForFacility_facilityNotFound_throws() {
     when(facilityRepository.findByOwnerIdAndIdAndDeletedAtIsNull("profile", "f1")).thenReturn(Optional.empty());
     assertThatThrownBy(
-        () -> listingService.listListingItemsForFacility("profile", "f1", 0, 10, null, null))
+        () -> listingService.listListingItemsForFacility("profile", "f1", 0, 10, null, null, null, null))
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FACILITY_NOT_FOUND);
     verify(listingSearchService, never()).searchListingsPaged(any());
@@ -225,7 +225,7 @@ class ListingServiceImplTest {
         .facility(fac)
         .title("Listing")
         .listingType(Listing.ListingType.BUY)
-        .listingStatus(Listing.ListingStatus.ACTIVE)
+        .listingStatus(Listing.ListingStatus.PENDING)
         .build();
     ProductVariant productVariant = ProductVariant.builder().id("pv-1").product(mine).sku("SKU-1").build();
     ListingResponse mappedResponse = ListingResponse.builder().id("listing-1").variants(List.of()).build();
@@ -247,6 +247,10 @@ class ListingServiceImplTest {
     when(listingMapper.toListingResponse(savedListing, List.of())).thenReturn(mappedResponse);
 
     ListingResponse out = listingService.createListing("me", req);
+
+    ArgumentCaptor<Listing> listingCaptor = ArgumentCaptor.forClass(Listing.class);
+    verify(listingRepository).save(listingCaptor.capture());
+    assertThat(listingCaptor.getValue().getListingStatus()).isEqualTo(Listing.ListingStatus.PENDING);
 
     ArgumentCaptor<ListingVariant> variantCaptor = ArgumentCaptor.forClass(ListingVariant.class);
     verify(listingVariantRepository).save(variantCaptor.capture());
@@ -272,11 +276,12 @@ class ListingServiceImplTest {
         .thenReturn(new ListingSearchService.ListingDocumentPage(List.of(), 0));
     ArgumentCaptor<ListingSearchRequest> cap = ArgumentCaptor.forClass(ListingSearchRequest.class);
 
-    listingService.listListingItemsForFacility("prof", "f1", 0, 10, "shoes ", null);
+    listingService.listListingItemsForFacility("prof", "f1", 0, 10, "shoes ", null, null, null);
 
     verify(listingSearchService).searchListingsPaged(cap.capture());
     assertThat(cap.getValue().getSortBy()).isEqualTo(OpenSearchSortBy.RELEVANCE);
     assertThat(cap.getValue().getKeyword()).isEqualTo("shoes");
+    assertThat(cap.getValue().getListingStatuses()).isEqualTo(Listing.ListingStatus.MANAGE_STATUSES);
   }
 
   private static Product minimalProduct(String ownerId, ProductStatus status) {

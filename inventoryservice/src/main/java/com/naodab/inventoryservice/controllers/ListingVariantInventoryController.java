@@ -91,22 +91,16 @@ public class ListingVariantInventoryController {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
+    // Read-only availability: always return min free quantity in the interval (never 409).
+    // Callers compare availableQuantity against requested quantity client-side.
     Long availableQty = null;
     boolean tracked = false;
-    if (quantity != null) {
-      long available =
-          inventoryAvailabilityService.requireAvailableQuantityInOpenInterval(
-              listingVariantId, mode, from, to, quantity.longValue());
+    var opt =
+        inventoryAvailabilityService.findMinAvailableQuantityInOpenInterval(
+            listingVariantId, mode, from, to);
+    if (opt.isPresent()) {
       tracked = true;
-      availableQty = available;
-    } else {
-      var opt =
-          inventoryAvailabilityService.findMinAvailableQuantityInOpenInterval(
-              listingVariantId, mode, from, to);
-      if (opt.isPresent()) {
-        tracked = true;
-        availableQty = opt.get();
-      }
+      availableQty = opt.get();
     }
 
     ListingVariantIntervalAvailabilityResponse body =

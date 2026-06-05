@@ -96,14 +96,14 @@ http:
       priority: 50
 
     booking-api-options:
-      rule: "(PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`)) && Method(`OPTIONS`)"
+      rule: "(PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`) || PathPrefix(`/api/v1/rental-orders`)) && Method(`OPTIONS`)"
       service: booking-service
       entryPoints:
         - web
       priority: 100
 
     booking-api:
-      rule: "PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`)"
+      rule: "PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`) || PathPrefix(`/api/v1/rental-orders`)"
       service: booking-service
       entryPoints:
         - web

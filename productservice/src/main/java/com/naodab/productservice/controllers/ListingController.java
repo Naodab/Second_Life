@@ -30,7 +30,10 @@ import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
+import com.naodab.productservice.models.Listing.ListingStatus;
+import com.naodab.productservice.models.Listing.ListingType;
 import com.naodab.productservice.services.ListingAdminPurgeService;
+import com.naodab.productservice.services.ListingAdminService;
 import com.naodab.productservice.services.ListingRecommendationService;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
@@ -53,6 +56,44 @@ public class ListingController {
   SearchHistoryAsyncRecorder searchHistoryAsyncRecorder;
   ListingRecommendationService listingRecommendationService;
   ListingAdminPurgeService listingAdminPurgeService;
+  ListingAdminService listingAdminService;
+
+  @GetMapping("/admin/pending")
+  public ResponseEntity<ApiResponse<PagedItemsResponse<ListingItemResponse>>> listPendingListingsAdmin(
+      @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer pageSize,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {
+    if (!AppConstants.ROLE_ADMIN.equals(role)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
+    return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ListingItemResponse>>builder()
+        .data(listingAdminService.listPendingListings(page, pageSize))
+        .build());
+  }
+
+  @PostMapping("/admin/{id}/approve")
+  public ResponseEntity<ApiResponse<ListingResponse>> approveListingAdmin(
+      @PathVariable String id,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {
+    if (!AppConstants.ROLE_ADMIN.equals(role)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
+    return ResponseEntity.ok(ApiResponse.<ListingResponse>builder()
+        .data(listingAdminService.approveListing(id))
+        .build());
+  }
+
+  @PostMapping("/admin/{id}/reject")
+  public ResponseEntity<ApiResponse<ListingResponse>> rejectListingAdmin(
+      @PathVariable String id,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {
+    if (!AppConstants.ROLE_ADMIN.equals(role)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
+    return ResponseEntity.ok(ApiResponse.<ListingResponse>builder()
+        .data(listingAdminService.rejectListing(id))
+        .build());
+  }
 
   @PostMapping("/admin/purge-all")
   public ResponseEntity<ApiResponse<AdminListingPurgeResponse>> purgeAllListingsAdmin(
@@ -119,10 +160,13 @@ public class ListingController {
       @RequestParam(required = false) Integer pageSize,
       @RequestParam(required = false) String keyword,
       @RequestParam(required = false) String productId,
+      @RequestParam(required = false) ListingStatus listingStatus,
+      @RequestParam(required = false) ListingType listingType,
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
     String profileId = validateProfileId(profileIdHeader);
     return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ListingItemResponse>>builder()
-        .data(listingService.listListingItemsForFacility(profileId, facilityId, page, pageSize, keyword, productId))
+        .data(listingService.listListingItemsForFacility(
+            profileId, facilityId, page, pageSize, keyword, productId, listingStatus, listingType))
         .build());
   }
 

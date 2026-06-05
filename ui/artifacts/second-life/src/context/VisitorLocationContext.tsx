@@ -1,5 +1,4 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { LocationConsentDialog } from "@/components/location/LocationConsentDialog";
 import { loadVisitorLocation, type VisitorLocationPayload } from "@/lib/visitor-location";
 
 type VisitorLocationCtx = {
@@ -18,12 +17,7 @@ export function VisitorLocationProvider({ children }: { children: React.ReactNod
 
   const value = useMemo(() => ({ location, reload }), [location, reload]);
 
-  return (
-    <Ctx.Provider value={value}>
-      <LocationConsentDialog onResolved={reload} />
-      {children}
-    </Ctx.Provider>
-  );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useVisitorLocation(): VisitorLocationCtx {

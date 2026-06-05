@@ -40,6 +40,7 @@ import com.naodab.productservice.models.Listing.ListingStatus;
 import com.naodab.productservice.models.Listing.ListingType;
 import com.naodab.productservice.models.Product.ProductStatus;
 import com.naodab.productservice.services.ListingAdminPurgeService;
+import com.naodab.productservice.services.ListingAdminService;
 import com.naodab.productservice.services.ListingRecommendationService;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
@@ -70,6 +71,9 @@ class ListingControllerTest {
 
   @MockitoBean
   ListingAdminPurgeService listingAdminPurgeService;
+
+  @MockitoBean
+  ListingAdminService listingAdminService;
 
   @Test
   void getPublicListingById_delegates() throws Exception {
@@ -143,13 +147,13 @@ class ListingControllerTest {
   void listByFacility_requiresProfile() throws Exception {
     mockMvc.perform(get("/listings/by-facility/fac-1"))
         .andExpect(status().isBadRequest());
-    verify(listingService, never()).listListingItemsForFacility(any(), any(), any(), any(), any(), any());
+    verify(listingService, never()).listListingItemsForFacility(any(), any(), any(), any(), any(), any(), any(), any());
   }
 
   @Test
   void listByFacility_delegates() throws Exception {
     when(listingService.listListingItemsForFacility(
-        eq("p1"), eq("fac-1"), eq(0), eq(10), eq("kw"), eq("prod-99")))
+        eq("p1"), eq("fac-1"), eq(0), eq(10), eq("kw"), eq("prod-99"), eq(null), eq(null)))
         .thenReturn(PagedItemsResponse.<ListingItemResponse>builder()
             .items(List.of()).totalCount(0).page(0).pageSize(10).build());
 
@@ -160,6 +164,31 @@ class ListingControllerTest {
         .param("keyword", "kw")
         .param("productId", "prod-99"))
         .andExpect(status().isOk());
+  }
+
+  @Test
+  void approveListing_requiresAdmin() throws Exception {
+    mockMvc.perform(post("/listings/admin/lid-1/approve")
+        .header(AppConstants.JWT_CLAIM_ROLE, "USER"))
+        .andExpect(status().isForbidden());
+    verify(listingAdminService, never()).approveListing(any());
+  }
+
+  @Test
+  void approveListing_adminOk() throws Exception {
+    when(listingAdminService.approveListing("lid-1"))
+        .thenReturn(ListingResponse.builder()
+            .id("lid-1")
+            .listingStatus(ListingStatus.ACTIVE)
+            .variants(List.of())
+            .build());
+
+    mockMvc.perform(post("/listings/admin/lid-1/approve")
+        .header(AppConstants.JWT_CLAIM_ROLE, AppConstants.ROLE_ADMIN))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.listingStatus").value("ACTIVE"));
+
+    verify(listingAdminService).approveListing("lid-1");
   }
 
   @Test

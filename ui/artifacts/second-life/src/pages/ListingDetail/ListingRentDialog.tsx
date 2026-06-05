@@ -31,6 +31,9 @@ type Props = {
   variantSelection: Record<string, string>;
   onVariantSelectionChange: (axisKey: string, valueId: string) => void;
   rentUnit: RentUnit;
+  /** Base rent stock for overlap checks in the scheduler (does not lock date inputs). */
+  schedulerStock: number;
+  /** Max quantity for selected window (after range availability). */
   lineStock: number;
   lineUnitRentPrice: number;
   rentQty: number;
@@ -39,6 +42,7 @@ type Props = {
   onRentWindowChange: (w: RentScheduleWindow | null) => void;
   rentValidity: RentScheduleValidityPayload;
   onRentValidityChange: (p: RentScheduleValidityPayload) => void;
+  rentRangeError?: string | null;
   rentalPeriods: RentalPeriodDto[];
   rentalsLoading: boolean;
   schedulerResetKey: string;
@@ -55,6 +59,7 @@ export function ListingRentDialog({
   variantSelection,
   onVariantSelectionChange,
   rentUnit,
+  schedulerStock,
   lineStock,
   lineUnitRentPrice,
   rentQty,
@@ -63,6 +68,7 @@ export function ListingRentDialog({
   onRentWindowChange,
   rentValidity,
   onRentValidityChange,
+  rentRangeError,
   rentalPeriods,
   rentalsLoading,
   schedulerResetKey,
@@ -83,8 +89,6 @@ export function ListingRentDialog({
   const estimatedTotal = showUnitPrice && billUnits > 0 ? lineUnitRentPrice * billUnits * rentQty : 0;
 
   const unitLabelVu = rentUnitLabelVu(rentUnit);
-
-  const scheduleLocked = lineStock <= 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -160,7 +164,6 @@ export function ListingRentDialog({
                     <input
                       id="rent-hour-day"
                       type="date"
-                      disabled={scheduleLocked}
                       className={cn(
                         "h-10 w-full min-w-0 rounded-xl border-2 bg-muted/30 px-3 text-sm font-medium tabular-nums outline-none sm:w-[13.5rem]",
                         "border-border/50 shadow-sm transition-colors",
@@ -189,9 +192,8 @@ export function ListingRentDialog({
                   scheduleResourceLabel={cartBridge.name}
                   hourDay={rentUnit === "HOUR" ? hourRentDay : undefined}
                   onHourDayChange={rentUnit === "HOUR" ? setHourRentDay : undefined}
-                  disabled={scheduleLocked}
                   bookings={bookings}
-                  concurrencyCap={lineStock}
+                  concurrencyCap={schedulerStock}
                   rentQty={rentQty}
                   parentWindow={rentWindow}
                   onWindowChange={onRentWindowChange}
@@ -261,6 +263,12 @@ export function ListingRentDialog({
               <div className="flex items-start gap-2 rounded-xl border border-destructive/35 bg-destructive/10 p-3 text-sm text-destructive dark:border-destructive/40 dark:bg-destructive/15">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{rentValidity.error}</span>
+              </div>
+            ) : null}
+            {rentRangeError ? (
+              <div className="flex items-start gap-2 rounded-xl border border-destructive/35 bg-destructive/10 p-3 text-sm text-destructive dark:border-destructive/40 dark:bg-destructive/15">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{rentRangeError}</span>
               </div>
             ) : null}
           </div>

@@ -288,7 +288,9 @@ public class ListingServiceImpl implements ListingService {
       Integer page,
       Integer pageSize,
       String keyword,
-      String productId) {
+      String productId,
+      Listing.ListingStatus listingStatus,
+      Listing.ListingType listingType) {
     String fid = facilityId == null || facilityId.isBlank() ? "" : facilityId.trim();
     facilityRepository
         .findByOwnerIdAndIdAndDeletedAtIsNull(profileId, fid)
@@ -298,14 +300,22 @@ public class ListingServiceImpl implements ListingService {
     String kw = trimToNull(keyword);
     String pid = trimToNull(productId);
 
-    ListingSearchRequest searchRequest = ListingSearchRequest.builder()
+    ListingSearchRequest.ListingSearchRequestBuilder searchBuilder = ListingSearchRequest.builder()
         .facilityId(fid)
         .keyword(kw)
         .productId(pid)
         .page(normalizedPage)
         .pageSize(normalizedSize)
-        .sortBy(kw != null ? OpenSearchSortBy.RELEVANCE : OpenSearchSortBy.CREATED_AT_DESC)
-        .build();
+        .sortBy(kw != null ? OpenSearchSortBy.RELEVANCE : OpenSearchSortBy.CREATED_AT_DESC);
+    if (listingStatus != null) {
+      searchBuilder.listingStatus(listingStatus);
+    } else {
+      searchBuilder.listingStatuses(Listing.ListingStatus.MANAGE_STATUSES);
+    }
+    if (listingType != null) {
+      searchBuilder.listingType(listingType);
+    }
+    ListingSearchRequest searchRequest = searchBuilder.build();
 
     ListingSearchService.ListingDocumentPage esPage = listingSearchService.searchListingsPaged(searchRequest);
     List<ListingItemResponse> items = esPage.items().stream()
@@ -348,6 +358,7 @@ public class ListingServiceImpl implements ListingService {
         .title(request.getTitle().trim())
         .description(trimToNull(request.getDescription()))
         .listingType(listingType)
+        .listingStatus(Listing.ListingStatus.PENDING)
         .minPrice(priceAggregate.minPrice())
         .maxPrice(priceAggregate.maxPrice())
         .build();
@@ -422,7 +433,7 @@ public class ListingServiceImpl implements ListingService {
       listing.setDescription(StringUtils.hasText(d) ? d : null);
     }
     if (request.getListingStatus() != null) {
-      listing.setListingStatus(request.getListingStatus());
+      applySellerListingStatusChange(listing, request.getListingStatus());
     }
 
     Listing saved = listingRepository.save(listing);
@@ -461,6 +472,22 @@ public class ListingServiceImpl implements ListingService {
 
       return variant.getBuyPrice();
     }
+  }
+
+  private static void applySellerListingStatusChange(Listing listing, Listing.ListingStatus targetStatus) {
+    Listing.ListingStatus current = listing.getListingStatus();
+    if (targetStatus == current) {
+      return;
+    }
+    if (targetStatus == Listing.ListingStatus.INACTIVE && current == Listing.ListingStatus.ACTIVE) {
+      listing.setListingStatus(Listing.ListingStatus.INACTIVE);
+      return;
+    }
+    if (targetStatus == Listing.ListingStatus.PENDING && current == Listing.ListingStatus.REJECTED) {
+      listing.setListingStatus(Listing.ListingStatus.PENDING);
+      return;
+    }
+    throw new AppException(ErrorCode.INVALID_INPUT);
   }
 
   private static String trimToNull(String value) {

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, XCircle } from "lucide-react";
 
 import { cancelBookingOrder } from "@/api/booking";
+import { cancelRentalOrder } from "@/api/rental";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,17 +18,25 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { mapApiError } from "@/lib/api-error";
+import type { OrderKind } from "./unified-orders";
 
-export function OrderCancelButton({ orderId }: { orderId: string }) {
+export function OrderCancelButton({
+  orderId,
+  orderKind,
+}: {
+  orderId: string;
+  orderKind: OrderKind;
+}) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const cancelMutation = useMutation({
-    mutationFn: () => cancelBookingOrder(orderId),
+    mutationFn: () =>
+      orderKind === "rent" ? cancelRentalOrder(orderId) : cancelBookingOrder(orderId),
     onSuccess: async () => {
       setOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ["myBookingOrders"] });
+      await queryClient.invalidateQueries({ queryKey: ["myOrders"] });
       toast({
         title: "Đã hủy đơn hàng",
         description: "Đơn hàng đã được hủy thành công.",

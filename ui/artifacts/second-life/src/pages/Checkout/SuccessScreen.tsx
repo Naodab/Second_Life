@@ -59,7 +59,7 @@ export function SuccessScreen({ context }: { context: CheckoutSuccessContext }) 
 
             {hasRentals && (
               <p className="text-xs text-muted-foreground mb-4">
-                Đơn thuê sẽ được xử lý riêng theo chính sách đặt cọc của từng cơ sở.
+                Đơn thuê sẽ được xử lý riêng theo chính sách của từng cơ sở.
               </p>
             )}
 

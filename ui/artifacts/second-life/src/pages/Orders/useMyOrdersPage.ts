@@ -3,21 +3,35 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { format, parseISO, isValid } from "date-fns";
 import { vi } from "date-fns/locale";
 
-import { listBookingOrders, type BookingOrderResponse, type BookingOrderStatus } from "@/api/booking";
+import { listBookingOrders, type BookingOrderStatus } from "@/api/booking";
+import { listRentalOrders, type RentalOrderStatus } from "@/api/rental";
 import { fetchListingVariantContext, type ListingVariantContextResponse } from "@/api/listing";
 import { useAuth } from "@/context/AuthContext";
 import { mapApiError, type ApiErrorViewModel } from "@/lib/api-error";
+import {
+  bookingToEnriched,
+  mergeOrdersNewestFirst,
+  orderMatchesTab,
+  rentalToEnriched,
+  type EnrichedOrder,
+  type OrderDisplayStatus,
+  type OrderKind,
+} from "./unified-orders";
+
+export type { EnrichedOrder, OrderKind };
 
 const PLACEHOLDER_IMAGE =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop";
 
-export type OrderTab = "all" | BookingOrderStatus;
+export type OrderTab = "all" | OrderDisplayStatus;
 
-export const ORDER_STATUS_LABELS: Record<BookingOrderStatus, string> = {
+export const ORDER_STATUS_LABELS: Record<OrderDisplayStatus, string> = {
   PENDING: "Chờ xác nhận",
   CONFIRMED: "Đã xác nhận",
   SHIPPED: "Đang giao",
-  DELIVERED: "Hoàn thành",
+  DELIVERED: "Đã giao",
+  RETURNED: "Đã trả",
+  COMPLETED: "Hoàn thành",
   CANCELLED: "Đã hủy",
 };
 
@@ -27,13 +41,18 @@ export const ORDER_TABS: { value: OrderTab; label: string }[] = [
   { value: "CONFIRMED", label: ORDER_STATUS_LABELS.CONFIRMED },
   { value: "SHIPPED", label: ORDER_STATUS_LABELS.SHIPPED },
   { value: "DELIVERED", label: ORDER_STATUS_LABELS.DELIVERED },
+  { value: "RETURNED", label: ORDER_STATUS_LABELS.RETURNED },
+  { value: "COMPLETED", label: ORDER_STATUS_LABELS.COMPLETED },
   { value: "CANCELLED", label: ORDER_STATUS_LABELS.CANCELLED },
 ];
 
-export function orderStatusBadgeClass(status: BookingOrderStatus): string {
+export function orderStatusBadgeClass(status: OrderDisplayStatus): string {
   switch (status) {
+    case "COMPLETED":
     case "DELIVERED":
       return "bg-primary/10 text-primary border-primary/20";
+    case "RETURNED":
+      return "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800";
     case "SHIPPED":
       return "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800";
     case "CONFIRMED":
@@ -53,15 +72,16 @@ export function formatOrderDate(value?: string | null): string {
 }
 
 export function formatPickupTime(value?: string | null): string {
-  if (!value?.trim()) return "—";
-  const parsed = parseISO(value);
-  if (!isValid(parsed)) return value;
-  return format(parsed, "dd/MM/yyyy HH:mm", { locale: vi });
+  return formatOrderDate(value);
 }
 
-export type EnrichedOrder = BookingOrderResponse & {
-  context?: ListingVariantContextResponse;
-};
+export function formatRentalPeriod(order: EnrichedOrder): string {
+  if (order.kind !== "rent") return "—";
+  const start = formatOrderDate(order.startTime);
+  const end = formatOrderDate(order.endTime);
+  if (start === "—" && end === "—") return "—";
+  return `${start} → ${end}`;
+}
 
 export function orderDisplayTitle(order: EnrichedOrder): string {
   const ctx = order.context;
@@ -82,35 +102,54 @@ export function orderListingHref(order: EnrichedOrder): string | null {
 }
 
 export function orderUnitPrice(order: EnrichedOrder): number | null {
-  if (order.price != null && Number.isFinite(order.price)) return order.price;
+  if (order.kind === "buy" && order.price != null && Number.isFinite(order.price)) {
+    return order.price;
+  }
   const ctx = order.context;
   if (!ctx) return null;
-  if (ctx.listingType === "RENT") {
+  if (order.kind === "rent") {
     return ctx.rentPrice != null && Number.isFinite(ctx.rentPrice) ? ctx.rentPrice : null;
   }
   return ctx.buyPrice != null && Number.isFinite(ctx.buyPrice) ? ctx.buyPrice : null;
 }
 
-export function canCancelOrder(status: BookingOrderStatus): boolean {
-  return status === "PENDING";
+export function orderLineTotal(order: EnrichedOrder): number | null {
+  if (order.kind === "rent" && order.price != null && Number.isFinite(order.price)) {
+    return order.price;
+  }
+  const unit = orderUnitPrice(order);
+  if (unit == null) return null;
+  return unit * order.quantity;
+}
+
+export function canCancelOrder(order: EnrichedOrder): boolean {
+  return order.status === "PENDING";
+}
+
+async function fetchMyOrders() {
+  const [bookingOrders, rentalOrders] = await Promise.all([listBookingOrders(), listRentalOrders()]);
+  return mergeOrdersNewestFirst([
+    ...bookingOrders.map(bookingToEnriched),
+    ...rentalOrders.map(rentalToEnriched),
+  ]);
 }
 
 export function useMyOrdersPage(activeTab: OrderTab) {
   const { isLoggedIn, isLoading: authLoading } = useAuth();
 
   const ordersQuery = useQuery({
-    queryKey: ["myBookingOrders"] as const,
-    queryFn: listBookingOrders,
+    queryKey: ["myOrders"] as const,
+    queryFn: fetchMyOrders,
     enabled: isLoggedIn && !authLoading,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
 
-  const orders = ordersQuery.data ?? [];
+  const baseOrders = ordersQuery.data ?? [];
 
   const variantIds = useMemo(
-    () => [...new Set(orders.map((o) => o.listingVariantId).filter(Boolean))],
-    [orders],
+    () => [...new Set(baseOrders.map((o) => o.listingVariantId).filter(Boolean))],
+    [baseOrders],
   );
 
   const contextQueries = useQueries({
@@ -133,18 +172,15 @@ export function useMyOrdersPage(activeTab: OrderTab) {
 
   const enrichedOrders: EnrichedOrder[] = useMemo(
     () =>
-      orders.map((order) => ({
+      baseOrders.map((order) => ({
         ...order,
         context: contextByVariantId.get(order.listingVariantId),
       })),
-    [orders, contextByVariantId],
+    [baseOrders, contextByVariantId],
   );
 
   const filteredOrders = useMemo(
-    () =>
-      activeTab === "all"
-        ? enrichedOrders
-        : enrichedOrders.filter((order) => order.status === activeTab),
+    () => enrichedOrders.filter((order) => orderMatchesTab(order, activeTab)),
     [activeTab, enrichedOrders],
   );
 
@@ -169,3 +205,5 @@ export function useMyOrdersPage(activeTab: OrderTab) {
     refetch: () => void ordersQuery.refetch(),
   };
 }
+
+export type { BookingOrderStatus, RentalOrderStatus };

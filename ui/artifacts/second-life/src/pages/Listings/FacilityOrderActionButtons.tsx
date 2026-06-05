@@ -2,24 +2,31 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
 import { updateBookingOrderStatus, type BookingOrderStatus } from "@/api/booking";
+import { updateRentalOrderStatus, type RentalOrderStatus } from "@/api/rental";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { mapApiError } from "@/lib/api-error";
+import type { OrderDisplayStatus, OrderKind } from "@/pages/Orders/unified-orders";
 
 import { sellerOrdersQueryKey } from "./useFacilityOrdersPage";
 
 type SellerOrderAction = {
   label: string;
-  status: BookingOrderStatus;
+  status: OrderDisplayStatus;
   variant?: "default" | "outline" | "destructive";
   className?: string;
 };
 
-function actionsForStatus(status: BookingOrderStatus): SellerOrderAction[] {
+function buyActionsForStatus(status: BookingOrderStatus): SellerOrderAction[] {
   switch (status) {
     case "PENDING":
       return [
-        { label: "Từ chối", status: "CANCELLED", variant: "outline", className: "text-destructive border-destructive/30" },
+        {
+          label: "Từ chối",
+          status: "CANCELLED",
+          variant: "outline",
+          className: "text-destructive border-destructive/30",
+        },
         { label: "Xác nhận đơn", status: "CONFIRMED" },
       ];
     case "CONFIRMED":
@@ -31,24 +38,55 @@ function actionsForStatus(status: BookingOrderStatus): SellerOrderAction[] {
   }
 }
 
+function rentActionsForStatus(status: RentalOrderStatus): SellerOrderAction[] {
+  switch (status) {
+    case "PENDING":
+      return [
+        {
+          label: "Từ chối",
+          status: "CANCELLED",
+          variant: "outline",
+          className: "text-destructive border-destructive/30",
+        },
+        { label: "Xác nhận đơn", status: "CONFIRMED" },
+      ];
+    case "CONFIRMED":
+      return [{ label: "Đã giao", status: "DELIVERED" }];
+    case "DELIVERED":
+      return [{ label: "Đã nhận lại", status: "RETURNED" }];
+    case "RETURNED":
+      return [{ label: "Hoàn thành", status: "COMPLETED", className: "bg-green-600 hover:bg-green-700" }];
+    default:
+      return [];
+  }
+}
+
 export function FacilityOrderActionButtons({
   facilityFilter,
   orderId,
+  orderKind,
   status,
 }: {
   facilityFilter: string;
   orderId: string;
-  status: BookingOrderStatus;
+  orderKind: OrderKind;
+  status: OrderDisplayStatus;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const actions = actionsForStatus(status);
+  const actions =
+    orderKind === "rent"
+      ? rentActionsForStatus(status as RentalOrderStatus)
+      : buyActionsForStatus(status as BookingOrderStatus);
 
   const mutation = useMutation({
-    mutationFn: (nextStatus: BookingOrderStatus) => updateBookingOrderStatus(orderId, nextStatus),
+    mutationFn: (nextStatus: OrderDisplayStatus) =>
+      orderKind === "rent"
+        ? updateRentalOrderStatus(orderId, nextStatus as RentalOrderStatus)
+        : updateBookingOrderStatus(orderId, nextStatus as BookingOrderStatus),
     onSuccess: async (_data, nextStatus) => {
       await queryClient.invalidateQueries({ queryKey: sellerOrdersQueryKey(facilityFilter) });
-      await queryClient.invalidateQueries({ queryKey: ["sellerBookingOrders"] });
+      await queryClient.invalidateQueries({ queryKey: ["sellerOrders"] });
       const message =
         nextStatus === "CANCELLED"
           ? "Đơn hàng đã bị từ chối."
@@ -56,7 +94,11 @@ export function FacilityOrderActionButtons({
             ? "Đơn hàng đã được xác nhận."
             : nextStatus === "SHIPPED"
               ? "Đơn hàng đã chuyển sang trạng thái đang giao."
-              : "Đơn hàng đã hoàn thành.";
+              : nextStatus === "DELIVERED"
+                ? "Đơn hàng đã được giao."
+                : nextStatus === "RETURNED"
+                  ? "Đơn thuê đã được nhận lại."
+                  : "Đơn hàng đã hoàn thành.";
       toast({ title: "Cập nhật thành công", description: message });
     },
     onError: (error) => {
@@ -75,7 +117,7 @@ export function FacilityOrderActionButtons({
   if (actions.length === 0) return null;
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 flex-wrap justify-end">
       {actions.map((action) => (
         <Button
           key={action.status}

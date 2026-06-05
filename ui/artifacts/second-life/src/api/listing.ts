@@ -6,14 +6,14 @@ import { getSuggestionFromPrefix, setSuggestionCached } from "@/lib/suggestion-c
 export type ListingType = "BUY" | "RENT";
 
 export type RentUnit = "HOUR" | "DAY" | "WEEK" | "MONTH";
-export type ListingStatus =
-  | "ACTIVE"
-  | "INACTIVE"
-  | "SOLD"
-  | "RENTED"
-  | "PENDING"
-  | "APPROVED"
-  | "REJECTED";
+export type ListingStatus = "ACTIVE" | "INACTIVE" | "PENDING" | "REJECTED";
+
+export const MANAGE_LISTING_STATUSES: ListingStatus[] = [
+  "ACTIVE",
+  "INACTIVE",
+  "PENDING",
+  "REJECTED",
+];
 
 export type ListingItemResponse = {
   id: string;
@@ -41,6 +41,8 @@ export type GetFacilityListingPageParams = {
   pageSize?: number;
   keyword?: string | null;
   productId?: string | null;
+  listingStatus?: ListingStatus | null;
+  listingType?: ListingType | null;
 };
 
 export type ListingSearchSort =
@@ -198,6 +200,8 @@ export async function getFacilityListingPage(
   if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
   if (params.keyword != null && params.keyword.trim()) q.set("keyword", params.keyword.trim());
   if (params.productId != null && params.productId.trim()) q.set("productId", params.productId.trim());
+  if (params.listingStatus) q.set("listingStatus", params.listingStatus);
+  if (params.listingType) q.set("listingType", params.listingType);
   const qs = q.toString();
   const path = `/api/v1/listings/by-facility/${encodeURIComponent(facilityId)}${qs ? `?${qs}` : ""}`;
   const raw = await customFetch<ApiResponseEnvelope<PagedItemsResponse<ListingItemResponse>>>(path, {
@@ -366,6 +370,46 @@ export async function fetchListingPublicDetail(
     ...data,
     facility: facility ?? data.facility,
   };
+}
+
+export async function adminApproveListing(listingId: string): Promise<ListingResponseDetailed> {
+  const raw = await customFetch<ApiResponseEnvelope<ListingResponseDetailed>>(
+    `/api/v1/listings/admin/${encodeURIComponent(listingId.trim())}/approve`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  return unwrapApiData(raw);
+}
+
+export async function adminRejectListing(listingId: string): Promise<ListingResponseDetailed> {
+  const raw = await customFetch<ApiResponseEnvelope<ListingResponseDetailed>>(
+    `/api/v1/listings/admin/${encodeURIComponent(listingId.trim())}/reject`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  return unwrapApiData(raw);
+}
+
+export async function adminListPendingListings(params: {
+  page?: number;
+  pageSize?: number;
+} = {}): Promise<PagedItemsResponse<ListingItemResponse>> {
+  const q = new URLSearchParams();
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
+  const qs = q.toString();
+  const raw = await customFetch<ApiResponseEnvelope<PagedItemsResponse<ListingItemResponse>>>(
+    `/api/v1/listings/admin/pending${qs ? `?${qs}` : ""}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  return unwrapApiData(raw);
 }
 
 export async function createListing(body: ListingCreateBody): Promise<ListingCreateResponse> {

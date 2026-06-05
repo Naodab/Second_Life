@@ -47,17 +47,11 @@ function listingTypeLabel(row: ListingItemResponse): string {
 function listingStatusLabel(row: ListingItemResponse): string {
   switch (row.listingStatus) {
     case "ACTIVE":
-      return "Đang hiển thị";
+      return "Đang đăng";
     case "INACTIVE":
-      return "Tắt";
-    case "SOLD":
-      return "Đã bán";
-    case "RENTED":
-      return "Đã cho thuê";
+      return "Tạm ẩn";
     case "PENDING":
-      return "Chờ duyệt";
-    case "APPROVED":
-      return "Đã duyệt";
+      return "Chưa duyệt";
     case "REJECTED":
       return "Từ chối";
     default:

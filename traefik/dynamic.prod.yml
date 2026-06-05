@@ -120,7 +120,7 @@ http:
         - gateway-jwt
       priority: 100
     booking-api-options:
-      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`)) && Method(`OPTIONS`)"
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`) || PathPrefix(`/api/v1/rental-orders`)) && Method(`OPTIONS`)"
       service: booking-service
       entryPoints:
         - websecure
@@ -128,7 +128,7 @@ http:
         certResolver: letsencrypt
       priority: 100
     booking-api:
-      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`))"
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/customers`) || PathPrefix(`/api/v1/orders`) || PathPrefix(`/api/v1/rental-orders`))"
       service: booking-service
       entryPoints:
         - websecure

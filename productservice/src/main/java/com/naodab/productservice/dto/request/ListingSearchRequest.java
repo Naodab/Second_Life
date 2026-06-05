@@ -35,6 +35,7 @@ public class ListingSearchRequest {
   ProductStatus productStatus;
   ListingType listingType;
   ListingStatus listingStatus;
+  List<ListingStatus> listingStatuses;
 
   String categoryId;
   String subCategoryId;

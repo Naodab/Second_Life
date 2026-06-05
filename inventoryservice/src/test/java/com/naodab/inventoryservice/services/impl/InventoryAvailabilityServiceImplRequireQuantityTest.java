@@ -2,8 +2,14 @@ package com.naodab.inventoryservice.services.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -15,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.inventoryservice.models.InventoryItem;
+import com.naodab.inventoryservice.models.InventoryReservation;
 import com.naodab.inventoryservice.repositories.InventoryItemRepository;
 import com.naodab.inventoryservice.repositories.InventoryReservationRepository;
 
@@ -46,11 +53,7 @@ class InventoryAvailabilityServiceImplRequireQuantityTest {
     when(inventoryItemRepository.findByListingVariantIdAndMode(
             VARIANT_ID, InventoryItem.InventoryMode.BUY))
         .thenReturn(Optional.of(item));
-    when(inventoryReservationRepository.sumActiveReservedQuantity(
-            org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.any()))
+    when(inventoryReservationRepository.sumActiveReservedQuantity(any(), any(), any(), any()))
         .thenReturn(0L);
 
     assertThatThrownBy(() -> service.requireAvailableQuantity(VARIANT_ID, InventoryItem.InventoryMode.BUY, 6L))
@@ -83,13 +86,60 @@ class InventoryAvailabilityServiceImplRequireQuantityTest {
     when(inventoryItemRepository.findByListingVariantIdAndMode(
             VARIANT_ID, InventoryItem.InventoryMode.BUY))
         .thenReturn(Optional.of(item));
-    when(inventoryReservationRepository.sumActiveReservedQuantity(
-            org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.any()))
+    when(inventoryReservationRepository.sumActiveReservedQuantity(any(), any(), any(), any()))
         .thenReturn(0L);
 
     assertThat(service.requireAvailableQuantity(VARIANT_ID, InventoryItem.InventoryMode.BUY, 2L)).isEqualTo(3L);
+  }
+
+  @Test
+  void findAvailableQuantityIfTracked_rent_returnsPhysicalNotMinusReservations() {
+    InventoryItem item =
+        InventoryItem.builder()
+            .listingVariantId(VARIANT_ID)
+            .mode(InventoryItem.InventoryMode.RENT)
+            .rentQuantity(2L)
+            .build();
+    when(inventoryItemRepository.findByListingVariantIdAndMode(VARIANT_ID, InventoryItem.InventoryMode.RENT))
+        .thenReturn(Optional.of(item));
+
+    assertThat(service.findAvailableQuantityIfTracked(VARIANT_ID, InventoryItem.InventoryMode.RENT))
+        .contains(2L);
+  }
+
+  @Test
+  void requireAvailableQuantityInOpenInterval_staggeredMayBookings_throwsInsufficient() {
+    InventoryReservation bookingA =
+        InventoryReservation.builder()
+            .rentalSlotStart(LocalDateTime.of(2026, 5, 4, 0, 0))
+            .rentalSlotEnd(LocalDateTime.of(2026, 5, 7, 0, 0))
+            .quantity(1L)
+            .build();
+    InventoryReservation bookingB =
+        InventoryReservation.builder()
+            .rentalSlotStart(LocalDateTime.of(2026, 5, 6, 0, 0))
+            .rentalSlotEnd(LocalDateTime.of(2026, 5, 9, 0, 0))
+            .quantity(1L)
+            .build();
+
+    InventoryItem item =
+        InventoryItem.builder()
+            .listingVariantId(VARIANT_ID)
+            .mode(InventoryItem.InventoryMode.RENT)
+            .rentQuantity(2L)
+            .build();
+    when(inventoryItemRepository.findByListingVariantIdAndMode(VARIANT_ID, InventoryItem.InventoryMode.RENT))
+        .thenReturn(Optional.of(item));
+    when(inventoryReservationRepository.findRentalPeriodsByListingVariant(
+            eq(VARIANT_ID), eq(InventoryItem.InventoryMode.RENT), any(), any()))
+        .thenReturn(List.of(bookingA, bookingB));
+
+    Instant may5 = LocalDateTime.of(2026, 5, 5, 0, 0).toInstant(ZoneOffset.UTC);
+    Instant may8 = LocalDateTime.of(2026, 5, 8, 0, 0).toInstant(ZoneOffset.UTC);
+
+    assertThatThrownBy(() -> service.requireAvailableQuantityInOpenInterval(
+            VARIANT_ID, InventoryItem.InventoryMode.RENT, may5, may8, 1L))
+        .isInstanceOf(AppException.class)
+        .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_INVENTORY);
   }
 }

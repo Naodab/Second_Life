@@ -42,7 +42,7 @@ export type BookingOrderResponse = {
   createdAt?: string | null;
 };
 
-function normalizeBookingOrderCustomer(raw: unknown): BookingOrderCustomerResponse | null {
+export function normalizeBookingOrderCustomer(raw: unknown): BookingOrderCustomerResponse | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   const id = o.id != null ? String(o.id) : "";
