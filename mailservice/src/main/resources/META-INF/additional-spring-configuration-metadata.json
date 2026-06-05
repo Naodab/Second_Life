@@ -44,6 +44,16 @@
       "name": "external.cors_allowed_origins",
       "type": "java.lang.String",
       "description": "Comma-separated; CORS for SPA (Vite 5173) + optional gateway/static host"
+    },
+    {
+      "name": "spring.kafka.topics.order-notification",
+      "type": "java.lang.String",
+      "description": "The topic to send order notification events to"
+    },
+    {
+      "name": "external.auth-service.url",
+      "type": "java.lang.String",
+      "description": "The URL of the auth service"
     }
   ]
 }

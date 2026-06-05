@@ -1,6 +1,7 @@
 package com.naodab.productservice.repositories;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -25,4 +26,12 @@ public interface ListingVariantRepository extends JpaRepository<ListingVariant, 
   List<String> findIdsByOwnerId(@Param("ownerId") String ownerId);
 
   boolean existsByIdAndListing_Id(String id, String listingId);
+
+  @Query("""
+      SELECT lv.listing.facility.ownerId FROM ListingVariant lv
+      WHERE lv.id = :id
+      AND lv.deletedAt IS NULL
+      AND lv.listing.facility.deletedAt IS NULL
+      """)
+  Optional<String> findOwnerIdById(@Param("id") String id);
 }

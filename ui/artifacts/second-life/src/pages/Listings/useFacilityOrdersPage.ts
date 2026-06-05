@@ -42,6 +42,19 @@ export const FACILITY_ORDER_TABS: { value: FacilityOrderTab; label: string }[] =
   { value: "CANCELLED", label: "Đã hủy" },
 ];
 
+export function parseFacilityOrderTabFromSearch(search: string): FacilityOrderTab {
+  const raw = search.startsWith("?") ? search.slice(1) : search;
+  const tab = new URLSearchParams(raw).get("tab")?.trim().toUpperCase();
+  if (tab && FACILITY_ORDER_TABS.some((entry) => entry.value === tab)) {
+    return tab as FacilityOrderTab;
+  }
+  return "PENDING";
+}
+
+export function buildManageOrdersPath(tab: FacilityOrderTab = "PENDING"): string {
+  return `/manage/orders?tab=${encodeURIComponent(tab)}`;
+}
+
 export function sellerOrdersQueryKey(facilityFilter: string) {
   return ["sellerOrders", facilityFilter] as const;
 }

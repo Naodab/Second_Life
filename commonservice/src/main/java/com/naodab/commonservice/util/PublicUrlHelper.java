@@ -14,7 +14,12 @@ public final class PublicUrlHelper {
     if (!StringUtils.hasText(url)) {
       return "";
     }
-    return url.trim().replaceAll("/+$", "");
+    String trimmed = url.trim();
+    int end = trimmed.length();
+    while (end > 0 && trimmed.charAt(end - 1) == '/') {
+      end--;
+    }
+    return end == trimmed.length() ? trimmed : trimmed.substring(0, end);
   }
 
   public static String resolveAuthPublicApiBase(String authPublicBaseUrl, String gatewayUrl) {

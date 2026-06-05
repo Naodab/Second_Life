@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useMemo } from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import { Clock, Loader2, MessageSquare, Package, ShoppingBag } from "lucide-react";
 
 import { ApiErrorState } from "@/components/errors";
@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/utils";
 import {
   ORDER_STATUS_LABELS,
   ORDER_TABS,
+  buildOrdersPath,
   canCancelOrder,
   formatOrderDate,
   formatPickupTime,
@@ -20,15 +21,22 @@ import {
   orderStatusBadgeClass,
   orderThumbnail,
   orderUnitPrice,
+  parseOrderTabFromSearch,
   useMyOrdersPage,
   type OrderTab,
 } from "./useMyOrdersPage";
 import { OrderCancelButton } from "./OrderCancelButton";
 
 export default function Orders() {
-  const [activeTab, setActiveTab] = useState<OrderTab>("all");
+  const search = useSearch();
+  const [, setLocation] = useLocation();
+  const activeTab = useMemo(() => parseOrderTabFromSearch(search), [search]);
   const { filteredOrders, orders, isLoading, contextsLoading, isError, errorView, refetch } =
     useMyOrdersPage(activeTab);
+
+  const handleTabChange = (value: string) => {
+    setLocation(buildOrdersPath(value as OrderTab), { replace: true });
+  };
 
   if (isLoading) {
     return (
@@ -66,7 +74,7 @@ export default function Orders() {
         </div>
 
         <div className="rounded-3xl border border-border bg-card shadow-sm overflow-hidden p-6">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as OrderTab)}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="bg-muted/60 rounded-xl p-1 mb-6 flex flex-wrap h-auto w-full justify-start">
               {ORDER_TABS.map((tab) => {
                 const count =

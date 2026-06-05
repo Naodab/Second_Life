@@ -185,4 +185,15 @@ public class FacilityServiceImpl implements FacilityService {
     return listingVariantRepository.findIdsByOwnerId(profileId.trim());
   }
 
+  @Override
+  @org.springframework.transaction.annotation.Transactional(readOnly = true)
+  public String resolveOwnerProfileIdByListingVariantId(String listingVariantId) {
+    if (!StringUtils.hasText(listingVariantId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    return listingVariantRepository.findOwnerIdById(listingVariantId.trim())
+        .filter(StringUtils::hasText)
+        .orElseThrow(() -> new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND));
+  }
+
 }

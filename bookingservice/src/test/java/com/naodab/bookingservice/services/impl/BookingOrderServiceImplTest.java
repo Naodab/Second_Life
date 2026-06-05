@@ -38,6 +38,7 @@ import com.naodab.bookingservice.models.Customer;
 import com.naodab.bookingservice.models.enums.BookingOrderStatus;
 import com.naodab.bookingservice.repositories.BookingOrderRepository;
 import com.naodab.bookingservice.services.CustomerService;
+import com.naodab.bookingservice.services.OrderNotificationPublisher;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 
@@ -63,6 +64,9 @@ class BookingOrderServiceImplTest {
   ProductClients productClients;
 
   @Mock
+  OrderNotificationPublisher orderNotificationPublisher;
+
+  @Mock
   LocationClients locationClients;
 
   BookingOrderMapper bookingOrderMapper;
@@ -79,7 +83,8 @@ class BookingOrderServiceImplTest {
         bookingOrderRepository,
         customerService,
         inventoryClients,
-        productClients);
+        productClients,
+        orderNotificationPublisher);
   }
 
   @Test

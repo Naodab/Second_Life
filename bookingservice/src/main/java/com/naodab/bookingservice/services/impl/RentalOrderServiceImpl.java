@@ -22,6 +22,7 @@ import com.naodab.bookingservice.models.RentalOrder;
 import com.naodab.bookingservice.models.enums.RentalOrderStatus;
 import com.naodab.bookingservice.repositories.RentalOrderRepository;
 import com.naodab.bookingservice.services.CustomerService;
+import com.naodab.bookingservice.services.OrderNotificationPublisher;
 import com.naodab.bookingservice.services.RentalOrderService;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
@@ -46,6 +47,7 @@ public class RentalOrderServiceImpl implements RentalOrderService {
   CustomerService customerService;
   InventoryClients inventoryClients;
   ProductClients productClients;
+  OrderNotificationPublisher orderNotificationPublisher;
 
   @Override
   @Transactional
@@ -78,6 +80,9 @@ public class RentalOrderServiceImpl implements RentalOrderService {
       inventoryClients.releaseBuyReservation(rentalOrder.getId());
       throw e;
     }
+
+    orderNotificationPublisher.publishRentOrderCreated(
+        rentalOrder.getId(), rentalOrder.getListingVariantId(), profileId, customer);
 
     return rentalOrderMapper.toRentalOrderResponse(rentalOrder, customer);
   }
@@ -140,6 +145,27 @@ public class RentalOrderServiceImpl implements RentalOrderService {
     rentalOrderRepository.save(order);
     if (currentStatus == RentalOrderStatus.PENDING && targetStatus == RentalOrderStatus.CANCELLED) {
       inventoryClients.releaseBuyReservation(order.getId());
+      orderNotificationPublisher.publishRentOrderCancelledBySeller(
+          order.getId(),
+          order.getListingVariantId(),
+          order.getCustomer().getProfileId(),
+          order.getCustomer());
+    } else if (targetStatus == RentalOrderStatus.CONFIRMED) {
+      orderNotificationPublisher.publishRentOrderConfirmed(
+          order.getId(),
+          order.getListingVariantId(),
+          order.getCustomer().getProfileId(),
+          order.getCustomer());
+    } else if (targetStatus == RentalOrderStatus.DELIVERED
+        || targetStatus == RentalOrderStatus.RETURNED
+        || targetStatus == RentalOrderStatus.COMPLETED) {
+      orderNotificationPublisher.publishRentOrderStatusChanged(
+          order.getId(),
+          order.getListingVariantId(),
+          order.getCustomer().getProfileId(),
+          order.getCustomer(),
+          currentStatus.name(),
+          targetStatus.name());
     }
     return rentalOrderMapper.toRentalOrderResponse(order, order.getCustomer());
   }
@@ -166,6 +192,8 @@ public class RentalOrderServiceImpl implements RentalOrderService {
     order.setStatus(RentalOrderStatus.CANCELLED);
     rentalOrderRepository.save(order);
     inventoryClients.releaseBuyReservation(order.getId());
+    orderNotificationPublisher.publishRentOrderCancelledByBuyer(
+        order.getId(), order.getListingVariantId(), profileId, order.getCustomer());
   }
 
   private boolean validRentInventory(

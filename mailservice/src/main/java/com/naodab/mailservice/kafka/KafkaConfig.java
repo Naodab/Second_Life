@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.naodab.mailservice.dto.EmailVerificationEvent;
 import com.naodab.mailservice.dto.ForgotPasswordEvent;
+import com.naodab.commonservice.event.OrderNotificationEvent;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -77,5 +78,10 @@ public class KafkaConfig {
   @Bean
   public ConcurrentKafkaListenerContainerFactory<String, ForgotPasswordEvent> forgotPasswordKafkaListenerContainerFactory() {
     return kafkaListenerContainerFactory(ForgotPasswordEvent.class, consumerGroupId);
+  }
+
+  @Bean
+  public ConcurrentKafkaListenerContainerFactory<String, OrderNotificationEvent> orderNotificationKafkaListenerContainerFactory() {
+    return kafkaListenerContainerFactory(OrderNotificationEvent.class, consumerGroupId);
   }
 }

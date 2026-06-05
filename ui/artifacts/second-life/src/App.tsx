@@ -9,6 +9,7 @@ import NotFound from "@/pages/NotFound";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { VisitorLocationProvider } from "@/context/VisitorLocationContext";
 import { Header } from "@/components/layout/Header";
+import { NotificationRealtimeListener } from "@/components/NotificationRealtimeListener";
 import { Footer } from "@/components/layout/Footer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { SellerHubProfileGate } from "@/components/SellerHubProfileGate";
@@ -131,6 +132,7 @@ function App() {
               <VisitorLocationProvider>
                 <ProfileSetupRedirect />
                 <SellerHubProfileGate />
+                <NotificationRealtimeListener />
                 <Router />
                 <Toaster />
               </VisitorLocationProvider>

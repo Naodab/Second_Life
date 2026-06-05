@@ -12,10 +12,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import com.naodab.bookingservice.dto.response.ListingVariantContextResponse;
 import com.naodab.commonservice.constant.AppConstants;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
@@ -33,6 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ProductClients {
 
+  private static final String LOG_PRODUCT_CALL_FAILED = "Product service call failed ({}): {}";
+
   RestTemplate restTemplate;
 
   @NonFinal
@@ -49,6 +53,61 @@ public class ProductClients {
     String base = stripTrailingSlashes(productServiceUrl.trim());
     String uri = base + "/facilities/me/listing-variant-ids";
     return getStringList(profileId, uri);
+  }
+
+  public ListingVariantContextResponse getListingVariantContext(String listingVariantId) {
+    if (!StringUtils.hasText(listingVariantId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    String base = stripTrailingSlashes(productServiceUrl.trim());
+    String uri = base + "/listings/variants/" + listingVariantId.trim() + "/context";
+    try {
+      ResponseEntity<ApiResponse<ListingVariantContextResponse>> response = restTemplate.exchange(
+          Objects.requireNonNull(uri),
+          Objects.requireNonNull(HttpMethod.GET),
+          HttpEntity.EMPTY,
+          new ParameterizedTypeReference<ApiResponse<ListingVariantContextResponse>>() {});
+      ApiResponse<ListingVariantContextResponse> body = response.getBody();
+      if (response.getStatusCode() != HttpStatus.OK || body == null || body.getData() == null) {
+        throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+      }
+      return body.getData();
+    } catch (HttpClientErrorException.NotFound e) {
+      throw new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND);
+    } catch (RestClientException e) {
+      log.error(LOG_PRODUCT_CALL_FAILED, uri, e.getMessage());
+      throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  public String resolveOwnerProfileId(String listingVariantId) {
+    if (listingVariantId == null || listingVariantId.isBlank()) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    String base = stripTrailingSlashes(productServiceUrl.trim());
+    String uri = base + "/listing-variants/" + listingVariantId.trim() + "/owner-profile-id";
+    try {
+      ResponseEntity<ApiResponse<String>> response = restTemplate.exchange(
+          Objects.requireNonNull(uri),
+          Objects.requireNonNull(HttpMethod.GET),
+          HttpEntity.EMPTY,
+          new ParameterizedTypeReference<ApiResponse<String>>() {});
+      ApiResponse<String> body = response.getBody();
+      if (response.getStatusCode() != HttpStatus.OK || body == null || !StringUtils.hasText(body.getData())) {
+        throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+      }
+      return body.getData().trim();
+    } catch (HttpClientErrorException.NotFound e) {
+      throw new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND);
+    } catch (HttpClientErrorException e) {
+      if (e.getStatusCode() == HttpStatus.FORBIDDEN || e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+        throw new AppException(ErrorCode.UNAUTHORIZED);
+      }
+      throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+    } catch (RestClientException e) {
+      log.error(LOG_PRODUCT_CALL_FAILED, uri, e.getMessage());
+      throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
   }
 
   private List<String> getStringList(String profileId, String uri) {
@@ -73,7 +132,7 @@ public class ProductClients {
       }
       throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
     } catch (RestClientException e) {
-      log.error("Product service call failed ({}): {}", uri, e.getMessage());
+      log.error(LOG_PRODUCT_CALL_FAILED, uri, e.getMessage());
       throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
     }
   }
