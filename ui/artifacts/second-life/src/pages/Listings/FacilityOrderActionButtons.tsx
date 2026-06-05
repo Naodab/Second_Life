@@ -80,10 +80,13 @@ export function FacilityOrderActionButtons({
       : buyActionsForStatus(status as BookingOrderStatus);
 
   const mutation = useMutation({
-    mutationFn: (nextStatus: OrderDisplayStatus) =>
-      orderKind === "rent"
-        ? updateRentalOrderStatus(orderId, nextStatus as RentalOrderStatus)
-        : updateBookingOrderStatus(orderId, nextStatus as BookingOrderStatus),
+    mutationFn: async (nextStatus: OrderDisplayStatus): Promise<void> => {
+      if (orderKind === "rent") {
+        await updateRentalOrderStatus(orderId, nextStatus as RentalOrderStatus);
+      } else {
+        await updateBookingOrderStatus(orderId, nextStatus as BookingOrderStatus);
+      }
+    },
     onSuccess: async (_data, nextStatus) => {
       await queryClient.invalidateQueries({ queryKey: sellerOrdersQueryKey(facilityFilter) });
       await queryClient.invalidateQueries({ queryKey: ["sellerOrders"] });

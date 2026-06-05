@@ -1,141 +1,201 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRoute, Link } from "wouter";
-import { Star, ShieldCheck, MapPin, Store, MessageSquare, Package, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Star,
+  ShieldCheck,
+  MapPin,
+  Store,
+  MessageSquare,
+  Package,
+  Eye,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ProductCard } from "@/components/ProductCard";
-import { useFacility } from "@/hooks/use-mock-api";
+import { ListingCard } from "@/components/ListingCard";
+import { ListingPaginationBar } from "@/components/ListingPaginationBar";
+import { ApiErrorState } from "@/components/errors";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDistanceToNow } from "date-fns";
-import { vi } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { getFacilityById, facilityAvatarUrl } from "@/api/facility";
+import { searchListings } from "@/api/listing";
+import { formatFacilityAddress, resolveFacilityPlaceNames } from "@/lib/facility-display";
+import { mapApiError } from "@/lib/api-error";
 
-function CategorySlider({ categories }: { categories: string[] }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const scroll = (dir: number) => ref.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => scroll(-1)}
-        className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white border shadow-md rounded-full p-1.5 hover:bg-gray-50"
-      >
-        <ChevronLeft className="w-4 h-4" />
-      </button>
-      <div ref={ref} className="flex gap-3 overflow-x-auto hide-scrollbar py-2 px-1">
-        <button
-          type="button"
-          onClick={() => setActiveCategory(null)}
-          className={cn(
-            "flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-medium border transition-all whitespace-nowrap",
-            activeCategory === null
-              ? "bg-primary text-white border-primary shadow-md shadow-primary/20"
-              : "bg-white text-muted-foreground border-border hover:border-primary/40 hover:text-primary"
-          )}
-        >
-          Tất cả
-        </button>
-        {categories.map(cat => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setActiveCategory(cat === activeCategory ? null : cat)}
-            className={cn(
-              "flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-medium border transition-all whitespace-nowrap",
-              activeCategory === cat
-                ? "bg-primary text-white border-primary shadow-md shadow-primary/20"
-                : "bg-white text-muted-foreground border-border hover:border-primary/40 hover:text-primary"
-            )}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={() => scroll(1)}
-        className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white border shadow-md rounded-full p-1.5 hover:bg-gray-50"
-      >
-        <ChevronRight className="w-4 h-4" />
-      </button>
-      <div className="mt-1 text-xs text-muted-foreground pl-1">
-        {activeCategory ? `Đang lọc: ${activeCategory}` : ""}
-      </div>
-    </div>
-  );
-}
+const PAGE_SIZE = 12;
 
 export default function FacilityPage() {
   const [, facilityParams] = useRoute("/facility/:id");
   const [, legacyShopParams] = useRoute("/shop/:id");
-  const facilityId = facilityParams?.id ?? legacyShopParams?.id ?? "s1";
-  const { data: facility, products, isLoading } = useFacility(facilityId);
+  const facilityId = (facilityParams?.id ?? legacyShopParams?.id ?? "").trim();
+  const [page, setPage] = useState(0);
 
-  if (isLoading) {
+  useEffect(() => {
+    setPage(0);
+  }, [facilityId]);
+
+  const facilityQuery = useQuery({
+    queryKey: ["publicFacility", facilityId],
+    queryFn: () => getFacilityById(facilityId),
+    enabled: Boolean(facilityId),
+    retry: false,
+  });
+
+  const placesQuery = useQuery({
+    queryKey: ["publicFacilityPlace", facilityQuery.data?.provinceCode, facilityQuery.data?.wardCode],
+    queryFn: () =>
+      resolveFacilityPlaceNames(facilityQuery.data!.provinceCode, facilityQuery.data!.wardCode),
+    enabled: Boolean(facilityQuery.data?.provinceCode),
+    staleTime: 300_000,
+  });
+
+  const listingsQuery = useQuery({
+    queryKey: ["publicFacilityListings", facilityId, page],
+    queryFn: () =>
+      searchListings({
+        facilityId,
+        listingStatus: "ACTIVE",
+        sortBy: "UPDATED_AT_DESC",
+        page,
+        pageSize: PAGE_SIZE,
+      }),
+    enabled: Boolean(facilityId) && facilityQuery.isSuccess,
+    staleTime: 30_000,
+  });
+
+  const facilityErrorView = useMemo(() => {
+    if (!facilityQuery.error) return null;
+    return mapApiError(facilityQuery.error, {
+      fallbackTitle: "Không tìm thấy cơ sở",
+      fallbackMessage: "Cơ sở này không tồn tại hoặc đã bị xóa.",
+    });
+  }, [facilityQuery.error]);
+
+  if (!facilityId) {
+    return (
+      <ApiErrorState
+        kind="not_found"
+        variant="fullscreen"
+        title="Không tìm thấy cơ sở"
+        message="Đường dẫn không hợp lệ."
+        homeHref="/"
+      />
+    );
+  }
+
+  if (facilityQuery.isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-12 animate-pulse space-y-8">
         <Skeleton className="h-48 w-full rounded-3xl" />
         <Skeleton className="h-32 w-full rounded-3xl" />
-        <div className="flex gap-4 overflow-hidden">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="w-32 h-10 rounded-full flex-shrink-0" />)}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="aspect-square rounded-2xl" />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="aspect-square rounded-2xl" />
+          ))}
         </div>
       </div>
     );
   }
 
-  if (!facility) return <div className="text-center py-20 text-2xl font-bold">Không tìm thấy cơ sở</div>;
+  if (facilityQuery.isError && facilityErrorView) {
+    return (
+      <ApiErrorState
+        variant="fullscreen"
+        model={facilityErrorView}
+        homeHref="/"
+        onRetry={() => void facilityQuery.refetch()}
+      />
+    );
+  }
 
-  const facilityCategories = facility.categories || [...new Set(products.map((p) => p.subCategoryName))];
-  const joinedAgo = formatDistanceToNow(new Date(facility.joinedDate), { locale: vi, addSuffix: true });
+  const facility = facilityQuery.data;
+  if (!facility) {
+    return (
+      <ApiErrorState
+        kind="not_found"
+        variant="fullscreen"
+        title="Không tìm thấy cơ sở"
+        message="Cơ sở này không tồn tại hoặc đã bị xóa."
+        homeHref="/"
+      />
+    );
+  }
+
+  const fullAddress = formatFacilityAddress({
+    address: facility.address,
+    wardName: placesQuery.data?.wardName,
+    provinceName: placesQuery.data?.provinceName,
+    wardCode: facility.wardCode,
+    provinceCode: facility.provinceCode,
+  });
+  const listings = listingsQuery.data?.items ?? [];
+  const totalCount = typeof listingsQuery.data?.totalCount === "number" ? listingsQuery.data.totalCount : 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const rating = facility.averageRating ?? 0;
+  const orderCount = Number(facility.orderCount ?? 0);
+  const viewCount = Number(facility.viewCount ?? 0);
 
   return (
     <div className="min-h-screen bg-gray-50/30 pb-20">
-
       <div className="bg-gradient-to-br from-primary/15 via-primary/8 to-transparent h-44 sm:h-56 relative border-b border-primary/10">
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: "radial-gradient(circle at 20% 50%, var(--primary) 0%, transparent 60%), radial-gradient(circle at 80% 20%, var(--secondary) 0%, transparent 60%)"
-        }} />
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 50%, var(--primary) 0%, transparent 60%), radial-gradient(circle at 80% 20%, var(--secondary) 0%, transparent 60%)",
+          }}
+        />
         <div className="absolute -bottom-16 left-6 sm:left-10">
           <div className="bg-white p-2 rounded-3xl shadow-lg border">
-            <img src={facility.avatar} alt={facility.name} className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover" />
+            <img
+              src={facilityAvatarUrl(facility)}
+              alt={facility.name}
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover"
+            />
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
-
         <div className="bg-white rounded-3xl border shadow-sm p-6 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-start gap-5">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-5">
             <div>
               <h1 className="text-2xl font-display font-bold flex items-center gap-2">
                 {facility.name}
-                {facility.isVerified && <ShieldCheck className="w-5 h-5 text-primary" />}
+                {orderCount > 50 ? <ShieldCheck className="w-5 h-5 text-primary" aria-hidden /> : null}
               </h1>
-              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                <MapPin className="w-4 h-4 flex-shrink-0" />
-                <span>{facility.address}, {facility.ward}</span>
-              </div>
-              <div className="text-sm font-medium text-foreground mt-0.5 ml-5">{facility.province}</div>
+              {fullAddress ? (
+                <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
+                  <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden />
+                  <span>{fullAddress}</span>
+                </div>
+              ) : null}
+              {facility.description?.trim() ? (
+                <p className="text-sm text-muted-foreground mt-3 max-w-2xl">{facility.description.trim()}</p>
+              ) : null}
 
-              <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1.5 text-amber-500 font-semibold">
-                  <Star className="w-4 h-4 fill-current" />
-                  <span>{facility.rating}</span>
+                  <Star className="w-4 h-4 fill-current" aria-hidden />
+                  <span>{rating}</span>
                 </div>
-                <span className="text-gray-300">•</span>
+                <span className="text-gray-300" aria-hidden>
+                  •
+                </span>
                 <div className="flex items-center gap-1.5">
-                  <Package className="w-4 h-4" />
-                  <span><strong className="text-foreground">{facility.totalOrders}</strong> đơn đã bán / cho thuê</span>
+                  <Package className="w-4 h-4" aria-hidden />
+                  <span>
+                    <strong className="text-foreground">{orderCount}</strong> đơn đã bán / cho thuê
+                  </span>
                 </div>
-                <span className="text-gray-300">•</span>
+                <span className="text-gray-300" aria-hidden>
+                  •
+                </span>
                 <div className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4" />
-                  <span>Tham gia {joinedAgo}</span>
+                  <Eye className="w-4 h-4" aria-hidden />
+                  <span>
+                    <strong className="text-foreground">{viewCount}</strong> lượt xem
+                  </span>
                 </div>
               </div>
             </div>
@@ -143,41 +203,63 @@ export default function FacilityPage() {
             <div className="flex gap-3 flex-shrink-0 mt-2 md:mt-0">
               <Link href="/messages">
                 <Button variant="outline" className="rounded-full bg-white">
-                  <MessageSquare className="w-4 h-4 mr-2" /> Chat ngay
+                  <MessageSquare className="w-4 h-4 mr-2" aria-hidden /> Chat ngay
                 </Button>
               </Link>
-              <Button className="rounded-full shadow-md shadow-primary/20 px-6">
+              <Button className="rounded-full shadow-md shadow-primary/20 px-6" disabled>
                 Theo dõi
               </Button>
             </div>
           </div>
         </div>
 
-        {facilityCategories.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-bold mb-4">Danh mục</h2>
-            <CategorySlider categories={facilityCategories} />
-          </div>
-        )}
-
         <div>
           <h2 className="text-xl font-display font-bold mb-5 flex items-center gap-2">
-            <Store className="w-5 h-5 text-primary" />
-            Sản phẩm tại cơ sở
-            <Badge variant="outline" className="ml-2 text-muted-foreground font-normal">{products.length}</Badge>
+            <Store className="w-5 h-5 text-primary" aria-hidden />
+            Bài đăng tại cơ sở
+            <Badge variant="outline" className="ml-2 text-muted-foreground font-normal">
+              {totalCount}
+            </Badge>
           </h2>
 
-          {products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {products.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+          {listingsQuery.isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border text-muted-foreground gap-2">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden />
+              <p className="text-sm">Đang tải bài đăng…</p>
             </div>
+          ) : listingsQuery.isError ? (
+            <ApiErrorState
+              variant="embedded"
+              error={listingsQuery.error}
+              mapOptions={{
+                fallbackTitle: "Không tải được bài đăng",
+                fallbackMessage: "Vui lòng thử lại sau.",
+              }}
+              onRetry={() => void listingsQuery.refetch()}
+            />
+          ) : listings.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                {listings.map((row) => (
+                  <ListingCard key={row.id} row={row} />
+                ))}
+              </div>
+              {totalCount > PAGE_SIZE ? (
+                <ListingPaginationBar
+                  currentPage={page}
+                  totalPages={totalPages}
+                  pageSize={PAGE_SIZE}
+                  totalItems={totalCount}
+                  itemLabel="bài đăng"
+                  onPageChange={setPage}
+                />
+              ) : null}
+            </>
           ) : (
             <div className="text-center py-20 bg-white rounded-3xl border">
-              <Store className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <h3 className="text-xl font-bold text-foreground mb-2">Chưa có sản phẩm nào</h3>
-              <p className="text-muted-foreground">Cơ sở này chưa đăng sản phẩm nào.</p>
+              <Store className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" aria-hidden />
+              <h3 className="text-xl font-bold text-foreground mb-2">Chưa có bài đăng nào</h3>
+              <p className="text-muted-foreground">Cơ sở này chưa có bài đăng đang hoạt động.</p>
             </div>
           )}
         </div>
