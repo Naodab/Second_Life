@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
 
 import com.naodab.authservice.properties.OAuth2Properties;
+import com.naodab.commonservice.util.PublicUrlHelper;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -66,7 +67,7 @@ public class OAuth2AuthorizedRedirectUrisConfiguration {
     if (!StringUtils.hasText(origin)) {
       return;
     }
-    String base = origin.trim().replaceAll("/+$", "");
+    String base = PublicUrlHelper.stripTrailingSlash(origin);
     target.add(base + GOOGLE_CALLBACK_SUFFIX);
     addWwwApexPair(target, base);
   }

@@ -6,6 +6,7 @@ import org.springframework.util.StringUtils;
 
 import com.naodab.commonservice.constant.OrderNotificationConstants;
 import com.naodab.commonservice.event.OrderNotificationEvent;
+import com.naodab.commonservice.util.PublicUrlHelper;
 import com.naodab.mailservice.models.NotificationDocument;
 import com.naodab.mailservice.models.NotificationType;
 
@@ -132,7 +133,7 @@ public class NotificationMessageFactory {
   }
 
   private String normalizeLink(String path) {
-    String base = frontendUrl != null ? frontendUrl.trim().replaceAll("/+$", "") : "";
+    String base = PublicUrlHelper.stripTrailingSlash(frontendUrl);
     if (!StringUtils.hasText(base)) {
       return path;
     }

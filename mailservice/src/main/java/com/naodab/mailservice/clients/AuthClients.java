@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.naodab.commonservice.constant.AppConstants;
+import com.naodab.commonservice.util.PublicUrlHelper;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,7 @@ public class AuthClients {
     if (!StringUtils.hasText(accessToken)) {
       return Optional.empty();
     }
-    String base = authServiceUrl.trim().replaceAll("/+$", "");
+    String base = PublicUrlHelper.stripTrailingSlash(authServiceUrl);
     String uri = base + "/auth/forward-auth";
     HttpHeaders headers = new HttpHeaders();
     headers.setBearerAuth(accessToken.trim());
