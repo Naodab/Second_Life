@@ -53,7 +53,7 @@ export function SuccessScreen({ context }: { context: CheckoutSuccessContext }) 
 
             {subOrderCount > 1 && (
               <p className="text-xs text-muted-foreground mb-4">
-                Đơn đã được tách thành <strong>{subOrderCount} đơn nhỏ</strong> theo từng cơ sở.
+                Đã tạo <strong>{subOrderCount} đơn hàng</strong> riêng biệt.
               </p>
             )}
 

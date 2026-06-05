@@ -1,8 +1,8 @@
-import type { CartItem } from "@/hooks/use-mock-api";
+import type { CartItemView } from "./cart-types";
 import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 
-export function groupByDate(items: CartItem[]) {
-  const map = new Map<string, CartItem[]>();
+export function groupByDate(items: CartItemView[]) {
+  const map = new Map<string, CartItemView[]>();
   for (const item of items) {
     const key = format(startOfDay(parseISO(item.addedAt)), "yyyy-MM-dd");
     if (!map.has(key)) map.set(key, []);
@@ -17,11 +17,11 @@ export function rentDays(start: string, end: string) {
   return d > 0 ? d : 0;
 }
 
-export function calcBuyTotal(item: CartItem, qty: number) {
+export function calcBuyTotal(item: CartItemView, qty: number) {
   return item.buyPrice * qty;
 }
 
-export function calcRentTotal(item: CartItem, start: string, end: string, qty: number) {
+export function calcRentTotal(item: CartItemView, start: string, end: string, qty: number) {
   const days = rentDays(start, end);
   return days > 0 ? item.rentPrice * days * qty : 0;
 }

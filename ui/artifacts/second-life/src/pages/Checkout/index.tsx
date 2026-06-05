@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   AlertCircle,
@@ -17,8 +17,10 @@ import { Label } from "@/components/ui/label";
 import { formatCurrency, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { removeCartItem } from "@/api/cart";
 import { createBookingOrder, buildDefaultPickupTime } from "@/api/booking";
 import { createRentalOrder, formatRentalDateTime } from "@/api/rental";
+import { CART_QUERY_KEY } from "@/hooks/use-cart";
 import { buildCheckoutSuccessContext, type CheckoutSuccessContext } from "./checkout-success-context";
 import { SuccessScreen } from "./SuccessScreen";
 import { CheckoutOrderInfoForm, type CheckoutOrderInfoFormRef } from "./CheckoutOrderInfoForm";
@@ -53,6 +55,7 @@ function CheckoutReadonlyField({ label, value, className }: { label: string; val
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const { items, isLoading, isError, errorView, ownerNameLoading, placeNamesLoading, clearSession, refetch } =
     useCheckoutPage();
   const [successContext, setSuccessContext] = useState<CheckoutSuccessContext | null>(null);
@@ -60,12 +63,13 @@ export default function Checkout() {
   const orderInfoFormRef = useRef<CheckoutOrderInfoFormRef>(null);
 
   const facilityGroups = groupByFacility(items);
-  const subOrderCount = facilityGroups.size;
+  const facilityCount = facilityGroups.size;
+  const orderCount = items.length;
 
   const subtotal = items.reduce((s, i) => s + itemTotal(i), 0);
 
   const placeOrderMutation = useMutation({
-    mutationFn: async (payload: { customerId: string; orderItems: typeof items; orderSubCount: number }) => {
+    mutationFn: async (payload: { customerId: string; orderItems: typeof items }) => {
       const pickupTime = buildDefaultPickupTime();
       const orders = await Promise.all(
         payload.orderItems.map((item) => {
@@ -87,10 +91,17 @@ export default function Checkout() {
           });
         }),
       );
-      return { orders, orderItems: payload.orderItems, orderSubCount: payload.orderSubCount };
+      return { orders, orderItems: payload.orderItems };
     },
-    onSuccess: (result) => {
-      setSuccessContext(buildCheckoutSuccessContext(result.orderItems, result.orderSubCount));
+    onSuccess: async (result) => {
+      const cartIds = result.orderItems
+        .map((item) => item.cartItemId?.trim())
+        .filter((id): id is string => Boolean(id));
+      if (cartIds.length > 0) {
+        await Promise.allSettled(cartIds.map((id) => removeCartItem(id)));
+        await queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY });
+      }
+      setSuccessContext(buildCheckoutSuccessContext(result.orderItems, result.orderItems.length));
       clearSession();
     },
   });
@@ -98,7 +109,7 @@ export default function Checkout() {
   const handlePlaceOrder = async () => {
     const result = await orderInfoFormRef.current?.validate();
     if (!result) return;
-    placeOrderMutation.mutate({ customerId: result.customerId, orderItems: items, orderSubCount: subOrderCount });
+    placeOrderMutation.mutate({ customerId: result.customerId, orderItems: items });
   };
 
   const handleGoBack = () => {
@@ -150,14 +161,20 @@ export default function Checkout() {
 
         <h1 className="text-3xl font-display font-bold mb-8">Thanh toán</h1>
 
-        {subOrderCount > 1 && (
+        {orderCount > 1 && (
           <div className={cn(checkoutAlertClass, "flex items-start gap-3 p-4 mb-6")}>
             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold">Đơn từ nhiều cơ sở</p>
+              <p className="font-semibold">Thanh toán nhiều sản phẩm</p>
               <p className="mt-0.5 opacity-90">
-                Sản phẩm từ <strong>{subOrderCount} cơ sở</strong> khác nhau — hệ thống sẽ tách thành{" "}
-                <strong>{subOrderCount} đơn hàng riêng</strong>.
+                Hệ thống sẽ tạo <strong>{orderCount} đơn hàng</strong> riêng
+                {facilityCount > 1 ? (
+                  <>
+                    {" "}
+                    từ <strong>{facilityCount} cơ sở</strong> khác nhau
+                  </>
+                ) : null}
+                .
               </p>
             </div>
           </div>
@@ -183,7 +200,7 @@ export default function Checkout() {
                     <CheckoutFacilityCollapseHeader
                       item={facilityItems[0]}
                       subOrderIndex={idx}
-                      showSubOrderBadge={subOrderCount > 1}
+                      showSubOrderBadge={facilityCount > 1}
                       ownerNameLoading={ownerNameLoading}
                     />
                     <div className="flex items-center gap-3 shrink-0">
@@ -331,9 +348,9 @@ export default function Checkout() {
                 )}
               </Button>
 
-              {subOrderCount > 1 && (
+              {orderCount > 1 && (
                 <p className="text-xs text-muted-foreground text-center mt-4 pt-4 border-t border-border">
-                  Tách thành <strong>{subOrderCount} đơn hàng</strong> riêng
+                  Tạo <strong>{orderCount} đơn hàng</strong> riêng (mỗi sản phẩm một đơn)
                 </p>
               )}
             </div>

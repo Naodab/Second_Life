@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { CalendarDays, ArrowRight, AlertCircle } from "lucide-react";
+import { CalendarDays, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useCart, setPendingCheckout, type CheckoutSelection } from "@/hooks/use-mock-api";
+import { useCart } from "@/hooks/use-cart";
+import { buildCheckoutCartHref, setPendingCheckoutLines, type CheckoutLineInput } from "@/checkout/checkout-session";
+import { toApiDateTime } from "@/cart/cart-datetime";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -13,7 +15,7 @@ import { groupByDate, calcBuyTotal, calcRentTotal } from "./cart-utils";
 
 export default function Cart() {
   const [, setLocation] = useLocation();
-  const { cartItems, removeFromCart } = useCart();
+  const { cartItems, isLoading, removeFromCart, updateCartQuantity } = useCart();
   const [itemStates, setItemStates] = useState<Record<string, ItemState>>({});
   const [selection, setSelection] = useState<Set<ModeKey>>(new Set());
 
@@ -58,11 +60,8 @@ export default function Cart() {
   const isAllSelected =
     cartItems.length > 0 &&
     cartItems.every((item) => {
-      const isBuy = item.type === "buy" || item.type === "both";
-      const isRent = item.type === "rent" || item.type === "both";
-      const buyOk = !isBuy || selection.has(`${item.cartItemId}:buy`);
-      const rentOk = !isRent || selection.has(`${item.cartItemId}:rent`);
-      return buyOk && rentOk;
+      const key: ModeKey = `${item.cartItemId}:${item.type}`;
+      return selection.has(key);
     });
 
   const toggleAll = () => {
@@ -71,12 +70,13 @@ export default function Cart() {
     } else {
       const all = new Set<ModeKey>();
       for (const item of cartItems) {
-        if (item.type === "buy" || item.type === "both") all.add(`${item.cartItemId}:buy`);
-        if (item.type === "rent" || item.type === "both") all.add(`${item.cartItemId}:rent`);
+        all.add(`${item.cartItemId}:${item.type}`);
       }
       setSelection(all);
     }
   };
+
+  const selectedFacilityIds = new Set<string>();
 
   let selectedTotal = 0;
   let selectedCount = 0;
@@ -91,11 +91,13 @@ export default function Cart() {
       if (st.buyStatus !== "error") {
         selectedTotal += calcBuyTotal(item, st.buyQty);
         selectedCount++;
+        if (item.facilityId) selectedFacilityIds.add(item.facilityId);
       }
     } else {
       if (st.rentStatus !== "error" && st.rentStart && st.rentEnd) {
         selectedTotal += calcRentTotal(item, st.rentStart, st.rentEnd, st.rentQty);
         selectedCount++;
+        if (item.facilityId) selectedFacilityIds.add(item.facilityId);
       }
     }
   }
@@ -109,59 +111,72 @@ export default function Cart() {
   });
 
   const handleCheckout = () => {
-    const items: CheckoutSelection[] = [];
+    if (selection.size === 0 || hasErrors) return;
+
+    const lines: CheckoutLineInput[] = [];
+
     for (const key of selection) {
       const [id, mode] = key.split(":") as [string, "buy" | "rent"];
       const item = cartItems.find((i) => i.cartItemId === id);
       const st = itemStates[id];
       if (!item || !st) continue;
-      if (mode === "buy" && st.buyStatus !== "error") {
-        items.push({
-          cartItemId: `${id}:buy`,
-          productId: item.productId,
-          name: item.name,
-          images: item.images,
-          facilityId: item.facilityId,
-          buyPrice: item.buyPrice,
-          rentPrice: item.rentPrice,
-          mode: "buy",
+
+      if (mode === "buy") {
+        if (st.buyStatus === "error") continue;
+        lines.push({
+          cartItemId: item.cartItemId,
+          listingId: item.listingId,
+          listingVariantId: item.listingVariantId,
           quantity: st.buyQty,
+          mode: "buy",
         });
-      } else if (mode === "rent" && st.rentStart && st.rentEnd && st.rentStatus !== "error") {
-        items.push({
-          cartItemId: `${id}:rent`,
-          productId: item.productId,
-          name: item.name,
-          images: item.images,
-          facilityId: item.facilityId,
-          buyPrice: item.buyPrice,
-          rentPrice: item.rentPrice,
-          mode: "rent",
+      } else {
+        if (st.rentStatus === "error" || !st.rentStart || !st.rentEnd) continue;
+        lines.push({
+          cartItemId: item.cartItemId,
+          listingId: item.listingId,
+          listingVariantId: item.listingVariantId,
           quantity: st.rentQty,
-          rentalDates: { start: new Date(st.rentStart), end: new Date(st.rentEnd) },
+          mode: "rent",
+          rentalStart: toApiDateTime(new Date(`${st.rentStart}T00:00:00`)),
+          rentalEnd: toApiDateTime(new Date(`${st.rentEnd}T23:59:59`)),
+          rentUnit: item.rentUnit,
         });
       }
     }
-    if (items.length === 0) return;
-    setPendingCheckout(items);
-    setLocation("/checkout");
+
+    if (lines.length === 0) return;
+
+    setPendingCheckoutLines(lines);
+    setLocation(buildCheckoutCartHref());
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center bg-muted/20 dark:bg-background">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Đang tải giỏ hàng...
+        </div>
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center bg-gray-50/30">
-        <div className="text-center">
+      <div className="min-h-[70vh] flex items-center justify-center bg-muted/20 dark:bg-background">
+        <div className="text-center px-4">
           <div className="w-70 h-70 flex items-center justify-center mx-auto mb-6">
             <img
               src={`${import.meta.env.BASE_URL}images/empty-cart.png`}
               alt="Mọi người trao đổi đồ dùng"
-              className="relative z-10 w-full h-auto drop-shadow-2xl object-contain"
+              className="relative z-10 w-full h-auto drop-shadow-2xl object-contain dark:opacity-90"
             />
           </div>
-          <h2 className="text-3xl font-display font-bold mb-3">Giỏ hàng của bạn đang trống</h2>
+          <h2 className="text-3xl font-display font-bold mb-3 text-foreground">Giỏ hàng của bạn đang trống</h2>
           <p className="text-muted-foreground mb-8">Có vẻ bạn chưa thêm sản phẩm nào vào giỏ hàng.</p>
           <Link href="/search">
-            <Button size="lg" className="rounded-full px-8 shadow-lg shadow-primary/20">
+            <Button size="lg" className="rounded-full px-8 shadow-lg shadow-primary/20 dark:shadow-primary/10">
               Bắt đầu mua sắm
             </Button>
           </Link>
@@ -171,10 +186,10 @@ export default function Cart() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/30 pt-8 pb-36">
+    <div className="min-h-screen bg-muted/20 dark:bg-background pt-8 pb-36">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-display font-bold">Giỏ hàng</h1>
+          <h1 className="text-3xl font-display font-bold text-foreground">Giỏ hàng</h1>
           <label className="flex items-center gap-2 cursor-pointer select-none text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             <Checkbox checked={isAllSelected} onCheckedChange={toggleAll} />
             Chọn tất cả
@@ -204,14 +219,20 @@ export default function Cart() {
                       selection={selection}
                       onToggle={toggleMode}
                       onStateChange={patchState}
+                      onQtyPersist={(id, quantity) => void updateCartQuantity(id, quantity)}
                       onRemove={(id) => {
-                        removeFromCart(id);
+                        setItemStates((prev) => {
+                          const next = { ...prev };
+                          delete next[id];
+                          return next;
+                        });
                         setSelection((prev) => {
                           const next = new Set(prev);
                           next.delete(`${id}:buy`);
                           next.delete(`${id}:rent`);
                           return next;
                         });
+                        void removeFromCart(id);
                       }}
                     />
                   ))}
@@ -222,12 +243,15 @@ export default function Cart() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t py-4 px-4 z-40 shadow-[0_-8px_30px_rgb(0,0,0,0.06)]">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/90 backdrop-blur-xl py-4 px-4 shadow-[0_-8px_30px_rgb(0,0,0,0.06)] dark:bg-card/95 dark:shadow-[0_-8px_30px_rgb(0,0,0,0.35)]">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             {selectedCount > 0 ? (
               <>
-                <p className="text-sm text-muted-foreground">Đã chọn {selectedCount} lượt sản phẩm</p>
+                <p className="text-sm text-muted-foreground">
+                  Đã chọn {selectedCount} mục
+                  {selectedFacilityIds.size > 1 ? ` · ${selectedFacilityIds.size} cửa hàng` : ""}
+                </p>
                 <p className="text-2xl font-bold text-primary">{formatCurrency(selectedTotal)}</p>
               </>
             ) : (
@@ -242,7 +266,7 @@ export default function Cart() {
             )}
             <Button
               size="lg"
-              className="flex-1 sm:flex-none rounded-full px-10 h-13 shadow-lg shadow-primary/20 text-base font-semibold"
+              className="flex-1 sm:flex-none rounded-full px-10 h-13 shadow-lg shadow-primary/20 dark:shadow-primary/10 text-base font-semibold"
               disabled={!canCheckout || hasErrors}
               onClick={handleCheckout}
             >

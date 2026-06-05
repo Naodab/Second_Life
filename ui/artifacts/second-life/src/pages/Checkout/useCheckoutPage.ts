@@ -1,16 +1,15 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { useSearch } from "wouter";
 
-import { getFacilityById } from "@/api/facility";
+import { getFacilityById, type FacilityResponse } from "@/api/facility";
 import { getProfileById, profileDisplayName, type ProfilePayload } from "@/api/profile";
 import { fetchListingPublicDetail } from "@/api/listing";
 import { fetchListingVariantAvailability, fetchListingVariantAvailabilityInRange } from "@/api/inventory";
 import { buildCheckoutLineItem, type CheckoutLineItem } from "@/checkout/build-checkout-line";
 import {
   clearPendingCheckoutLine,
-  getPendingCheckoutLine,
-  parseCheckoutSearch,
+  resolveCheckoutInputs,
   type CheckoutLineInput,
 } from "@/checkout/checkout-session";
 import { resolveFacilityPlaceNames } from "@/lib/facility-display";
@@ -49,125 +48,219 @@ function mergeOwnerContact(
 export function useCheckoutPage() {
   const search = useSearch();
 
-  const input: CheckoutLineInput | null = useMemo(() => {
-    const fromUrl = parseCheckoutSearch(search);
-    if (fromUrl) return fromUrl;
-    return getPendingCheckoutLine();
-  }, [search]);
+  const inputs: CheckoutLineInput[] = useMemo(() => resolveCheckoutInputs(search), [search]);
 
-  const listingQuery = useQuery({
-    queryKey: ["checkoutListingDetail", input?.listingId, input?.listingVariantId] as const,
-    queryFn: () =>
-      fetchListingPublicDetail(input!.listingId, {
-        listingVariantId: input!.listingVariantId,
-      }),
-    enabled: Boolean(input?.listingId && input?.listingVariantId),
-    staleTime: 30_000,
-    retry: false,
+  const listingQueries = useQueries({
+    queries: inputs.map((input) => ({
+      queryKey: ["checkoutListingDetail", input.listingId, input.listingVariantId] as const,
+      queryFn: () =>
+        fetchListingPublicDetail(input.listingId, {
+          listingVariantId: input.listingVariantId,
+        }),
+      enabled: Boolean(input.listingId && input.listingVariantId),
+      staleTime: 30_000,
+      retry: false,
+    })),
   });
 
-  const availabilityQuery = useQuery({
-    queryKey: [
-      "checkoutVariantAvailability",
-      input?.listingVariantId,
-      input?.mode,
-      input?.quantity,
-      input?.rentalStart,
-      input?.rentalEnd,
-    ] as const,
-    queryFn: () => availabilityForInput(input!),
-    enabled: Boolean(input?.listingVariantId && input.quantity >= 1),
-    staleTime: 10_000,
-    retry: false,
+  const availabilityQueries = useQueries({
+    queries: inputs.map((input) => ({
+      queryKey: [
+        "checkoutVariantAvailability",
+        input.listingVariantId,
+        input.mode,
+        input.quantity,
+        input.rentalStart,
+        input.rentalEnd,
+      ] as const,
+      queryFn: () => availabilityForInput(input),
+      enabled: Boolean(input.listingVariantId && input.quantity >= 1),
+      staleTime: 10_000,
+      retry: false,
+    })),
   });
 
-  const listing = listingQuery.data;
-  const facilityIdFromListing = listing?.facility?.id?.trim() ?? "";
-
-  const facilityQuery = useQuery({
-    queryKey: ["checkoutFacilityDetail", facilityIdFromListing] as const,
-    queryFn: () => getFacilityById(facilityIdFromListing),
-    enabled: Boolean(facilityIdFromListing),
-    staleTime: 60_000,
-    retry: 1,
-  });
-
-  const facilityOwnerId =
-    facilityQuery.data?.ownerId?.trim() ||
-    listing?.facility?.ownerId?.trim() ||
-    listing?.product?.ownerId?.trim() ||
-    "";
-
-  const ownerProfileQuery = useQuery({
-    queryKey: ["checkoutFacilityOwner", facilityOwnerId] as const,
-    queryFn: () => getProfileById(facilityOwnerId),
-    enabled: Boolean(facilityOwnerId),
-    staleTime: 60_000,
-    retry: 1,
-  });
-
-  const facilityProvinceCode =
-    facilityQuery.data?.provinceCode?.trim() || listing?.facility?.provinceCode?.trim() || "";
-  const facilityWardCode =
-    facilityQuery.data?.wardCode?.trim() || listing?.facility?.wardCode?.trim() || "";
-
-  const placeNamesQuery = useQuery({
-    queryKey: ["checkoutFacilityPlace", facilityProvinceCode, facilityWardCode] as const,
-    queryFn: () => resolveFacilityPlaceNames(facilityProvinceCode, facilityWardCode),
-    enabled: Boolean(facilityProvinceCode),
-    staleTime: 300_000,
-    retry: 1,
-  });
-
-  const line: CheckoutLineItem | null = useMemo(() => {
-    if (!input || !listing || !availabilityQuery.data) return null;
-    const facilityData = facilityIdFromListing
-      ? facilityQuery.data ?? listing.facility
-      : listing.facility;
-    const base = buildCheckoutLineItem(
-      input,
-      listing,
-      availabilityQuery.data,
-      facilityData ?? null,
-    );
-    if (!base) return null;
-
-    let merged = mergeOwnerContact(base, ownerProfileQuery.data);
-    const places = placeNamesQuery.data;
-    if (places) {
-      merged = {
-        ...merged,
-        facilityProvinceName: places.provinceName,
-        facilityWardName: places.wardName,
-      };
+  const facilityIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (let i = 0; i < inputs.length; i++) {
+      const listing = listingQueries[i]?.data;
+      const fromFacility = listing?.facility?.id?.trim();
+      if (fromFacility) ids.add(fromFacility);
     }
-    return merged;
+    return [...ids];
+  }, [inputs.length, listingQueries]);
+
+  const facilityQueries = useQueries({
+    queries: facilityIds.map((facilityId) => ({
+      queryKey: ["checkoutFacilityDetail", facilityId] as const,
+      queryFn: () => getFacilityById(facilityId),
+      enabled: Boolean(facilityId),
+      staleTime: 60_000,
+      retry: 1,
+    })),
+  });
+
+  const facilityById = useMemo(() => {
+    const map = new Map<string, NonNullable<(typeof facilityQueries)[number]["data"]>>();
+    facilityIds.forEach((id, idx) => {
+      const data = facilityQueries[idx]?.data;
+      if (data) map.set(id, data);
+    });
+    return map;
+  }, [facilityIds, facilityQueries]);
+
+  const ownerIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (let i = 0; i < inputs.length; i++) {
+      const listing = listingQueries[i]?.data;
+      const facilityId = listing?.facility?.id?.trim() ?? "";
+      const facility =
+        (facilityId ? facilityById.get(facilityId) : null) ?? listing?.facility ?? null;
+      const ownerId =
+        facility?.ownerId?.trim() ||
+        listing?.facility?.ownerId?.trim() ||
+        listing?.product?.ownerId?.trim() ||
+        "";
+      if (ownerId) ids.add(ownerId);
+    }
+    return [...ids];
+  }, [inputs.length, listingQueries, facilityById]);
+
+  const ownerQueries = useQueries({
+    queries: ownerIds.map((ownerId) => ({
+      queryKey: ["checkoutFacilityOwner", ownerId] as const,
+      queryFn: () => getProfileById(ownerId),
+      enabled: Boolean(ownerId),
+      staleTime: 60_000,
+      retry: 1,
+    })),
+  });
+
+  const ownerById = useMemo(() => {
+    const map = new Map<string, ProfilePayload>();
+    ownerIds.forEach((id, idx) => {
+      const data = ownerQueries[idx]?.data;
+      if (data) map.set(id, data);
+    });
+    return map;
+  }, [ownerIds, ownerQueries]);
+
+  const placeKeys = useMemo(() => {
+    const keys = new Map<string, { provinceCode: string; wardCode: string }>();
+    for (let i = 0; i < inputs.length; i++) {
+      const listing = listingQueries[i]?.data;
+      const facilityId = listing?.facility?.id?.trim() ?? "";
+      const facility =
+        (facilityId ? facilityById.get(facilityId) : null) ?? listing?.facility ?? null;
+      const provinceCode = facility?.provinceCode?.trim() ?? "";
+      const wardCode = facility?.wardCode?.trim() ?? "";
+      if (!provinceCode) continue;
+      const key = `${provinceCode}:${wardCode}`;
+      if (!keys.has(key)) keys.set(key, { provinceCode, wardCode });
+    }
+    return [...keys.values()];
+  }, [inputs.length, listingQueries, facilityById]);
+
+  const placeQueries = useQueries({
+    queries: placeKeys.map(({ provinceCode, wardCode }) => ({
+      queryKey: ["checkoutFacilityPlace", provinceCode, wardCode] as const,
+      queryFn: () => resolveFacilityPlaceNames(provinceCode, wardCode),
+      enabled: Boolean(provinceCode),
+      staleTime: 300_000,
+      retry: 1,
+    })),
+  });
+
+  const placesByKey = useMemo(() => {
+    const map = new Map<string, { provinceName: string; wardName: string }>();
+    placeKeys.forEach((key, idx) => {
+      const data = placeQueries[idx]?.data;
+      if (data) map.set(`${key.provinceCode}:${key.wardCode}`, data);
+    });
+    return map;
+  }, [placeKeys, placeQueries]);
+
+  const items: CheckoutLineItem[] = useMemo(() => {
+    const built: CheckoutLineItem[] = [];
+    for (let i = 0; i < inputs.length; i++) {
+      const input = inputs[i];
+      const listing = listingQueries[i]?.data;
+      const availability = availabilityQueries[i]?.data;
+      if (!listing || !availability) continue;
+
+      const facilityId = listing.facility?.id?.trim() ?? "";
+      const facilityData: FacilityResponse | null =
+        (facilityId ? facilityById.get(facilityId) : null) ??
+        (listing.facility as FacilityResponse | null) ??
+        null;
+      const ownerId =
+        facilityData?.ownerId?.trim() ||
+        listing.facility?.ownerId?.trim() ||
+        listing.product?.ownerId?.trim() ||
+        "";
+      const owner = ownerId ? ownerById.get(ownerId) : undefined;
+
+      const provinceCode = facilityData?.provinceCode?.trim() ?? "";
+      const wardCode = facilityData?.wardCode?.trim() ?? "";
+      const places = provinceCode ? placesByKey.get(`${provinceCode}:${wardCode}`) : undefined;
+
+      const base = buildCheckoutLineItem(input, listing, availability, facilityData ?? null);
+      if (!base) continue;
+
+      let merged = mergeOwnerContact(base, owner);
+      if (places) {
+        merged = {
+          ...merged,
+          facilityProvinceName: places.provinceName,
+          facilityWardName: places.wardName,
+        };
+      }
+      built.push(merged);
+    }
+    return built;
   }, [
-    input,
-    listing,
-    availabilityQuery.data,
-    facilityIdFromListing,
-    facilityQuery.data,
-    ownerProfileQuery.data,
-    placeNamesQuery.data,
+    inputs,
+    listingQueries,
+    availabilityQueries,
+    facilityById,
+    ownerById,
+    placesByKey,
   ]);
 
-  const isLoading =
-    Boolean(input) &&
-    (listingQuery.isLoading ||
-      availabilityQuery.isFetching ||
-      (Boolean(facilityIdFromListing) && facilityQuery.isLoading && !facilityQuery.data) ||
-      (Boolean(facilityOwnerId) && ownerProfileQuery.isLoading && !ownerProfileQuery.data) ||
-      (Boolean(facilityProvinceCode) && placeNamesQuery.isLoading && !placeNamesQuery.data));
+  const line = items.length === 1 ? items[0] : null;
 
-  const apiError = listingQuery.error ?? availabilityQuery.error ?? facilityQuery.error;
+  const listingsLoading = inputs.length > 0 && listingQueries.some((q) => q.isLoading);
+  const availabilityLoading =
+    inputs.length > 0 && availabilityQueries.some((q) => q.isFetching);
+  const facilitiesLoading =
+    facilityIds.length > 0 && facilityQueries.some((q) => q.isLoading && !q.data);
+  const ownersLoading = ownerIds.length > 0 && ownerQueries.some((q) => q.isLoading && !q.data);
+  const placesLoading =
+    placeKeys.length > 0 && placeQueries.some((q) => q.isLoading && !q.data);
+
+  const isLoading =
+    inputs.length > 0 &&
+    (listingsLoading ||
+      availabilityLoading ||
+      facilitiesLoading ||
+      ownersLoading ||
+      placesLoading);
+
+  const apiError =
+    listingQueries.find((q) => q.error)?.error ??
+    availabilityQueries.find((q) => q.error)?.error ??
+    facilityQueries.find((q) => q.error)?.error;
+
+  const allListingsReady = inputs.length > 0 && listingQueries.every((q) => q.isSuccess);
+  const allAvailabilityReady =
+    inputs.length > 0 && availabilityQueries.every((q) => q.isSuccess);
 
   const errorView: ApiErrorViewModel | null = useMemo(() => {
-    if (!input) {
+    if (inputs.length === 0) {
       return {
         kind: "bad_request",
         title: "Thông tin không hợp lệ",
-        message: "Không có thông tin thanh toán. Vui lòng chọn sản phẩm từ trang chi tiết.",
+        message: "Không có thông tin thanh toán. Vui lòng chọn sản phẩm từ giỏ hàng hoặc trang chi tiết.",
       };
     }
     if (apiError) {
@@ -176,15 +269,15 @@ export function useCheckoutPage() {
         fallbackMessage: "Đã xảy ra lỗi khi tải thông tin thanh toán. Vui lòng thử lại sau.",
       });
     }
-    if (listingQuery.isSuccess && availabilityQuery.isSuccess && !line) {
+    if (allListingsReady && allAvailabilityReady && items.length !== inputs.length) {
       return {
         kind: "not_found",
         title: "Không tìm thấy sản phẩm",
-        message: "Không tìm thấy phiên bản sản phẩm đã chọn trên listing này.",
+        message: "Một hoặc nhiều sản phẩm đã chọn không còn khả dụng.",
       };
     }
     return null;
-  }, [input, apiError, listingQuery.isSuccess, availabilityQuery.isSuccess, line]);
+  }, [inputs.length, apiError, allListingsReady, allAvailabilityReady, items.length]);
 
   const isError = Boolean(errorView) && !isLoading;
 
@@ -193,32 +286,33 @@ export function useCheckoutPage() {
   };
 
   const ownerNameLoading =
-    Boolean(facilityOwnerId) &&
-    ownerProfileQuery.isLoading &&
-    !line?.ownerDisplayName?.trim();
+    ownerIds.length > 0 &&
+    ownerQueries.some((q) => q.isLoading) &&
+    items.some((item) => !item.ownerDisplayName?.trim());
 
   const placeNamesLoading =
-    Boolean(facilityProvinceCode) &&
-    placeNamesQuery.isLoading &&
-    !line?.facilityWardName?.trim() &&
-    !line?.facilityProvinceName?.trim();
+    placeKeys.length > 0 &&
+    placeQueries.some((q) => q.isLoading) &&
+    items.some((item) => !item.facilityWardName?.trim() && !item.facilityProvinceName?.trim());
+
+  const refetch = () => {
+    listingQueries.forEach((q) => void q.refetch());
+    availabilityQueries.forEach((q) => void q.refetch());
+    facilityQueries.forEach((q) => void q.refetch());
+    ownerQueries.forEach((q) => void q.refetch());
+    placeQueries.forEach((q) => void q.refetch());
+  };
 
   return {
-    input,
+    inputs,
     line,
-    items: line ? [line] : [],
+    items,
     isLoading,
     isError,
     errorView,
     ownerNameLoading,
     placeNamesLoading,
     clearSession,
-    refetch: () => {
-      void listingQuery.refetch();
-      void availabilityQuery.refetch();
-      if (facilityIdFromListing) void facilityQuery.refetch();
-      if (facilityOwnerId) void ownerProfileQuery.refetch();
-      if (facilityProvinceCode) void placeNamesQuery.refetch();
-    },
+    refetch,
   };
 }

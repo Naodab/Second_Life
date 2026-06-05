@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useCart } from "@/hooks/use-mock-api";
+import { useCart } from "@/hooks/use-cart";
 import { cn } from "@/lib/utils";
 import { buildFreshSearchPath, buildSearchPath } from "@/lib/search-url";
 import { pathnameEndsWithSegment, rawQueryFromBrowserSearch } from "@/lib/wouter-location";

@@ -7,20 +7,55 @@ export type CheckoutLineInput = {
   rentalStart?: string;
   rentalEnd?: string;
   rentUnit?: "HOUR" | "DAY" | "WEEK" | "MONTH";
+  /** Cart row id — used to remove from cart after successful checkout. */
+  cartItemId?: string;
 };
 
 let pendingLine: CheckoutLineInput | null = null;
+let pendingLines: CheckoutLineInput[] = [];
 
 export function setPendingCheckoutLine(line: CheckoutLineInput) {
   pendingLine = line;
+  pendingLines = [line];
 }
 
 export function getPendingCheckoutLine(): CheckoutLineInput | null {
   return pendingLine;
 }
 
+export function setPendingCheckoutLines(lines: CheckoutLineInput[]) {
+  pendingLines = lines;
+  pendingLine = lines.length === 1 ? lines[0] : null;
+}
+
+export function getPendingCheckoutLines(): CheckoutLineInput[] {
+  return pendingLines;
+}
+
 export function clearPendingCheckoutLine() {
   pendingLine = null;
+  pendingLines = [];
+}
+
+export function isCartCheckoutSearch(search: string): boolean {
+  const raw = search.startsWith("?") ? search.slice(1) : search;
+  if (!raw.trim()) return false;
+  return new URLSearchParams(raw).get("from") === "cart";
+}
+
+export function buildCheckoutCartHref(): string {
+  return "/checkout?from=cart";
+}
+
+export function resolveCheckoutInputs(search: string): CheckoutLineInput[] {
+  if (isCartCheckoutSearch(search)) {
+    return getPendingCheckoutLines();
+  }
+  const fromUrl = parseCheckoutSearch(search);
+  if (fromUrl) return [fromUrl];
+  if (pendingLines.length > 0) return pendingLines;
+  if (pendingLine) return [pendingLine];
+  return [];
 }
 
 export function parseCheckoutSearch(search: string): CheckoutLineInput | null {
@@ -28,6 +63,8 @@ export function parseCheckoutSearch(search: string): CheckoutLineInput | null {
   if (!raw.trim()) return null;
 
   const q = new URLSearchParams(raw);
+  if (q.get("from") === "cart") return null;
+
   const listingId = q.get("listingId")?.trim() ?? "";
   const listingVariantId = q.get("listingVariantId")?.trim() ?? "";
   const mode = q.get("mode")?.trim();

@@ -48,6 +48,9 @@ type Props = {
   schedulerResetKey: string;
   checkoutDisabled: boolean;
   onCheckout: () => void;
+  onAddToCart?: () => void;
+  addToCartDisabled?: boolean;
+  addToCartLoading?: boolean;
 };
 
 export function ListingRentDialog({
@@ -74,6 +77,9 @@ export function ListingRentDialog({
   schedulerResetKey,
   checkoutDisabled,
   onCheckout,
+  onAddToCart,
+  addToCartDisabled,
+  addToCartLoading,
 }: Props) {
   const bookings = useMemo(() => rentalPeriodsToBookings(rentalPeriods), [rentalPeriods]);
 
@@ -273,10 +279,20 @@ export function ListingRentDialog({
             ) : null}
           </div>
         </div>
-        <DialogFooter className="mt-2 shrink-0 gap-2 border-t border-border/40 pt-4 dark:border-border/35 sm:gap-0">
+        <DialogFooter className="mt-2 shrink-0 gap-2 border-t border-border/40 pt-4 dark:border-border/35 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-full border-border/80">
             Hủy
           </Button>
+          {onAddToCart ? (
+            <Button
+              variant="outline"
+              onClick={onAddToCart}
+              disabled={addToCartDisabled || addToCartLoading}
+              className="rounded-full border-border/80"
+            >
+              {addToCartLoading ? "Đang thêm..." : "Thêm vào giỏ"}
+            </Button>
+          ) : null}
           <Button
             onClick={onCheckout}
             disabled={checkoutDisabled}

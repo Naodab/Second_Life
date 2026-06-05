@@ -84,7 +84,7 @@ http:
         certResolver: letsencrypt
       priority: 100
     product-api-options:
-      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`) || PathPrefix(`/api/v1/attributes`) || PathPrefix(`/api/v1/products`) || PathPrefix(`/api/v1/listings`) || PathPrefix(`/api/v1/ai`)) && Method(`OPTIONS`)"
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`) || PathPrefix(`/api/v1/attributes`) || PathPrefix(`/api/v1/products`) || PathPrefix(`/api/v1/listings`) || PathPrefix(`/api/v1/cart`) || PathPrefix(`/api/v1/ai`)) && Method(`OPTIONS`)"
       service: product-service
       entryPoints:
         - websecure
@@ -92,7 +92,7 @@ http:
         certResolver: letsencrypt
       priority: 200
     product-api:
-      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`) || PathPrefix(`/api/v1/attributes`) || PathPrefix(`/api/v1/products`) || PathPrefix(`/api/v1/listings`) || PathPrefix(`/api/v1/ai`))"
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/facilities`) || PathPrefix(`/api/v1/categories`) || PathPrefix(`/api/v1/sub-categories`) || PathPrefix(`/api/v1/attributes`) || PathPrefix(`/api/v1/products`) || PathPrefix(`/api/v1/listings`) || PathPrefix(`/api/v1/cart`) || PathPrefix(`/api/v1/ai`))"
       service: product-service
       entryPoints:
         - websecure
