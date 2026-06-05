@@ -164,9 +164,18 @@ public class ListingController {
       @RequestParam(required = false) ListingType listingType,
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader) {
     String profileId = validateProfileId(profileIdHeader);
+    ListingSearchRequest request =
+        ListingSearchRequest.builder()
+            .facilityId(facilityId)
+            .page(page)
+            .pageSize(pageSize)
+            .keyword(keyword)
+            .productId(productId)
+            .listingStatus(listingStatus)
+            .listingType(listingType)
+            .build();
     return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ListingItemResponse>>builder()
-        .data(listingService.listListingItemsForFacility(
-            profileId, facilityId, page, pageSize, keyword, productId, listingStatus, listingType))
+        .data(listingService.listListingItemsForFacility(profileId, request))
         .build());
   }
 

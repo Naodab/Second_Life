@@ -283,37 +283,38 @@ public class ListingServiceImpl implements ListingService {
 
   @Override
   public PagedItemsResponse<ListingItemResponse> listListingItemsForFacility(
-      String profileId,
-      String facilityId,
-      Integer page,
-      Integer pageSize,
-      String keyword,
-      String productId,
-      Listing.ListingStatus listingStatus,
-      Listing.ListingType listingType) {
-    String fid = facilityId == null || facilityId.isBlank() ? "" : facilityId.trim();
+      String profileId, ListingSearchRequest request) {
+    if (request == null) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    String fid =
+        request.getFacilityId() == null || request.getFacilityId().isBlank()
+            ? ""
+            : request.getFacilityId().trim();
     facilityRepository
         .findByOwnerIdAndIdAndDeletedAtIsNull(profileId, fid)
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
-    int normalizedPage = OpenSearchNativeQueryHelper.normalizePage(page);
-    int normalizedSize = OpenSearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
-    String kw = trimToNull(keyword);
-    String pid = trimToNull(productId);
+    int normalizedPage = OpenSearchNativeQueryHelper.normalizePage(request.getPage());
+    int normalizedSize =
+        OpenSearchNativeQueryHelper.normalizePageSize(request.getPageSize(), defaultListingPageSize);
+    String kw = trimToNull(request.getKeyword());
+    String pid = trimToNull(request.getProductId());
 
-    ListingSearchRequest.ListingSearchRequestBuilder searchBuilder = ListingSearchRequest.builder()
-        .facilityId(fid)
-        .keyword(kw)
-        .productId(pid)
-        .page(normalizedPage)
-        .pageSize(normalizedSize)
-        .sortBy(kw != null ? OpenSearchSortBy.RELEVANCE : OpenSearchSortBy.CREATED_AT_DESC);
-    if (listingStatus != null) {
-      searchBuilder.listingStatus(listingStatus);
+    ListingSearchRequest.ListingSearchRequestBuilder searchBuilder =
+        ListingSearchRequest.builder()
+            .facilityId(fid)
+            .keyword(kw)
+            .productId(pid)
+            .page(normalizedPage)
+            .pageSize(normalizedSize)
+            .sortBy(kw != null ? OpenSearchSortBy.RELEVANCE : OpenSearchSortBy.CREATED_AT_DESC);
+    if (request.getListingStatus() != null) {
+      searchBuilder.listingStatus(request.getListingStatus());
     } else {
       searchBuilder.listingStatuses(Listing.ListingStatus.MANAGE_STATUSES);
     }
-    if (listingType != null) {
-      searchBuilder.listingType(listingType);
+    if (request.getListingType() != null) {
+      searchBuilder.listingType(request.getListingType());
     }
     ListingSearchRequest searchRequest = searchBuilder.build();
 

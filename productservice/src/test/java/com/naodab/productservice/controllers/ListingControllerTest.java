@@ -147,13 +147,12 @@ class ListingControllerTest {
   void listByFacility_requiresProfile() throws Exception {
     mockMvc.perform(get("/listings/by-facility/fac-1"))
         .andExpect(status().isBadRequest());
-    verify(listingService, never()).listListingItemsForFacility(any(), any(), any(), any(), any(), any(), any(), any());
+    verify(listingService, never()).listListingItemsForFacility(any(), any());
   }
 
   @Test
   void listByFacility_delegates() throws Exception {
-    when(listingService.listListingItemsForFacility(
-        eq("p1"), eq("fac-1"), eq(0), eq(10), eq("kw"), eq("prod-99"), eq(null), eq(null)))
+    when(listingService.listListingItemsForFacility(eq("p1"), any()))
         .thenReturn(PagedItemsResponse.<ListingItemResponse>builder()
             .items(List.of()).totalCount(0).page(0).pageSize(10).build());
 

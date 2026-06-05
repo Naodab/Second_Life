@@ -3,8 +3,6 @@ package com.naodab.productservice.services;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
-import com.naodab.productservice.models.Listing.ListingStatus;
-import com.naodab.productservice.models.Listing.ListingType;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingVariantContextResponse;
 import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
@@ -31,12 +29,5 @@ public interface ListingService {
   List<ListingSuggestionResponse> suggestSearch(String keyword, Integer limit);
 
   PagedItemsResponse<ListingItemResponse> listListingItemsForFacility(
-      String profileId,
-      String facilityId,
-      Integer page,
-      Integer pageSize,
-      String keyword,
-      String productId,
-      ListingStatus listingStatus,
-      ListingType listingType);
+      String profileId, ListingSearchRequest request);
 }

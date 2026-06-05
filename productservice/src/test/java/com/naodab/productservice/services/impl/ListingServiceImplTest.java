@@ -176,7 +176,9 @@ class ListingServiceImplTest {
   void listListingItemsForFacility_facilityNotFound_throws() {
     when(facilityRepository.findByOwnerIdAndIdAndDeletedAtIsNull("profile", "f1")).thenReturn(Optional.empty());
     assertThatThrownBy(
-        () -> listingService.listListingItemsForFacility("profile", "f1", 0, 10, null, null, null, null))
+        () -> listingService.listListingItemsForFacility(
+            "profile",
+            ListingSearchRequest.builder().facilityId("f1").page(0).pageSize(10).build()))
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FACILITY_NOT_FOUND);
     verify(listingSearchService, never()).searchListingsPaged(any());
@@ -274,10 +276,12 @@ class ListingServiceImplTest {
         .thenReturn(Optional.of(Facility.builder().id("f1").build()));
     when(listingSearchService.searchListingsPaged(any()))
         .thenReturn(new ListingSearchService.ListingDocumentPage(List.of(), 0));
+
+    ListingSearchRequest request = ListingSearchRequest.builder().facilityId("f1").page(0).pageSize(10)
+        .keyword("shoes ").build();
+    listingService.listListingItemsForFacility("prof", request);
+
     ArgumentCaptor<ListingSearchRequest> cap = ArgumentCaptor.forClass(ListingSearchRequest.class);
-
-    listingService.listListingItemsForFacility("prof", "f1", 0, 10, "shoes ", null, null, null);
-
     verify(listingSearchService).searchListingsPaged(cap.capture());
     assertThat(cap.getValue().getSortBy()).isEqualTo(OpenSearchSortBy.RELEVANCE);
     assertThat(cap.getValue().getKeyword()).isEqualTo("shoes");

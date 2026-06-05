@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -111,14 +112,14 @@ class InventoryAvailabilityServiceImplRequireQuantityTest {
   void requireAvailableQuantityInOpenInterval_staggeredMayBookings_throwsInsufficient() {
     InventoryReservation bookingA =
         InventoryReservation.builder()
-            .rentalSlotStart(LocalDateTime.of(2026, 5, 4, 0, 0))
-            .rentalSlotEnd(LocalDateTime.of(2026, 5, 7, 0, 0))
+            .rentalSlotStart(LocalDateTime.of(2026, Month.MAY, 4, 0, 0))
+            .rentalSlotEnd(LocalDateTime.of(2026, Month.MAY, 7, 0, 0))
             .quantity(1L)
             .build();
     InventoryReservation bookingB =
         InventoryReservation.builder()
-            .rentalSlotStart(LocalDateTime.of(2026, 5, 6, 0, 0))
-            .rentalSlotEnd(LocalDateTime.of(2026, 5, 9, 0, 0))
+            .rentalSlotStart(LocalDateTime.of(2026, Month.MAY, 6, 0, 0))
+            .rentalSlotEnd(LocalDateTime.of(2026, Month.MAY, 9, 0, 0))
             .quantity(1L)
             .build();
 
@@ -134,8 +135,8 @@ class InventoryAvailabilityServiceImplRequireQuantityTest {
             eq(VARIANT_ID), eq(InventoryItem.InventoryMode.RENT), any(), any()))
         .thenReturn(List.of(bookingA, bookingB));
 
-    Instant may5 = LocalDateTime.of(2026, 5, 5, 0, 0).toInstant(ZoneOffset.UTC);
-    Instant may8 = LocalDateTime.of(2026, 5, 8, 0, 0).toInstant(ZoneOffset.UTC);
+    Instant may5 = LocalDateTime.of(2026, Month.MAY, 5, 0, 0).toInstant(ZoneOffset.UTC);
+    Instant may8 = LocalDateTime.of(2026, Month.MAY, 8, 0, 0).toInstant(ZoneOffset.UTC);
 
     assertThatThrownBy(() -> service.requireAvailableQuantityInOpenInterval(
             VARIANT_ID, InventoryItem.InventoryMode.RENT, may5, may8, 1L))
