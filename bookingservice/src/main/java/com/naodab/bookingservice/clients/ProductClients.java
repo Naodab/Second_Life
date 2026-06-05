@@ -35,6 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ProductClients {
 
+  private static final String LOG_PRODUCT_CALL_FAILED = "Product service call failed ({}): {}";
+
   RestTemplate restTemplate;
 
   @NonFinal
@@ -73,7 +75,7 @@ public class ProductClients {
     } catch (HttpClientErrorException.NotFound e) {
       throw new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND);
     } catch (RestClientException e) {
-      log.error("Product service call failed ({}): {}", uri, e.getMessage());
+      log.error(LOG_PRODUCT_CALL_FAILED, uri, e.getMessage());
       throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -103,7 +105,7 @@ public class ProductClients {
       }
       throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
     } catch (RestClientException e) {
-      log.error("Product service call failed ({}): {}", uri, e.getMessage());
+      log.error(LOG_PRODUCT_CALL_FAILED, uri, e.getMessage());
       throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -130,7 +132,7 @@ public class ProductClients {
       }
       throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
     } catch (RestClientException e) {
-      log.error("Product service call failed ({}): {}", uri, e.getMessage());
+      log.error(LOG_PRODUCT_CALL_FAILED, uri, e.getMessage());
       throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
     }
   }

@@ -11,8 +11,10 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import com.naodab.commonservice.constant.AppConstants;
+import com.naodab.commonservice.constant.OrderNotificationConstants;
 import com.naodab.mailservice.clients.AuthClients;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -57,9 +59,23 @@ public class NotificationHandshakeInterceptor implements HandshakeInterceptor {
       if (StringUtils.hasText(forwardedProfileId)) {
         return forwardedProfileId.trim();
       }
-      String token = httpRequest.getParameter("access_token");
+      String token = resolveAccessToken(httpRequest);
       if (StringUtils.hasText(token)) {
         return authClients.resolveProfileId(token).orElse(null);
+      }
+    }
+    return null;
+  }
+
+  private static String resolveAccessToken(HttpServletRequest request) {
+    Cookie[] cookies = request.getCookies();
+    if (cookies == null) {
+      return null;
+    }
+    for (Cookie cookie : cookies) {
+      if (OrderNotificationConstants.ACCESS_TOKEN_COOKIE.equals(cookie.getName())
+          && StringUtils.hasText(cookie.getValue())) {
+        return cookie.getValue().trim();
       }
     }
     return null;

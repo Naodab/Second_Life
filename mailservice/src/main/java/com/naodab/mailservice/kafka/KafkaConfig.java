@@ -18,7 +18,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.naodab.mailservice.dto.EmailVerificationEvent;
 import com.naodab.mailservice.dto.ForgotPasswordEvent;
-import com.naodab.mailservice.dto.OrderNotificationEvent;
+import com.naodab.commonservice.event.OrderNotificationEvent;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

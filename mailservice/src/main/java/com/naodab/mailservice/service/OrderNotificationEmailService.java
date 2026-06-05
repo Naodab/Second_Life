@@ -4,7 +4,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import com.naodab.mailservice.dto.OrderNotificationEvent;
+import com.naodab.commonservice.event.OrderNotificationEvent;
 import com.naodab.mailservice.models.NotificationDocument;
 
 import lombok.AccessLevel;

@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.mailservice.dto.NotificationResponse;
-import com.naodab.mailservice.dto.OrderNotificationEvent;
+import com.naodab.commonservice.event.OrderNotificationEvent;
 import com.naodab.mailservice.models.NotificationDocument;
 import com.naodab.mailservice.repositories.NotificationRepository;
 

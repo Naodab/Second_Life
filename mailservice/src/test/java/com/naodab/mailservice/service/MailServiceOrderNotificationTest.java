@@ -16,8 +16,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
-import com.naodab.mailservice.dto.OrderNotificationEvent;
-import com.naodab.mailservice.dto.OrderNotificationEvent.OrderNotificationKind;
+import com.naodab.commonservice.event.OrderNotificationEvent;
+import com.naodab.commonservice.event.OrderNotificationEvent.OrderNotificationKind;
 import com.naodab.mailservice.models.NotificationDocument;
 import com.naodab.mailservice.models.NotificationType;
 
@@ -50,7 +50,8 @@ class MailServiceOrderNotificationTest {
   void sendOrderNotification_processesTemplateWithProductImage() throws Exception {
     when(mailSender.createMimeMessage()).thenReturn(mock(MimeMessage.class));
     when(templateEngine.process(eq("email/order-notification"), any())).thenReturn("<html>ok</html>");
-    when(restTemplate.getForObject("https://cdn.example.com/item.jpg", byte[].class))
+    String imageUrl = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
+    when(restTemplate.getForObject(imageUrl, byte[].class))
         .thenReturn(new byte[] {1, 2, 3});
 
     mailService.sendOrderNotification(
@@ -59,7 +60,7 @@ class MailServiceOrderNotificationTest {
         "Đơn mua #12345678 đã được người bán xác nhận.",
         "http://localhost:5173/orders",
         "Máy ảnh mirrorless",
-        "https://cdn.example.com/item.jpg",
+        imageUrl,
         "order-12345678",
         "BUY");
 
@@ -82,7 +83,7 @@ class MailServiceOrderNotificationTest {
         .orderId("order-1")
         .orderType("BUY")
         .productTitle("Áo khoác")
-        .thumbnailUrl("https://cdn.example.com/jacket.jpg")
+        .thumbnailUrl("https://res.cloudinary.com/demo/image/upload/jacket.jpg")
         .build();
 
     emailService.sendOrderNotification(event, document);
@@ -93,7 +94,7 @@ class MailServiceOrderNotificationTest {
         "Có đơn mới",
         "http://localhost:5173/manage/products",
         "Áo khoác",
-        "https://cdn.example.com/jacket.jpg",
+        "https://res.cloudinary.com/demo/image/upload/jacket.jpg",
         "order-1",
         "BUY");
   }

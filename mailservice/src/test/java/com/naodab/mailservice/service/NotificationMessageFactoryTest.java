@@ -6,8 +6,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.naodab.mailservice.dto.OrderNotificationEvent;
-import com.naodab.mailservice.dto.OrderNotificationEvent.OrderNotificationKind;
+import com.naodab.commonservice.event.OrderNotificationEvent;
+import com.naodab.commonservice.event.OrderNotificationEvent.OrderNotificationKind;
 import com.naodab.mailservice.models.NotificationDocument;
 import com.naodab.mailservice.models.NotificationType;
 

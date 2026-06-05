@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.naodab.bookingservice.dto.events.InventoryReservationCreateEvent;
-import com.naodab.bookingservice.dto.events.OrderNotificationEvent;
+import com.naodab.commonservice.event.OrderNotificationEvent;
 
 import java.util.HashMap;
 import java.util.Map;

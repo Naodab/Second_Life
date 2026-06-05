@@ -5,7 +5,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import com.naodab.bookingservice.dto.events.OrderNotificationEvent;
+import com.naodab.commonservice.event.OrderNotificationEvent;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

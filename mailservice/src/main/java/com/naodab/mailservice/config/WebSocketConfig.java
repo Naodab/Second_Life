@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
@@ -34,11 +35,22 @@ public class WebSocketConfig implements WebSocketConfigurer {
   public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
     List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
         .map(String::trim)
-        .filter(s -> !s.isEmpty())
+        .filter(StringUtils::hasText)
+        .filter(WebSocketConfig::isAllowedOrigin)
         .toList();
+    if (origins.isEmpty()) {
+      origins = List.of("http://localhost:5173");
+    }
     registry
         .addHandler(notificationWebSocketHandler, "/ws/notifications")
         .addInterceptors(notificationHandshakeInterceptor)
         .setAllowedOrigins(origins.toArray(new String[0]));
+  }
+
+  private static boolean isAllowedOrigin(String origin) {
+    if ("*".equals(origin)) {
+      return false;
+    }
+    return origin.startsWith("http://") || origin.startsWith("https://");
   }
 }

@@ -120,12 +120,11 @@ export function useNotifications() {
       return;
     }
 
-    const token = Cookies.get("accessToken");
-    if (!token) {
+    if (!Cookies.get("accessToken")) {
       return;
     }
 
-    const socket = new WebSocket(resolveNotificationWebSocketUrl(token));
+    const socket = new WebSocket(resolveNotificationWebSocketUrl());
     socketRef.current = socket;
 
     socket.onmessage = (event) => {

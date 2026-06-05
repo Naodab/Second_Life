@@ -3,7 +3,7 @@ package com.naodab.mailservice.kafka.consumers;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import com.naodab.mailservice.dto.OrderNotificationEvent;
+import com.naodab.commonservice.event.OrderNotificationEvent;
 import com.naodab.mailservice.service.NotificationService;
 
 import lombok.AccessLevel;

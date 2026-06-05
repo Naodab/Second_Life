@@ -53,10 +53,9 @@ export async function markAllNotificationsRead(): Promise<void> {
   });
 }
 
-export function resolveNotificationWebSocketUrl(accessToken: string): string {
+export function resolveNotificationWebSocketUrl(): string {
   const raw = (import.meta.env.VITE_BACKEND_URL as string | undefined)?.trim();
   const base = raw ? raw.replace(/\/+$/, "") : `${window.location.protocol}//${window.location.host}`;
   const wsBase = base.replace(/^http/i, "ws");
-  const token = encodeURIComponent(accessToken);
-  return `${wsBase}/api/v1/ws/notifications?access_token=${token}`;
+  return `${wsBase}/api/v1/ws/notifications`;
 }

@@ -4,7 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import com.naodab.mailservice.dto.OrderNotificationEvent;
+import com.naodab.commonservice.constant.OrderNotificationConstants;
+import com.naodab.commonservice.event.OrderNotificationEvent;
 import com.naodab.mailservice.models.NotificationDocument;
 import com.naodab.mailservice.models.NotificationType;
 
@@ -15,6 +16,9 @@ import lombok.experimental.NonFinal;
 @Component
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class NotificationMessageFactory {
+
+  private static final String RENT_ORDER_PREFIX = "Đơn thuê #";
+  private static final String BUY_ORDER_PREFIX = "Đơn mua #";
 
   @NonFinal
   @Value("${app.frontend.url:http://localhost:5173}")
@@ -39,7 +43,8 @@ public class NotificationMessageFactory {
     String buyerName = StringUtils.hasText(event.getBuyerDisplayName())
         ? event.getBuyerDisplayName().trim()
         : "Khách hàng";
-    boolean sellerRecipient = "SELLER".equalsIgnoreCase(event.getRecipientRole());
+    boolean sellerRecipient =
+        OrderNotificationConstants.ROLE_SELLER.equalsIgnoreCase(event.getRecipientRole());
     String buyerLink = normalizeLink("/orders");
     String sellerLink = normalizeLink("/manage/products");
 
@@ -73,9 +78,7 @@ public class NotificationMessageFactory {
           : new MessageContent(
               NotificationType.ORDER,
               "Đơn hàng đã bị hủy",
-              "ACTOR_SELLER".equalsIgnoreCase(event.getCancelledBy())
-                  ? "Người bán đã hủy đơn " + orderKindLabel(event.getOrderType()) + " #" + orderLabel + "."
-                  : "Đơn " + orderKindLabel(event.getOrderType()) + " #" + orderLabel + " đã được hủy.",
+              cancelledByBuyerMessage(event, orderLabel),
               buyerLink);
       case ORDER_STATUS_CHANGED -> buildStatusChanged(event, orderLabel, buyerLink);
     };
@@ -88,24 +91,22 @@ public class NotificationMessageFactory {
       case "SHIPPED" -> new MessageContent(
           NotificationType.DELIVERY,
           "Đơn hàng đang giao",
-          "Đơn mua #" + orderLabel + " đang được vận chuyển.",
+          BUY_ORDER_PREFIX + orderLabel + " đang được vận chuyển.",
           buyerLink);
       case "DELIVERED" -> new MessageContent(
           NotificationType.DELIVERY,
           "Đơn hàng đã giao",
-          "RENT".equalsIgnoreCase(event.getOrderType())
-              ? "Đơn thuê #" + orderLabel + " đã được bàn giao."
-              : "Đơn mua #" + orderLabel + " đã được giao thành công.",
+          deliveredMessage(event, orderLabel),
           buyerLink);
       case "RETURNED" -> new MessageContent(
           NotificationType.DELIVERY,
           "Đã nhận lại hàng thuê",
-          "Đơn thuê #" + orderLabel + " đã được trả và đang chờ hoàn tất.",
+          RENT_ORDER_PREFIX + orderLabel + " đã được trả và đang chờ hoàn tất.",
           buyerLink);
       case "COMPLETED" -> new MessageContent(
           NotificationType.ORDER,
           "Đơn thuê hoàn tất",
-          "Đơn thuê #" + orderLabel + " đã hoàn tất.",
+          RENT_ORDER_PREFIX + orderLabel + " đã hoàn tất.",
           buyerLink);
       default -> new MessageContent(
           NotificationType.ORDER,
@@ -114,6 +115,20 @@ public class NotificationMessageFactory {
               + " chuyển sang trạng thái " + status + ".",
           buyerLink);
     };
+  }
+
+  private static String cancelledByBuyerMessage(OrderNotificationEvent event, String orderLabel) {
+    if (OrderNotificationConstants.ACTOR_SELLER.equalsIgnoreCase(event.getCancelledBy())) {
+      return "Người bán đã hủy đơn " + orderKindLabel(event.getOrderType()) + " #" + orderLabel + ".";
+    }
+    return "Đơn " + orderKindLabel(event.getOrderType()) + " #" + orderLabel + " đã được hủy.";
+  }
+
+  private static String deliveredMessage(OrderNotificationEvent event, String orderLabel) {
+    if (OrderNotificationConstants.ORDER_TYPE_RENT.equalsIgnoreCase(event.getOrderType())) {
+      return RENT_ORDER_PREFIX + orderLabel + " đã được bàn giao.";
+    }
+    return BUY_ORDER_PREFIX + orderLabel + " đã được giao thành công.";
   }
 
   private String normalizeLink(String path) {
@@ -133,7 +148,7 @@ public class NotificationMessageFactory {
   }
 
   private static String orderKindLabel(String orderType) {
-    return "RENT".equalsIgnoreCase(orderType) ? "thuê" : "mua";
+    return OrderNotificationConstants.ORDER_TYPE_RENT.equalsIgnoreCase(orderType) ? "thuê" : "mua";
   }
 
   private record MessageContent(NotificationType type, String title, String body, String link) {

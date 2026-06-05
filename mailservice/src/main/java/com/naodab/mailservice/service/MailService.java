@@ -1,7 +1,9 @@
 package com.naodab.mailservice.service;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -16,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
+import com.naodab.commonservice.constant.OrderNotificationConstants;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.commonservice.util.PublicUrlHelper;
@@ -35,6 +38,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class MailService {
+
+  private static final String CONTEXT_BASE_URL = "baseUrl";
+
   JavaMailSender mailSender;
   SpringTemplateEngine templateEngine;
   RestTemplate restTemplate;
@@ -62,7 +68,7 @@ public class MailService {
     Context context = new Context();
     context.setVariable("username", event.getUsername());
     context.setVariable("verificationLink", link);
-    context.setVariable("baseUrl", mailBaseUrl);
+    context.setVariable(CONTEXT_BASE_URL, mailBaseUrl);
 
     String htmlContent = templateEngine.process("email/email-verification", context);
     sendHtml(event.getToEmail(), subject, htmlContent, null);
@@ -77,7 +83,7 @@ public class MailService {
     Context context = new Context();
     context.setVariable("username", event.getUsername());
     context.setVariable("resetLink", link);
-    context.setVariable("baseUrl", mailBaseUrl);
+    context.setVariable(CONTEXT_BASE_URL, mailBaseUrl);
 
     String htmlContent = templateEngine.process("email/password-reset", context);
     sendHtml(event.getToEmail(), subject, htmlContent, null);
@@ -104,7 +110,7 @@ public class MailService {
     context.setVariable("actionLabel", actionLabel(orderType));
     context.setVariable("productTitle", StringUtils.hasText(productTitle) ? productTitle.trim() : null);
     context.setVariable("orderLabel", shortOrderId(orderId));
-    context.setVariable("baseUrl", mailBaseUrl);
+    context.setVariable(CONTEXT_BASE_URL, mailBaseUrl);
 
     Resource productImage = loadRemoteImage(thumbnailUrl);
     context.setVariable("hasProductImage", productImage != null);
@@ -138,12 +144,15 @@ public class MailService {
     }
   }
 
+  private static final Set<String> ALLOWED_IMAGE_HOST_SUFFIXES =
+      Set.of("cloudinary.com", "secondlifeonline.xyz");
+
   private Resource loadRemoteImage(String thumbnailUrl) {
     if (!StringUtils.hasText(thumbnailUrl)) {
       return null;
     }
     String url = thumbnailUrl.trim();
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    if (!isTrustedImageUrl(url)) {
       return null;
     }
     try {
@@ -158,6 +167,24 @@ public class MailService {
     }
   }
 
+  private static boolean isTrustedImageUrl(String url) {
+    try {
+      URI uri = URI.create(url);
+      if (!"https".equalsIgnoreCase(uri.getScheme())) {
+        return false;
+      }
+      String host = uri.getHost();
+      if (!StringUtils.hasText(host)) {
+        return false;
+      }
+      String normalizedHost = host.toLowerCase();
+      return ALLOWED_IMAGE_HOST_SUFFIXES.stream()
+          .anyMatch(suffix -> normalizedHost.equals(suffix) || normalizedHost.endsWith("." + suffix));
+    } catch (IllegalArgumentException ex) {
+      return false;
+    }
+  }
+
   private static String shortOrderId(String orderId) {
     if (!StringUtils.hasText(orderId)) {
       return null;
@@ -167,6 +194,8 @@ public class MailService {
   }
 
   private static String actionLabel(String orderType) {
-    return "RENT".equalsIgnoreCase(orderType) ? "Xem đơn thuê" : "Xem đơn hàng";
+    return OrderNotificationConstants.ORDER_TYPE_RENT.equalsIgnoreCase(orderType)
+        ? "Xem đơn thuê"
+        : "Xem đơn hàng";
   }
 }

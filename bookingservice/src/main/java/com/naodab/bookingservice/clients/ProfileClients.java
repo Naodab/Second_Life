@@ -14,7 +14,6 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import com.naodab.bookingservice.dto.response.ListingVariantContextResponse;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
