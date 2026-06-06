@@ -1,24 +1,24 @@
 # commonjpa
 
-Thư viện JPA dùng chung cho các service trong monorepo Second Life.
+Shared JPA library for Second Life monorepo services.
 
-## Công nghệ
+## Stack
 
-| Thành phần | Phiên bản / ghi chú |
+| Component | Version / notes |
 | --- | --- |
 | Java | 21 |
-| Hibernate ORM | Theo Spring Boot 3.5.11 |
-| Jakarta Persistence | API chuẩn JPA |
+| Hibernate ORM | Via Spring Boot 3.5.11 |
+| Jakarta Persistence | Standard JPA API |
 | Lombok | Annotation processing |
 
-Module **không phải** ứng dụng độc lập: được đóng gói `jar` và khai báo `dependency` trong các service.
+This module is **not** a standalone application: it is packaged as a `jar` and declared as a `dependency` in services.
 
-## Mô hình dữ liệu (JPA)
+## Data model (JPA)
 
-Chỉ có `@MappedSuperclass`, không map thành bảng riêng.
+Only `@MappedSuperclass` types — not mapped to their own tables.
 
-- **`BaseEntity`**: trường audit `created_at`, `updated_at`, `deleted_at` + hook `@PrePersist` / `@PreUpdate`.
-- **`@SoftDelete`** + listener / Hibernate integrator: hỗ trợ soft-delete ở các entity con (khi service cấu hình tương ứng).
+- **`BaseEntity`**: audit fields `created_at`, `updated_at`, `deleted_at` + `@PrePersist` / `@PreUpdate` hooks.
+- **`@SoftDelete`** + listener / Hibernate integrator: soft-delete support on child entities (when the service configures it).
 
 ```mermaid
 erDiagram
@@ -29,4 +29,8 @@ erDiagram
     }
 ```
 
-*(Trong thực thi JPA, các entity service con kế thừa và kế thừa các cột trên vào bảng tương ứng.)*
+*(In JPA, service entities extend this mixin and inherit the columns above into their tables.)*
+
+## Main flows
+
+**N/A** — shared JPA library only. Provides `BaseEntity` audit columns and soft-delete support; no runtime service or API.

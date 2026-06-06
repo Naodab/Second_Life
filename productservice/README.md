@@ -1,10 +1,10 @@
 # productservice
 
-Catalog sản phẩm (`Product`, variants, attributes), cơ sở/kho (`Facility`), tin đăng (`Listing`) gắn theo cơ sở, giá variant theo listing. `Product` thuộc chủ sở hữu (`owner_id`) thay vì gắn trực tiếp vào `Facility`. Tích hợp **OpenSearch** (Aiven) cho search; persistence chính trên MySQL.
+Product catalog (`Product`, variants, attributes), facilities/warehouses (`Facility`), listings (`Listing`) per facility, and per-listing variant pricing. `Product` is owned by `owner_id` rather than being tied directly to a `Facility`. Integrates **OpenSearch** (Aiven) for search; primary persistence on MySQL.
 
-## Công nghệ
+## Stack
 
-| Thành phần | Phiên bản / ghi chú |
+| Component | Version / notes |
 | --- | --- |
 | Java | 21 |
 | Spring Boot | Web, Validation, Data JPA |
@@ -13,11 +13,11 @@ Catalog sản phẩm (`Product`, variants, attributes), cơ sở/kho (`Facility`
 | Jackson YAML | |
 | OpenAPI | springdoc |
 | Lombok | |
-| Phụ thuộc nội bộ | `commonjpa`, `commonservice` |
+| Internal deps | `commonjpa`, `commonservice` |
 
-## Mô hình dữ liệu (JPA)
+## Data model (JPA)
 
-`Category` và `SubCategory` kế thừa `CatalogItemBase` (mapped superclass: `name`, `code`, … + audit từ `BaseEntity`).
+`Category` and `SubCategory` extend `CatalogItemBase` (mapped superclass: `name`, `code`, … + audit from `BaseEntity`).
 
 ```mermaid
 erDiagram
@@ -128,6 +128,20 @@ erDiagram
         datetime updated_at
         datetime deleted_at
     }
+    CartItem {
+        uuid id PK
+        string profile_id
+        string listing_id
+        string listing_variant_id
+        int quantity
+        enum mode
+        datetime rental_start
+        datetime rental_end
+        enum rent_unit
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
+    }
     SearchHistories {
         uuid id PK
         string profile_id UK
@@ -151,4 +165,108 @@ erDiagram
     ProductVariant ||--o{ ListingVariant : priced_row
 ```
 
-**Ghi chú:** Địa điểm (`province_code`, `ward_code`) trên `Facility` là mã tra cứu với `locationservice`, không có FK JPA.
+**Note:** Location codes (`province_code`, `ward_code`) on `Facility` are lookup keys for `locationservice`, not JPA foreign keys.
+
+## Main flows
+
+Base path: `/api/v1`. OpenSearch index: `listings`. Kafka topic: `inventory.item.create`.
+
+### Seller creates listing (PENDING → index → inventory bootstrap)
+
+Prerequisite: product is `PUBLISHED` (`POST /products/{id}/publish`).
+
+```mermaid
+sequenceDiagram
+  participant UI as Seller UI
+  participant P as ProductService
+  participant DB as MySQL
+  participant OS as OpenSearch
+  participant K as Kafka
+  participant I as InventoryService
+
+  UI->>P: POST /listings { productId, facilityId, variants[] }
+  P->>DB: Verify product PUBLISHED + owned
+  P->>DB: Verify facility owned by seller
+  P->>DB: INSERT Listing (PENDING) + ListingVariants
+  P->>OS: Index ListingDocument
+  P->>K: inventory.item.create { listingVariants[] }
+  K->>I: CreateInventoryItemConsumer
+  I->>I: Create BUY/RENT InventoryItem rows
+  P-->>UI: ListingResponse
+```
+
+### Admin approves listing (PENDING → ACTIVE)
+
+Only `ACTIVE` listings appear in public search (default filters).
+
+```mermaid
+sequenceDiagram
+  participant UI as Admin UI
+  participant P as ProductService
+  participant DB as MySQL
+  participant OS as OpenSearch
+
+  UI->>P: GET /listings/admin/pending
+  P->>OS: Search listingStatus=PENDING
+  OS-->>P: Pending listings
+  UI->>P: POST /listings/admin/{id}/approve
+  P->>DB: Load listing, set status ACTIVE
+  P->>OS: Re-sync ListingDocument
+  P-->>UI: ListingResponse
+```
+
+### Public listing search
+
+```mermaid
+sequenceDiagram
+  participant UI as Search UI
+  participant P as ProductService
+  participant OS as OpenSearch
+  participant DB as MySQL
+
+  UI->>P: GET /listings/search?keyword=&filters…
+  P->>P: Default filters: listingStatus=ACTIVE, productStatus=PUBLISHED
+  P->>OS: Native query (keyword, geo, price, category, sort)
+  OS-->>P: ListingDocument hits + total
+  opt profile header present
+    P->>DB: Async save SearchHistories
+  end
+  P-->>UI: PagedItemsResponse
+```
+
+### Facility creation + add to cart
+
+```mermaid
+sequenceDiagram
+  participant UI as Frontend
+  participant P as ProductService
+  participant L as LocationService
+  participant DB as MySQL
+
+  Note over UI,DB: Create facility
+  UI->>P: POST /facilities { name, provinceCode, wardCode, lat, lon, … }
+  P->>L: GET /provinces/{p}/wards/{w}/valid-location?latitude=&longitude=
+  L-->>P: pin inside ward boundary?
+  alt invalid location
+    P-->>UI: FACILITY_LOCATION_INVALID
+  else valid
+    P->>DB: INSERT Facility (ownerId from header)
+    P-->>UI: FacilityResponse
+  end
+
+  Note over UI,DB: Add to cart
+  UI->>P: POST /cart { listingId, listingVariantId, mode, quantity, rental dates? }
+  P->>DB: Verify listing ACTIVE, variant active, product PUBLISHED
+  P->>DB: INSERT CartItem (profileId)
+  P-->>UI: CartItemResponse
+```
+
+## Common environment variables
+
+| Variable | Description |
+|------|--------|
+| `SERVER_PORT_PRODUCT_SERVICE` | HTTP port |
+| `MYSQL_URL` / `MYSQL_USERNAME` / `MYSQL_PASSWORD` | Catalog database |
+| `OPENSEARCH_*` / `AIVEN_*` | Search cluster connection |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka broker |
+| `LOCATION_SERVICE_URL` | Ward/province validation |

@@ -1,26 +1,86 @@
-# Booking Service
+# bookingservice
 
-Service xử lý đơn đặt hàng (booking order): kiểm tra tồn kho BUY, tạo reservation đồng bộ qua **inventory service**, rồi lưu order (có rollback nếu lưu order thất bại).
+Handles purchase and rental orders: validates BUY stock, creates inventory reservations synchronously via **inventoryservice**, then persists the order (with rollback if persistence fails).
 
 - **Context path:** `/api/v1`
-- **Port mặc định:** `8087` (`SERVER_PORT_BOOKING_SERVICE`)
+- **Default port:** `8087` (`SERVER_PORT_BOOKING_SERVICE`)
 - **Kafka topic:** `inventory.reservation.create` (config: `spring.kafka.topics.create-inventory-reservation`)
 
-## Yêu cầu
+## Stack
+
+| Component | Version / notes |
+| --- | --- |
+| Java | 21 |
+| Spring Boot | Web, Validation, Data JPA |
+| MySQL | |
+| Spring Kafka | Reservation events |
+| Internal deps | `commonjpa`, `commonservice` |
+
+## Data model (JPA)
+
+`listing_variant_id` references product-service listing variants (cross-service, no JPA FK). `Customer.profile_id` references `profileservice`.
+
+```mermaid
+erDiagram
+    Customer {
+        uuid id PK
+        string profile_id
+        string first_name
+        string last_name
+        string phone_number
+        string email
+        string address
+        string province_code
+        string ward_code
+        boolean is_default
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
+    }
+    BookingOrder {
+        uuid id PK
+        uuid customer_id FK
+        string listing_variant_id
+        bigint price
+        int quantity
+        datetime pickup_time
+        enum status
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
+    }
+    RentalOrder {
+        uuid id PK
+        uuid customer_id FK
+        string listing_variant_id
+        bigint price
+        int quantity
+        datetime start_time
+        datetime end_time
+        enum status
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
+    }
+    Customer ||--o{ BookingOrder : places
+    Customer ||--o{ RentalOrder : rents
+```
+
+## Requirements
 
 - Java 21
 - Maven 3.9+
 - MySQL (`MYSQL_URL`, `MYSQL_USERNAME`, `MYSQL_PASSWORD`)
-- Kafka (`KAFKA_BOOTSTRAP_SERVERS`, mặc định `localhost:9092`)
-- Inventory service (`INVENTORY_SERVICE_URL`) — kiểm tra stock và consumer reservation
+- Kafka (`KAFKA_BOOTSTRAP_SERVERS`, default `localhost:9092`)
+- Inventory service (`INVENTORY_SERVICE_URL`) — stock checks and reservation consumer
 
-## Cấu hình local
+## Local setup
 
 ```bash
 cp src/main/resources/application-dev.yml.example src/main/resources/application-dev.yml
 ```
 
-Chỉnh DB, Kafka, và URL inventory (tránh trùng port với inventory service):
+Configure DB, Kafka, and inventory URL (avoid port clash with inventory service):
 
 ```bash
 export SERVER_PORT_BOOKING_SERVICE=8088
@@ -28,55 +88,55 @@ export INVENTORY_SERVICE_URL=http://localhost:8087/api/v1
 export KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 ```
 
-Chạy với profile `dev`:
+Run with the `dev` profile:
 
 ```bash
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Hoặc từ root repo (build kèm `commonservice`):
+Or from the repo root (builds `commonservice` as well):
 
 ```bash
 mvn spring-boot:run -pl bookingservice -am -Dspring-boot.run.profiles=dev
 ```
 
-## Chạy test
+## Tests
 
-Module phụ thuộc `commonservice` (enum `ErrorCode`, v.v.). Nếu test báo `NoSuchFieldError: INSUFFICIENT_INVENTORY`, cần bản `commonservice` mới trong workspace (xem lệnh bên dưới).
+The module depends on `commonservice` (`ErrorCode`, etc.). If tests fail with `NoSuchFieldError: INSUFFICIENT_INVENTORY`, rebuild `commonservice` in the workspace (see below).
 
-### Toàn bộ test của bookingservice
+### All bookingservice tests
 
-Từ thư mục `bookingservice`:
+From `bookingservice/`:
 
 ```bash
 mvn test
 ```
 
-`pom.xml` đã cấu hình compile `commonservice` trước test và dùng `../commonservice/target/classes` trên classpath.
+`pom.xml` compiles `commonservice` before tests and puts `../commonservice/target/classes` on the classpath.
 
-### Từ root repo (khuyến nghị)
+### From repo root (recommended)
 
 ```bash
 mvn test -pl bookingservice -am -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-`-am` build thêm các module phụ thuộc (`commonservice`, `commonjpa`, …).
+`-am` also builds dependent modules (`commonservice`, `commonjpa`, …).
 
-### Chỉ một vài class test
+### Selected test classes
 
 ```bash
 mvn test -Dtest=BookingOrderServiceImplTest,CreateInventoryReservationProducerTest
 ```
 
-### Cài lại commonservice (khi chạy test trong IDE bị lỗi ErrorCode cũ)
+### Reinstall commonservice (when IDE tests use stale ErrorCode)
 
 ```bash
 mvn clean install -pl commonservice -DskipTests
 ```
 
-Sau đó chạy lại test trong IDE hoặc `mvn test` trong `bookingservice`.
+Then rerun tests in the IDE or `mvn test` in `bookingservice`.
 
-### Test liên quan inventory (module khác)
+### Inventory-related tests (other module)
 
 ```bash
 mvn test -pl inventoryservice \
@@ -84,38 +144,116 @@ mvn test -pl inventoryservice \
   -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-## Luồng tạo reservation sau mua (BUY)
+## Order flows
+
+### BUY — create reservation
 
 ```mermaid
 sequenceDiagram
   participant B as BookingService
   participant I as InventoryService
-  B->>B: Gán orderId (UUID)
+  participant P as ProductService
+  participant K as Kafka / MailService
+  B->>B: Load customer, assign orderId (UUID)
   B->>I: GET /listing-variants/{id}/availability?mode=BUY
   B->>I: POST /reservations/buy
   alt reservation OK
-    B->>B: Lưu order (DB)
-    alt lưu order lỗi
+    B->>B: Persist order (DB)
+    alt order save fails
       B->>I: DELETE /reservations/{orderId}
+    else order saved
+      B->>K: ORDER_CREATED notification (buyer + seller)
+      B->>P: GET /listings/variants/{id}/context
+      P-->>B: facilityId
+      B->>P: POST /facilities/{facilityId}/record-order
+      Note over P: Facility.orderCount += 1
     end
-  else reservation lỗi
-    Note over B: Không tạo order
+  else reservation fails
+    Note over B: Order is not created
   end
 ```
 
-1. Kiểm tra stock: `GET /listing-variants/{id}/availability?mode=BUY`.
-2. Gán `orderId` (UUID) → **đồng bộ** `POST /reservations/buy` tạo reservation (`PENDING`).
-3. Lưu order; nếu lưu DB lỗi → `DELETE /reservations/{orderId}` (release).
-4. Nếu bước 2 lỗi (hết hàng, không có item) → **không** tạo order.
+1. Check stock: `GET /listing-variants/{id}/availability?mode=BUY`.
+2. Assign `orderId` (UUID) → **sync** `POST /reservations/buy` creates a `PENDING` reservation.
+3. Save order; on DB failure → `DELETE /reservations/{orderId}` (release).
+4. If step 2 fails (out of stock, no item) → **do not** create an order.
+5. After a successful save: publish `ORDER_CREATED` via Kafka (mailservice notifications).
+6. **Increment facility metrics (best-effort):** resolve `facilityId` from listing variant context, then  
+   `POST /facilities/{facilityId}/record-order` → `Facility.orderCount += 1` in product-service.  
+   Failures are logged only; the order is **not** rolled back.
 
-`inventoryReservationId` = `orderId`. Kafka consumer vẫn hỗ trợ event async (cùng logic `createBuyReservation`).
+`inventoryReservationId` equals `orderId`. The Kafka consumer still supports async reservation events (same `createBuyReservation` logic).
 
-## Biến môi trường thường dùng
+### RENT — create reservation
 
-| Biến | Mô tả |
+```mermaid
+sequenceDiagram
+  participant B as BookingService
+  participant I as InventoryService
+  participant P as ProductService
+  participant K as Kafka / MailService
+  B->>B: Validate startTime & endTime
+  B->>B: Load customer, assign orderId (UUID)
+  B->>I: GET /listing-variants/{id}/availability-in-range?mode=RENT&from=&to=
+  alt available quantity >= requested
+    B->>I: POST /reservations/rent
+    alt reservation OK
+      B->>B: Persist rental order (DB)
+      alt order save fails
+        B->>I: DELETE /reservations/{orderId}
+      else order saved
+        B->>K: ORDER_CREATED notification (buyer + seller)
+        B->>P: GET /listings/variants/{id}/context
+        P-->>B: facilityId
+        B->>P: POST /facilities/{facilityId}/record-order
+        Note over P: Facility.orderCount += 1
+      end
+    else reservation fails
+      Note over B: Rental order is not created
+    end
+  else insufficient rent slots
+    Note over B: INSUFFICIENT_INVENTORY — no reservation, no order
+  end
+```
+
+1. Validate rental window: `endTime` must be after `startTime`.
+2. Resolve the buyer's `Customer` record and assign `orderId` (UUID).
+3. Check concurrent rent capacity for the slot:  
+   `GET /listing-variants/{id}/availability-in-range?mode=RENT&from={startTime}&to={endTime}`.
+4. **Sync** `POST /reservations/rent` with `rentalSlotStart`, `rentalSlotEnd`, `quantity`, and `referenceId = orderId`.
+5. Save `RentalOrder` (`status = PENDING`); on DB failure → `DELETE /reservations/{orderId}`.
+6. After a successful save: publish rent `ORDER_CREATED` notification.
+7. **Increment facility metrics (best-effort):** same as BUY —  
+   `GET /listings/variants/{id}/context` → `POST /facilities/{facilityId}/record-order`.
+
+Reservation payload uses `mode = RENT`. `inventoryReservationId` equals `orderId` (same pattern as BUY).
+
+### RENT — cancel while PENDING
+
+Applies when the **buyer** cancels or the **seller** rejects a pending rent order.
+
+```mermaid
+sequenceDiagram
+  participant U as Buyer or Seller
+  participant B as BookingService
+  participant I as InventoryService
+  U->>B: DELETE /rental-orders/{id} (buyer)<br/>or PATCH status → CANCELLED (seller)
+  B->>B: Verify status is PENDING, set CANCELLED
+  B->>I: DELETE /reservations/{orderId}
+  Note over B: Publish cancellation notification
+```
+
+Seller status transitions after confirmation:  
+`PENDING → CONFIRMED → DELIVERED → RETURNED → COMPLETED`  
+(with `PENDING → CANCELLED` releasing the reservation).
+
+## Common environment variables
+
+| Variable | Description |
 |------|--------|
 | `SERVER_PORT_BOOKING_SERVICE` | HTTP port |
 | `MYSQL_URL` / `MYSQL_USERNAME` / `MYSQL_PASSWORD` | Database |
 | `KAFKA_BOOTSTRAP_SERVERS` | Kafka broker |
-| `KAFKA_TOPIC_CREATE_INVENTORY_RESERVATION` | Topic tạo reservation |
-| `INVENTORY_SERVICE_URL` | Base URL inventory API |
+| `KAFKA_TOPIC_CREATE_INVENTORY_RESERVATION` | Reservation topic |
+| `INVENTORY_SERVICE_URL` | Inventory API base URL |
+| `PRODUCT_SERVICE_URL` | Product API base URL (listing context + `record-order`) |
