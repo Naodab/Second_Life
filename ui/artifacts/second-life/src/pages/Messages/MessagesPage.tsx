@@ -1,12 +1,17 @@
+import { useEffect, useRef } from "react";
+import { Link } from "wouter";
 import { Loader2, Search, Store, User, ChevronLeft, Building2 } from "lucide-react";
 
 import { MessageBubble } from "@/components/messages/MessageBubble";
 import { MessageComposer } from "@/components/messages/MessageComposer";
+import { FacilityConversationAvatar } from "@/components/messages/FacilityConversationAvatar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { facilityAvatarUrl } from "@/api/facility";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { messagesSearchPlaceholder } from "@/lib/messages-conversation-search";
 import { useMessagesPage } from "./useMessagesPage";
 
 function TabUnreadBadge({ count }: { count: number }) {
@@ -24,6 +29,10 @@ export default function MessagesPage() {
     changeTab,
     conversations,
     conversationsLoading,
+    searchQuery,
+    setSearchQuery,
+    hasConversationSearch,
+    hasAnyConversations,
     buyerUnreadCount,
     sellerUnreadCount,
     activeConversation,
@@ -44,23 +53,46 @@ export default function MessagesPage() {
       : `Khách ${activeConversation?.buyerProfileId?.slice(0, 8) ?? ""}`;
 
   const showChatPanel = Boolean(activeConversationId && (activeConversation || openingConversation));
+  const activeFacilityImageUrl = activeConversation?.facilityImageUrl ?? null;
+  const activeFacilityAvatarSrc = facilityAvatarUrl({ imageUrl: activeFacilityImageUrl ?? undefined });
+  const activeFacilityPageHref =
+    tab === "facilities" && activeConversation?.facilityId?.trim()
+      ? `/facility/${encodeURIComponent(activeConversation.facilityId.trim())}`
+      : null;
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = messagesScrollRef.current;
+    if (!el || messagesLoading || openingConversation) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, messagesLoading, openingConversation, activeConversationId]);
 
   return (
-    <div className="flex min-h-[calc(100vh-4.5rem)] flex-col bg-background px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto flex h-[min(920px,calc(100vh-7rem))] w-full max-w-[1600px] flex-1 overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
+    <div
+      data-testid="messages-page-shell"
+      className="flex h-[calc(100dvh-var(--site-header-height))] max-h-[calc(100dvh-var(--site-header-height))] min-h-0 flex-col overflow-hidden bg-background px-4 py-6 sm:px-6 lg:px-8"
+    >
+      <div
+        data-testid="messages-layout-card"
+        className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden rounded-3xl border border-border bg-card shadow-lg"
+      >
         {/* Sidebar */}
         <div
           className={cn(
-            "flex w-full shrink-0 flex-col border-border md:w-[min(100%,380px)] md:border-r lg:w-[400px]",
+            "flex min-h-0 w-full shrink-0 flex-col overflow-hidden border-border md:w-[min(100%,380px)] md:border-r lg:w-[400px]",
             activeConversationId ? "hidden md:flex" : "flex",
           )}
         >
-          <div className="border-b border-border p-5">
+          <div className="shrink-0 border-b border-border p-5">
             <h2 className="mb-4 font-display text-2xl font-bold tracking-tight">Tin nhắn</h2>
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Tìm kiếm..."
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={messagesSearchPlaceholder(tab)}
+                aria-label={messagesSearchPlaceholder(tab)}
+                data-testid="messages-conversation-search"
                 className="h-11 rounded-full border-border bg-muted/50 pl-9"
               />
             </div>
@@ -69,7 +101,7 @@ export default function MessagesPage() {
                 type="button"
                 onClick={() => changeTab("facilities")}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all",
+                  "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all",
                   tab === "facilities"
                     ? "bg-background text-primary shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
@@ -82,7 +114,7 @@ export default function MessagesPage() {
                 type="button"
                 onClick={() => changeTab("customers")}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all",
+                  "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all",
                   tab === "customers"
                     ? "bg-background text-primary shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
@@ -94,7 +126,10 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div
+            data-testid="messages-conversation-list"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          >
             <div className="px-4 py-3">
               <p className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {tab === "facilities" ? "Cuộc trò chuyện với cơ sở" : "Khách nhắn cho cơ sở của bạn"}
@@ -105,11 +140,15 @@ export default function MessagesPage() {
               <div className="flex items-center justify-center py-16 text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>
-            ) : conversations.length === 0 ? (
+            ) : conversations.length === 0 && !hasAnyConversations ? (
               <p className="px-6 py-12 text-center text-sm leading-relaxed text-muted-foreground">
                 {tab === "facilities"
                   ? "Chưa có cuộc trò chuyện nào. Hãy chat từ trang sản phẩm hoặc cơ sở."
                   : "Chưa có khách hàng nhắn tin."}
+              </p>
+            ) : conversations.length === 0 && hasConversationSearch ? (
+              <p className="px-6 py-12 text-center text-sm leading-relaxed text-muted-foreground">
+                Không tìm thấy cuộc trò chuyện phù hợp với &quot;{searchQuery.trim()}&quot;.
               </p>
             ) : (
               conversations.map((chat) => (
@@ -118,18 +157,26 @@ export default function MessagesPage() {
                   type="button"
                   onClick={() => selectConversation(chat.id)}
                   className={cn(
-                    "flex w-full gap-3 border-b border-border px-5 py-4 text-left transition-colors border-l-4 hover:bg-muted/50",
+                    "flex w-full cursor-pointer gap-3 border-b border-border px-5 py-4 text-left transition-colors border-l-4 hover:bg-muted/50",
                     activeConversationId === chat.id
                       ? "border-l-primary bg-primary/5"
                       : "border-l-transparent",
                   )}
                 >
                   <div className="relative shrink-0">
-                    <Avatar className="h-12 w-12 border border-border">
-                      <AvatarFallback className="bg-muted">
-                        {tab === "facilities" ? <Store className="h-5 w-5" /> : <User className="h-5 w-5" />}
-                      </AvatarFallback>
-                    </Avatar>
+                    {tab === "facilities" ? (
+                      <FacilityConversationAvatar
+                        imageUrl={chat.facilityImageUrl}
+                        name={chat.facilityName}
+                        className="h-12 w-12 border border-border"
+                      />
+                    ) : (
+                      <Avatar className="h-12 w-12 border border-border">
+                        <AvatarFallback className="bg-muted">
+                          <User className="h-5 w-5" />
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     {chat.unreadCount > 0 ? (
                       <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-card bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                         {chat.unreadCount > 9 ? "9+" : chat.unreadCount}
@@ -169,7 +216,12 @@ export default function MessagesPage() {
         </div>
 
         {/* Chat panel */}
-        <div className={cn("flex min-w-0 flex-1 flex-col", !showChatPanel ? "hidden md:flex" : "flex")}>
+        <div
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            !showChatPanel ? "hidden md:flex" : "flex",
+          )}
+        >
           {showChatPanel ? (
             <>
               <div className="flex h-[4.5rem] shrink-0 items-center gap-3 border-b border-border px-5">
@@ -181,13 +233,32 @@ export default function MessagesPage() {
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
-                <Avatar className="h-11 w-11 shrink-0 border border-border">
-                  <AvatarFallback className="bg-muted">
-                    {tab === "facilities" ? <Store className="h-5 w-5" /> : <User className="h-5 w-5" />}
-                  </AvatarFallback>
-                </Avatar>
+                {tab === "facilities" ? (
+                  <FacilityConversationAvatar
+                    imageUrl={activeFacilityImageUrl}
+                    name={activeConversation?.facilityName}
+                    className="h-11 w-11 shrink-0 border border-border"
+                  />
+                ) : (
+                  <Avatar className="h-11 w-11 shrink-0 border border-border">
+                    <AvatarFallback className="bg-muted">
+                      <User className="h-5 w-5" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-lg font-bold">{peerTitle}</h3>
+                  <h3 className="truncate text-lg font-bold">
+                    {activeFacilityPageHref ? (
+                      <Link
+                        href={activeFacilityPageHref}
+                        className="cursor-pointer truncate transition-colors hover:text-primary hover:underline"
+                      >
+                        {peerTitle}
+                      </Link>
+                    ) : (
+                      peerTitle
+                    )}
+                  </h3>
                   {tab === "customers" ? (
                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Building2 className="h-3 w-3" /> {activeConversation?.facilityName}
@@ -211,7 +282,11 @@ export default function MessagesPage() {
                 </Badge>
               </div>
 
-              <div className="flex-1 space-y-4 overflow-y-auto bg-muted/20 p-5 sm:p-6">
+              <div
+                ref={messagesScrollRef}
+                data-testid="messages-thread-scroll"
+                className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-muted/20 p-5 sm:p-6"
+              >
                 {openingConversation || messagesLoading ? (
                   <div className="flex justify-center py-20">
                     <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
@@ -226,8 +301,9 @@ export default function MessagesPage() {
                       key={message.id}
                       message={message}
                       isMine={isMine(message.senderProfileId)}
+                      peerAvatarUrl={tab === "facilities" ? activeFacilityAvatarSrc : undefined}
                       peerFallback={
-                        tab === "facilities" ? <Store className="h-4 w-4" /> : <User className="h-4 w-4" />
+                        tab === "facilities" ? undefined : <User className="h-4 w-4" />
                       }
                     />
                   ))
@@ -239,7 +315,7 @@ export default function MessagesPage() {
               </div>
             </>
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center p-10 text-center">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto p-10 text-center">
               <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
                 {tab === "facilities" ? (
                   <Store className="h-12 w-12 text-primary/60" />

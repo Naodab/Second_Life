@@ -291,6 +291,7 @@ export type FacilityOverviewDto = {
   wardCode?: string | null;
   averageRating?: number | null;
   orderCount?: number | null;
+  viewCount?: number | null;
 };
 
 export type AttributeValueDto = {

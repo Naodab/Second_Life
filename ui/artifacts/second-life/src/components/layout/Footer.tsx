@@ -7,7 +7,13 @@ import { Facebook, Instagram } from "lucide-react";
 export function Footer() {
   const [location, setLocation] = useLocation();
   const { isLoggedIn, sellerHubProfileComplete } = useAuth();
-  if (location.startsWith("/manage") || location.startsWith("/listings")) return null;
+  if (
+    location.startsWith("/manage") ||
+    location.startsWith("/listings") ||
+    location.startsWith("/messages")
+  ) {
+    return null;
+  }
 
   return (
     <footer className="mt-20 border-t bg-background">

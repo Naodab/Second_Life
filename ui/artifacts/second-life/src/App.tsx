@@ -88,10 +88,11 @@ function Router() {
     location === "/profile/setup" ||
     location.startsWith("/oauth2/callback/");
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-dvh flex-col">
       <ScrollToTop />
       {!isAuthPage && !isSellerHub && <Header />}
-      <main className="flex flex-1 flex-col">
+      <main className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/search" component={Search} />
@@ -112,6 +113,7 @@ function Router() {
           <ProtectedRoute path="/profile/setup" component={ProfileSetup} />
           <Route component={NotFound} />
         </Switch>
+        </div>
       </main>
       {!isAuthPage && !isSellerHub && <Footer />}
     </div>

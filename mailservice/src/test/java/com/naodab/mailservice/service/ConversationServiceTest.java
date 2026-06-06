@@ -93,6 +93,11 @@ class ConversationServiceTest {
     assertThat(response.getId()).isEqualTo("conv-new");
     assertThat(response.getSellerProfileId()).isEqualTo("seller-1");
     assertThat(response.getFacilityId()).isEqualTo("facility-1");
+
+    ArgumentCaptor<ConversationDocument> captor = ArgumentCaptor.forClass(ConversationDocument.class);
+    verify(conversationRepository).save(captor.capture());
+    assertThat(captor.getValue().getFacilityImageUrl())
+        .isEqualTo("https://res.cloudinary.com/demo/image/upload/facility.jpg");
   }
 
   @Test
@@ -214,6 +219,7 @@ class ConversationServiceTest {
     facility.setId(facilityId);
     facility.setName("Green Loop Store");
     facility.setOwnerId(ownerId);
+    facility.setImageUrl("https://res.cloudinary.com/demo/image/upload/facility.jpg");
     return facility;
   }
 

@@ -35,6 +35,7 @@ public class ConversationDocument {
   String sellerProfileId;
   String facilityId;
   String facilityName;
+  String facilityImageUrl;
   String lastMessagePreview;
   Instant lastMessageAt;
   @Builder.Default

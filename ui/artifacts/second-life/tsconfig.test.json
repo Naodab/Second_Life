@@ -1,7 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "build", "dist"],
   "compilerOptions": {
     "noEmit": true,
     "jsx": "preserve",
@@ -15,9 +13,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "references": [
-    {
-      "path": "../../lib/api-client-react"
-    }
-  ]
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test/**/*.ts"],
+  "exclude": ["node_modules", "build", "dist"]
 }

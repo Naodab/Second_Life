@@ -37,6 +37,7 @@ export type ConversationResponse = {
   sellerProfileId: string;
   facilityId: string;
   facilityName?: string | null;
+  facilityImageUrl?: string | null;
   lastMessagePreview?: string | null;
   lastMessageAt?: string | null;
   unreadCount: number;

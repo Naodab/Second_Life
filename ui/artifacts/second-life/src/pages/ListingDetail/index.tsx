@@ -431,7 +431,8 @@ export default function ListingDetail() {
         </div>
 
         {facility?.id ? (
-          <ListingFacilitySection
+          <div className="mt-10">
+            <ListingFacilitySection
             facility={facility}
             listingContext={{
               listingId: listing.id,
@@ -441,7 +442,8 @@ export default function ListingDetail() {
               listingType: listing.listingType,
               price: listing.listingType === "RENT" ? rentPrice : buyPrice,
             }}
-          />
+            />
+          </div>
         ) : null}
 
         <ListingReviewsSection

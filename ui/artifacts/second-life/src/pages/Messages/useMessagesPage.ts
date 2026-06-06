@@ -29,6 +29,7 @@ import {
   resolveMessageSearch,
   wasInitialAttachSent,
 } from "@/lib/message-navigation";
+import { filterConversationsBySearch } from "@/lib/messages-conversation-search";
 
 export type MessagesTab = "facilities" | "customers";
 
@@ -66,6 +67,8 @@ export function useMessagesPage() {
   const [tab, setTab] = useState<MessagesTab>("facilities");
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [focusedConversation, setFocusedConversation] = useState<ConversationResponse | null>(null);
+  const [facilitySearchQuery, setFacilitySearchQuery] = useState("");
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
 
   const role = tab === "facilities" ? "buyer" : "seller";
 
@@ -85,6 +88,13 @@ export function useMessagesPage() {
 
   const conversations =
     tab === "facilities" ? (buyerConversationsQuery.data ?? []) : (sellerConversationsQuery.data ?? []);
+  const searchQuery = tab === "facilities" ? facilitySearchQuery : customerSearchQuery;
+  const setSearchQuery = tab === "facilities" ? setFacilitySearchQuery : setCustomerSearchQuery;
+  const filteredConversations = useMemo(
+    () => filterConversationsBySearch(conversations, tab, searchQuery),
+    [conversations, tab, searchQuery],
+  );
+  const hasAnyConversations = conversations.length > 0;
   const conversationsLoading =
     tab === "facilities" ? buyerConversationsQuery.isLoading : sellerConversationsQuery.isLoading;
 
@@ -271,8 +281,12 @@ export function useMessagesPage() {
   return {
     tab,
     changeTab,
-    conversations,
+    conversations: filteredConversations,
     conversationsLoading,
+    searchQuery,
+    setSearchQuery,
+    hasConversationSearch: searchQuery.trim().length > 0,
+    hasAnyConversations,
     buyerUnreadCount,
     sellerUnreadCount,
     activeConversation,

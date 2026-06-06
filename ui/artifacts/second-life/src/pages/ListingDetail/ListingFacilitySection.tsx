@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, MapPin, MessageSquare, Package, ShieldCheck } from "lucide-react";
+import { Eye, MapPin, MessageSquare, Package, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FacilityMapEmbed } from "@/components/FacilityMapEmbed";
 import { facilityAvatarUrl } from "@/api/facility";
@@ -8,6 +8,7 @@ import type { FacilityOverviewDto } from "@/api/listing";
 import { useAuth } from "@/context/AuthContext";
 import { formatFacilityAddress, resolveFacilityPlaceNames } from "@/lib/facility-display";
 import { facilityHasMap } from "@/lib/google-maps";
+import { cn } from "@/lib/utils";
 import { buildMessagesHref } from "@/lib/message-navigation";
 
 export type ListingChatContext = {
@@ -22,9 +23,10 @@ export type ListingChatContext = {
 type Props = {
   facility: FacilityOverviewDto;
   listingContext?: ListingChatContext | null;
+  className?: string;
 };
 
-export function ListingFacilitySection({ facility, listingContext }: Props) {
+export function ListingFacilitySection({ facility, listingContext, className }: Props) {
   const { user } = useAuth();
   const provinceCode = facility.provinceCode?.trim() ?? "";
   const wardCode = facility.wardCode?.trim() ?? "";
@@ -79,7 +81,12 @@ export function ListingFacilitySection({ facility, listingContext }: Props) {
   const showMap = facilityHasMap(mapFacility);
 
   return (
-    <div className="mt-10 overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 shadow-sm ring-1 ring-border/35 dark:from-card dark:via-card dark:to-muted/10 dark:shadow-xl dark:shadow-black/20 dark:ring-border/25">
+    <div
+      className={cn(
+        "overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 shadow-sm ring-1 ring-border/35 dark:from-card dark:via-card dark:to-muted/10 dark:shadow-xl dark:shadow-black/20 dark:ring-border/25",
+        className,
+      )}
+    >
       <div className="p-6 sm:p-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
           <div className="flex min-w-0 flex-1 gap-4">
@@ -107,15 +114,17 @@ export function ListingFacilitySection({ facility, listingContext }: Props) {
                 <div className="flex items-center gap-1.5">
                   <Package className="h-4 w-4 opacity-80" />
                   <span>
-                    <strong className="tabular-nums text-foreground">{facility.orderCount ?? 0}</strong> đơn đã hoàn thành (ước tính)
+                    <strong className="tabular-nums text-foreground">{facility.orderCount ?? 0}</strong> đơn đã bán / cho thuê
                   </span>
                 </div>
                 <span className="hidden text-muted-foreground/40 sm:inline" aria-hidden>
                   •
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4 opacity-80" />
-                  <span>Luôn cập nhật trên Second Life</span>
+                  <Eye className="h-4 w-4 opacity-80" />
+                  <span>
+                    <strong className="tabular-nums text-foreground">{facility.viewCount ?? 0}</strong> lượt xem
+                  </span>
                 </div>
               </div>
 

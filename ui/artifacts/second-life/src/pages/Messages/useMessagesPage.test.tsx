@@ -59,6 +59,7 @@ const conversationFixture = {
   sellerProfileId: "seller-1",
   facilityId: "fac-1",
   facilityName: "Green Loop Store",
+  facilityImageUrl: "https://res.cloudinary.com/demo/facility.jpg",
   lastMessagePreview: "[Sản phẩm] Máy ảnh",
   lastMessageAt: "2026-06-06T10:00:00.000Z",
   unreadCount: 0,
@@ -187,5 +188,163 @@ describe("useMessagesPage", () => {
       expect(markConversationReadMock).toHaveBeenCalled();
     });
     expect(markConversationReadMock.mock.calls[0]?.[0]).toBe("conv-1");
+  });
+
+  it("filters facilities tab conversations by search query", async () => {
+    listConversationsMock.mockResolvedValue([
+      conversationFixture,
+      {
+        ...conversationFixture,
+        id: "conv-2",
+        facilityName: "Vintage Hub",
+        lastMessagePreview: "Còn hàng không?",
+      },
+    ]);
+
+    const { result } = renderHook(() => useMessagesPage(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.conversations).toHaveLength(2);
+    });
+
+    act(() => {
+      result.current.setSearchQuery("vintage");
+    });
+
+    expect(result.current.conversations).toHaveLength(1);
+    expect(result.current.conversations[0]?.facilityName).toBe("Vintage Hub");
+    expect(result.current.hasConversationSearch).toBe(true);
+  });
+
+  it("keeps separate search queries per tab", async () => {
+    listConversationsMock.mockImplementation((role) => {
+      if (role === "buyer") {
+        return Promise.resolve([conversationFixture]);
+      }
+      return Promise.resolve([
+        {
+          ...conversationFixture,
+          id: "conv-seller",
+          buyerProfileId: "buyer-beta",
+          facilityName: "Seller Facility",
+        },
+      ]);
+    });
+
+    const { result } = renderHook(() => useMessagesPage(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.conversations).toHaveLength(1);
+    });
+
+    act(() => {
+      result.current.setSearchQuery("green");
+    });
+    expect(result.current.searchQuery).toBe("green");
+
+    act(() => {
+      result.current.changeTab("customers");
+    });
+
+    await waitFor(() => {
+      expect(result.current.searchQuery).toBe("");
+    });
+
+    act(() => {
+      result.current.setSearchQuery("buyer-beta");
+    });
+
+    act(() => {
+      result.current.changeTab("facilities");
+    });
+
+    expect(result.current.searchQuery).toBe("green");
+  });
+
+  it("filters customers tab conversations by buyer id on seller role", async () => {
+    listConversationsMock.mockImplementation((role) => {
+      if (role === "buyer") {
+        return Promise.resolve([conversationFixture]);
+      }
+      return Promise.resolve([
+        {
+          ...conversationFixture,
+          id: "conv-seller-1",
+          buyerProfileId: "buyer-alpha",
+          facilityName: "Alpha Shop",
+        },
+        {
+          ...conversationFixture,
+          id: "conv-seller-2",
+          buyerProfileId: "buyer-beta",
+          facilityName: "Beta Shop",
+        },
+      ]);
+    });
+
+    const { result } = renderHook(() => useMessagesPage(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.conversations).toHaveLength(1);
+    });
+
+    act(() => {
+      result.current.changeTab("customers");
+    });
+
+    await waitFor(() => {
+      expect(result.current.conversations).toHaveLength(2);
+    });
+
+    act(() => {
+      result.current.setSearchQuery("buyer-beta");
+    });
+
+    expect(result.current.conversations).toHaveLength(1);
+    expect(result.current.conversations[0]?.buyerProfileId).toBe("buyer-beta");
+    expect(result.current.hasAnyConversations).toBe(true);
+  });
+
+  it("reports hasAnyConversations when search filters out all rows", async () => {
+    listConversationsMock.mockResolvedValue([conversationFixture]);
+
+    const { result } = renderHook(() => useMessagesPage(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.hasAnyConversations).toBe(true);
+    });
+
+    act(() => {
+      result.current.setSearchQuery("không tồn tại");
+    });
+
+    expect(result.current.conversations).toHaveLength(0);
+    expect(result.current.hasAnyConversations).toBe(true);
+    expect(result.current.hasConversationSearch).toBe(true);
+  });
+
+  it("filters facilities tab by last message preview", async () => {
+    listConversationsMock.mockResolvedValue([
+      conversationFixture,
+      {
+        ...conversationFixture,
+        id: "conv-2",
+        facilityName: "Other Shop",
+        lastMessagePreview: "Ship COD được không?",
+      },
+    ]);
+
+    const { result } = renderHook(() => useMessagesPage(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.conversations).toHaveLength(2);
+    });
+
+    act(() => {
+      result.current.setSearchQuery("máy ảnh");
+    });
+
+    expect(result.current.conversations).toHaveLength(1);
+    expect(result.current.conversations[0]?.id).toBe("conv-1");
   });
 });
