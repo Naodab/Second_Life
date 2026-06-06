@@ -281,12 +281,13 @@ function ProfileSetupForm({
 
 export default function ProfileSetup() {
   const [, setLocation] = useLocation();
-  const { isLoggedIn, isLoading, needsProfileSetup, sellerHubProfileComplete, user, refreshSessionProfile } =
+  const { isLoggedIn, isLoading, isAdmin, needsProfileSetup, sellerHubProfileComplete, user, refreshSessionProfile } =
     useAuth();
   const returnTo = useMemo(() => readReturnToFromSearch(), []);
   const forSellerHub = returnTo.startsWith("/manage");
 
-  const mustCompleteForm = needsProfileSetup || (forSellerHub && !sellerHubProfileComplete);
+  const mustCompleteForm =
+    !isAdmin && (needsProfileSetup || (forSellerHub && !sellerHubProfileComplete));
 
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);

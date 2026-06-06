@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -49,4 +50,20 @@ public interface FacilityRepository extends JpaRepository<Facility, String>, Jpa
   boolean existsByIdAndDeletedAtIsNull(String facilityId);
 
   Optional<Facility> findByOwnerIdAndIdAndDeletedAtIsNull(String ownerId, String id);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("""
+      UPDATE Facility f
+      SET f.viewCount = COALESCE(f.viewCount, 0) + 1
+      WHERE f.id = :id AND f.deletedAt IS NULL
+      """)
+  int incrementViewCount(@Param("id") String id);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("""
+      UPDATE Facility f
+      SET f.orderCount = COALESCE(f.orderCount, 0) + 1
+      WHERE f.id = :id AND f.deletedAt IS NULL
+      """)
+  int incrementOrderCount(@Param("id") String id);
 }

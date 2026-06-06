@@ -29,7 +29,9 @@ import com.naodab.commonservice.exception.ErrorCode;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -72,7 +74,20 @@ public class BookingOrderServiceImpl implements BookingOrderService {
     orderNotificationPublisher.publishBuyOrderCreated(
         bookingOrder.getId(), bookingOrder.getListingVariantId(), profileId, customer);
 
+    recordFacilityOrder(bookingOrder.getListingVariantId());
+
     return bookingOrderMapper.toBookingOrderResponse(bookingOrder, customer);
+  }
+
+  private void recordFacilityOrder(String listingVariantId) {
+    try {
+      var context = productClients.getListingVariantContext(listingVariantId);
+      if (context != null && StringUtils.hasText(context.getFacilityId())) {
+        productClients.recordFacilityOrder(context.getFacilityId().trim());
+      }
+    } catch (RuntimeException e) {
+      log.warn("Failed to record facility order count for variant {}: {}", listingVariantId, e.getMessage());
+    }
   }
 
   private static InventoryReservationCreateEvent toReservationCreateEvent(BookingOrder order, String profileId) {

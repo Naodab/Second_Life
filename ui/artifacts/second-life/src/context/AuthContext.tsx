@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import Cookies from "js-cookie";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
-import { decodeJwtPayloadUnsafe } from "@/lib/jwtPayload";
+import { decodeJwtPayloadUnsafe, isAdminRole } from "@/lib/jwtPayload";
 import {
   ApiError,
   login as apiLogin,
   refreshToken as apiRefreshToken,
   getCurrentProfile,
   getProfileById,
-  profileIsCompleteForSellerHub,
   profileNeedsSetup,
+  resolveProfileSetupFlags,
   type ProfilePayload,
 } from "@/api";
 
@@ -63,9 +63,18 @@ export class UnverifiedEmailError extends Error {
   }
 }
 
+function readIsAdminFromToken(token: string | undefined): boolean {
+  if (!token?.trim()) {
+    return false;
+  }
+  const payload = decodeJwtPayloadUnsafe(token);
+  return isAdminRole(payload?.role);
+}
+
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
+  isAdmin: boolean;
   needsProfileSetup: boolean;
   sellerHubProfileComplete: boolean;
   login: (email: string, password: string) => Promise<boolean>;
@@ -108,18 +117,25 @@ async function loadProfileForAccessToken(accessToken: string): Promise<ProfilePa
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [sellerHubProfileComplete, setSellerHubProfileComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const syncAdminFromCookie = useCallback(() => {
+    setIsAdmin(readIsAdminFromToken(Cookies.get("accessToken")));
+  }, []);
 
   useEffect(() => {
     setAuthTokenGetter(() => Cookies.get("accessToken") || null);
   }, []);
 
   const applyProfile = useCallback((profile: ProfilePayload) => {
+    const admin = readIsAdminFromToken(Cookies.get("accessToken"));
+    const flags = resolveProfileSetupFlags(profile, admin);
     setUser(userFromProfile(profile));
-    setNeedsProfileSetup(profileNeedsSetup(profile));
-    setSellerHubProfileComplete(profileIsCompleteForSellerHub(profile));
+    setNeedsProfileSetup(flags.needsProfileSetup);
+    setSellerHubProfileComplete(flags.sellerHubProfileComplete);
   }, []);
 
   const refreshTokenAndFetchUser = async () => {
@@ -131,11 +147,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         Cookies.set("refreshToken", newRefreshToken, { ...authCookieBase, expires: 7 });
         const profile = await loadProfileForAccessToken(accessToken);
         applyProfile(profile);
+        setIsAdmin(readIsAdminFromToken(accessToken));
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
         Cookies.remove("accessToken", authCookieBase);
         Cookies.remove("refreshToken", authCookieBase);
         setUser(null);
+        setIsAdmin(false);
         setNeedsProfileSetup(false);
         setSellerHubProfileComplete(false);
       }
@@ -153,18 +171,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error("Failed to fetch profile with existing token:", error);
           const fallback = userFromAccessToken(token);
           if (fallback) {
+            const admin = readIsAdminFromToken(token);
             setUser(fallback);
-            setNeedsProfileSetup(true);
+            setIsAdmin(admin);
+            setNeedsProfileSetup(!admin);
+            setSellerHubProfileComplete(admin);
           } else {
             await refreshTokenAndFetchUser();
           }
         }
       }
+      syncAdminFromCookie();
       setIsLoading(false);
     };
 
     void checkAuth();
-  }, [applyProfile]);
+  }, [applyProfile, syncAdminFromCookie]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     const { accessToken, refreshToken, profile } = await apiLogin({ email, password });
@@ -176,32 +198,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.set("accessToken", accessToken, { ...authCookieBase, expires: 1 });
     Cookies.set("refreshToken", refreshToken, { ...authCookieBase, expires: 7 });
 
+    const admin = readIsAdminFromToken(accessToken);
+
     if (!profile) {
-      throw new Error("Login response missing profile");
+      if (!admin) {
+        throw new Error("Login response missing profile");
+      }
+      const fromJwt = userFromAccessToken(accessToken);
+      if (!fromJwt) {
+        throw new Error("Login response missing profile");
+      }
+      setUser(fromJwt);
+      setNeedsProfileSetup(false);
+      setSellerHubProfileComplete(true);
+      setIsAdmin(admin);
+      return false;
     }
 
     applyProfile(profile as ProfilePayload);
-    return profileNeedsSetup(profile as ProfilePayload);
+    setIsAdmin(admin);
+    return admin ? false : profileNeedsSetup(profile as ProfilePayload);
   };
 
   const loginWithGoogle = useCallback(
     async (accessToken: string, refreshToken: string): Promise<boolean> => {
       Cookies.set("accessToken", accessToken, { ...authCookieBase, expires: 1 });
       Cookies.set("refreshToken", refreshToken, { ...authCookieBase, expires: 7 });
+      setIsAdmin(readIsAdminFromToken(accessToken));
 
       try {
         const profile = await loadProfileForAccessToken(accessToken);
         applyProfile(profile);
-        return profileNeedsSetup(profile);
+        const admin = readIsAdminFromToken(accessToken);
+        return admin ? false : profileNeedsSetup(profile);
       } catch (profileErr) {
         console.warn("Profile fetch after OAuth failed, using JWT claims:", profileErr);
         const fromJwt = userFromAccessToken(accessToken);
         if (!fromJwt) {
           throw profileErr;
         }
+        const admin = readIsAdminFromToken(accessToken);
         setUser(fromJwt);
-        setNeedsProfileSetup(true);
-        return true;
+        setNeedsProfileSetup(!admin);
+        setSellerHubProfileComplete(admin);
+        return !admin;
       }
     },
     [applyProfile],
@@ -218,6 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
+    setIsAdmin(false);
     setNeedsProfileSetup(false);
     setSellerHubProfileComplete(false);
     Cookies.remove("accessToken", authCookieBase);
@@ -229,6 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isLoggedIn: !!user,
+        isAdmin,
         needsProfileSetup,
         sellerHubProfileComplete,
         login,

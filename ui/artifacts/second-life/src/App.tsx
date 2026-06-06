@@ -24,6 +24,8 @@ import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders/index";
 import Messages from "@/pages/Messages/MessagesPage";
 import Listings from "@/pages/Listings/index";
+import Admin from "@/pages/Admin/index";
+import { AdminRoute } from "@/components/AdminRoute";
 
 function SellerHubLegacyRedirect() {
   const [, setLocation] = useLocation();
@@ -75,7 +77,10 @@ function ScrollToTop() {
 
 function Router() {
   const [location] = useLocation();
-  const isSellerHub = location.startsWith("/manage") || location.startsWith("/listings");
+  const isSellerHub =
+    location.startsWith("/manage") ||
+    location.startsWith("/listings") ||
+    location.startsWith("/admin");
   const isAuthPage =
     location === "/login" ||
     location === "/register" ||
@@ -99,6 +104,7 @@ function Router() {
           <ProtectedRoute path="/messages" component={Messages} />
           <ProtectedRoute path="/listings" component={SellerHubLegacyRedirect} />
           <ProtectedRoute path="/manage/*?" component={Listings} />
+          <AdminRoute path="/admin/*?" component={Admin} />
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
           <Route path="/oauth2/callback/google" component={OAuthCallback} />

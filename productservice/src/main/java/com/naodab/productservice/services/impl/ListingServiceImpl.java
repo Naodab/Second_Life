@@ -28,6 +28,7 @@ import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.PagedItemsResponse;
 import com.naodab.productservice.dto.response.ProductResponse;
+import com.naodab.productservice.dto.response.FacilityResponse;
 import com.naodab.productservice.mapper.FacilityMapper;
 import com.naodab.productservice.mapper.ProductMapper;
 import com.naodab.productservice.mapper.ListingMapper;
@@ -45,6 +46,7 @@ import com.naodab.productservice.repositories.ProductRepository;
 import com.naodab.productservice.repositories.ProductVariantRepository;
 import com.naodab.productservice.opensearch.OpenSearchNativeQueryHelper;
 import com.naodab.productservice.kafka.CreateInventoryItemsEventProducer;
+import com.naodab.productservice.services.FacilityService;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
 
@@ -73,6 +75,7 @@ public class ListingServiceImpl implements ListingService {
   ListingMapper listingMapper;
   ProductMapper productMapper;
   FacilityMapper facilityMapper;
+  FacilityService facilityService;
   CreateInventoryItemsEventProducer createInventoryItemsEventProducer;
 
   @Override
@@ -101,10 +104,18 @@ public class ListingServiceImpl implements ListingService {
     ProductResponse productResp = productMapper.toProductResponse(
         product, productMapper.collectDistinctAttributesFromProduct(product));
     Facility listingFacility = listing.getFacility();
+    FacilityResponse facilityResponse = listingFacility == null
+        ? null
+        : facilityMapper.toFacilityResponse(listingFacility);
+    if (facilityResponse != null && StringUtils.hasText(facilityResponse.getId())) {
+      facilityService.recordView(facilityResponse.getId());
+      Long viewCount = facilityResponse.getViewCount();
+      facilityResponse.setViewCount(viewCount == null ? 1L : viewCount + 1L);
+    }
     return ListingPublicDetailResponse.builder()
         .listing(listingMapper.toListingResponse(listing, listingVariants))
         .product(productResp)
-        .facility(listingFacility == null ? null : facilityMapper.toFacilityResponse(listingFacility))
+        .facility(facilityResponse)
         .build();
   }
 

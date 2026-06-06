@@ -3,8 +3,9 @@ import { Link, useLocation, useSearch } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search, ShoppingCart, Bell, MessageSquare, User, ChevronDown, LogOut,
-  Package, Store, ShoppingBag, Truck, CheckCircle2, X, Info
+  Package, Store, ShoppingBag, Truck, CheckCircle2, X, Info, Shield
 } from "lucide-react";
+import { ADMIN_HOME } from "@/lib/admin-paths";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
@@ -194,7 +195,7 @@ function SearchSuggestionPanel({
 export function Header() {
   const [pathname, setLocation] = useLocation();
   const search = useSearch();
-  const { user, isLoggedIn, logout, sellerHubProfileComplete } = useAuth();
+  const { user, isLoggedIn, isAdmin, logout, sellerHubProfileComplete } = useAuth();
 
   const openSellerHub = () => {
     guardSellerHubNavigation(SELLER_HUB_HOME, { isLoggedIn, sellerHubProfileComplete }, setLocation);
@@ -429,6 +430,13 @@ export function Header() {
                     >
                       <Store className="mr-2 h-4 w-4 text-secondary" /> Quản lý bán hàng
                     </DropdownMenuItem>
+                    {isAdmin ? (
+                      <Link href={ADMIN_HOME}>
+                        <DropdownMenuItem className="cursor-pointer py-3 rounded-xl font-medium">
+                          <Shield className="mr-2 h-4 w-4 text-primary" /> Quản trị
+                        </DropdownMenuItem>
+                      </Link>
+                    ) : null}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="cursor-pointer py-3 rounded-xl text-destructive focus:bg-destructive/10 font-medium" onClick={logout}>
                       <LogOut className="mr-2 h-4 w-4" /> Đăng xuất

@@ -35,6 +35,34 @@ export type GetOwnedProductPageParams = GetFacilityProductPageParams & {
   status?: ProductStatus | null;
 };
 
+export type SearchAllProductsParams = {
+  page?: number;
+  pageSize?: number;
+  keyword?: string | null;
+  status?: ProductStatus | null;
+  ownerId?: string | null;
+  sortBy?: FacilityProductSort | null;
+};
+
+export async function searchAllProducts(
+  params: SearchAllProductsParams = {},
+): Promise<ProductItemResponse[]> {
+  const q = new URLSearchParams();
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
+  if (params.keyword?.trim()) q.set("keyword", params.keyword.trim());
+  if (params.status) q.set("status", params.status);
+  if (params.ownerId?.trim()) q.set("ownerId", params.ownerId.trim());
+  if (params.sortBy) q.set("sortBy", params.sortBy);
+  const qs = q.toString();
+  const raw = await customFetch<ApiResponseEnvelope<ProductItemResponse[]>>(
+    `/api/v1/products/search${qs ? `?${qs}` : ""}`,
+    { method: "GET", headers: { "Content-Type": "application/json" } },
+  );
+  const data = unwrapApiData(raw);
+  return Array.isArray(data) ? data : [];
+}
+
 export async function getOwnedProductPage(
   params: GetOwnedProductPageParams = {},
 ): Promise<PagedItemsResponse<ProductItemResponse>> {

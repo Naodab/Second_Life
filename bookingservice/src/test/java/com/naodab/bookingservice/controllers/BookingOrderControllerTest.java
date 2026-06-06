@@ -31,7 +31,9 @@ import com.naodab.bookingservice.dto.request.BookingOrderCreateRequest;
 import com.naodab.bookingservice.dto.request.BookingOrderStatusUpdateRequest;
 import com.naodab.bookingservice.dto.response.BookingOrderResponse;
 import com.naodab.bookingservice.models.enums.BookingOrderStatus;
+import com.naodab.bookingservice.services.BookingOrderAdminService;
 import com.naodab.bookingservice.services.BookingOrderService;
+import com.naodab.commonservice.response.PagedItemsResponse;
 import com.naodab.commonservice.constant.AppConstants;
 import com.naodab.commonservice.exception.GlobalExceptionHandler;
 
@@ -47,6 +49,9 @@ class BookingOrderControllerTest {
 
   @Mock
   BookingOrderService bookingOrderService;
+
+  @Mock
+  BookingOrderAdminService bookingOrderAdminService;
 
   @InjectMocks
   BookingOrderController bookingOrderController;
@@ -285,6 +290,43 @@ class BookingOrderControllerTest {
         .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
 
     verify(bookingOrderService).updateBookingOrderStatus(eq(PROFILE_ID), eq(ORDER_ID), any(BookingOrderStatusUpdateRequest.class));
+  }
+
+  @Test
+  void listBookingOrdersAdmin_requiresAdmin() throws Exception {
+    mockMvc.perform(get("/orders/admin")
+        .header(AppConstants.JWT_CLAIM_ROLE, "USER"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value(1050));
+
+    verify(bookingOrderAdminService, never()).listOrders(any(), any(), any());
+  }
+
+  @Test
+  void listBookingOrdersAdmin_adminOk() throws Exception {
+    when(bookingOrderAdminService.listOrders(0, 20, null))
+        .thenReturn(PagedItemsResponse.<BookingOrderResponse>builder()
+            .page(0)
+            .pageSize(20)
+            .totalCount(1)
+            .items(List.of(BookingOrderResponse.builder()
+                .id(ORDER_ID)
+                .customerId(CUSTOMER_ID)
+                .listingVariantId(LISTING_VARIANT_ID)
+                .quantity(1)
+                .status(BookingOrderStatus.PENDING)
+                .build()))
+            .build());
+
+    mockMvc.perform(get("/orders/admin")
+        .header(AppConstants.JWT_CLAIM_ROLE, AppConstants.ROLE_ADMIN)
+        .param("page", "0")
+        .param("pageSize", "20"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.totalCount").value(1))
+        .andExpect(jsonPath("$.data.items[0].id").value(ORDER_ID));
+
+    verify(bookingOrderAdminService).listOrders(0, 20, null);
   }
 
   private static BookingOrderCreateRequest validCreateRequest() {

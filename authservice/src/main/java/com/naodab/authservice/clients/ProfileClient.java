@@ -13,6 +13,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 
 import lombok.experimental.NonFinal;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,9 @@ public class ProfileClient {
   RestTemplate restTemplate;
 
   public Optional<ProfileResponse> getProfileById(String id) {
+    if (!StringUtils.hasText(id)) {
+      return Optional.empty();
+    }
     try {
       String url = profileServiceUrl + "/profiles/{id}";
       ResponseEntity<ApiResponse<ProfileResponse>> response = restTemplate.exchange(url,

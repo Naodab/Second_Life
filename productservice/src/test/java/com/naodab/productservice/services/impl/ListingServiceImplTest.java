@@ -28,12 +28,15 @@ import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
+import com.naodab.productservice.dto.response.FacilityResponse;
 import com.naodab.productservice.dto.response.ListingItemResponse;
+import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
 import com.naodab.productservice.dto.response.ListingSuggestionResponse;
 import com.naodab.productservice.mapper.FacilityMapper;
 import com.naodab.productservice.mapper.ListingMapper;
 import com.naodab.productservice.mapper.ProductMapper;
+import com.naodab.productservice.dto.response.ProductResponse;
 import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Listing;
 import com.naodab.productservice.models.ListingVariant;
@@ -82,12 +85,35 @@ class ListingServiceImplTest {
   @Mock
   CreateInventoryItemsEventProducer createInventoryItemsEventProducer;
 
+  @Mock
+  com.naodab.productservice.services.FacilityService facilityService;
+
   @InjectMocks
   ListingServiceImpl listingService;
 
   @BeforeEach
   void injectPageSizeDefault() {
     ReflectionTestUtils.setField(listingService, "defaultListingPageSize", 20);
+  }
+
+  @Test
+  void getPublicListingById_whenFacilityPresent_recordsViewAndBumpsCount() {
+    Product product = minimalProduct("pub", ProductStatus.PUBLISHED);
+    Listing listing = minimalListing(product, Listing.ListingStatus.ACTIVE);
+    when(listingRepository.findWithProductGraphById("lid")).thenReturn(Optional.of(listing));
+    when(listingVariantRepository.findByListing_Id("lid")).thenReturn(List.of());
+    when(productMapper.toProductResponse(any(), anyList()))
+        .thenReturn(ProductResponse.builder().id("p1").build());
+    when(facilityMapper.toFacilityResponse(listing.getFacility()))
+        .thenReturn(FacilityResponse.builder().id("f1").viewCount(10L).build());
+    when(listingMapper.toListingResponse(listing, List.of()))
+        .thenReturn(ListingResponse.builder().id("lid").build());
+
+    ListingPublicDetailResponse response = listingService.getPublicListingById("lid");
+
+    verify(facilityService).recordView("f1");
+    assertThat(response.getFacility()).isNotNull();
+    assertThat(response.getFacility().getViewCount()).isEqualTo(11L);
   }
 
   @Test

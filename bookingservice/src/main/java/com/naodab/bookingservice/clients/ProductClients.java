@@ -80,6 +80,29 @@ public class ProductClients {
     }
   }
 
+  public void recordFacilityOrder(String facilityId) {
+    if (!StringUtils.hasText(facilityId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    String base = stripTrailingSlashes(productServiceUrl.trim());
+    String uri = base + "/facilities/" + facilityId.trim() + "/record-order";
+    try {
+      ResponseEntity<ApiResponse<Void>> response = restTemplate.exchange(
+          Objects.requireNonNull(uri),
+          Objects.requireNonNull(HttpMethod.POST),
+          HttpEntity.EMPTY,
+          new ParameterizedTypeReference<ApiResponse<Void>>() {});
+      if (response.getStatusCode() != HttpStatus.OK) {
+        throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+      }
+    } catch (HttpClientErrorException.NotFound e) {
+      throw new AppException(ErrorCode.FACILITY_NOT_FOUND);
+    } catch (RestClientException e) {
+      log.error(LOG_PRODUCT_CALL_FAILED, uri, e.getMessage());
+      throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   public String resolveOwnerProfileId(String listingVariantId) {
     if (listingVariantId == null || listingVariantId.isBlank()) {
       throw new AppException(ErrorCode.INVALID_INPUT);
