@@ -95,7 +95,9 @@ public enum ErrorCode {
 	AI_SERVICE_BUSY(1070, "AI đang bận, vui lòng thử lại sau vài giây.", HttpStatus.TOO_MANY_REQUESTS),
 	AI_SERVICE_UNAVAILABLE(1071, "Không thể xử lý yêu cầu AI lúc này. Vui lòng thử lại sau.", HttpStatus.SERVICE_UNAVAILABLE),
 	CART_ITEM_NOT_FOUND(1072, "Cart item not found", HttpStatus.NOT_FOUND),
-	NOTIFICATION_NOT_FOUND(1073, "Notification not found", HttpStatus.NOT_FOUND);
+	NOTIFICATION_NOT_FOUND(1073, "Notification not found", HttpStatus.NOT_FOUND),
+	CONVERSATION_NOT_FOUND(1074, "Conversation not found", HttpStatus.NOT_FOUND),
+	CANNOT_MESSAGE_OWN_FACILITY(1075, "Cannot message your own facility", HttpStatus.FORBIDDEN);
 
 	private int code;
 	private String message;

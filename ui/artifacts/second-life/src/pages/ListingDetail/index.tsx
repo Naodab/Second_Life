@@ -430,7 +430,19 @@ export default function ListingDetail() {
           </div>
         </div>
 
-        {facility?.id ? <ListingFacilitySection facility={facility} /> : null}
+        {facility?.id ? (
+          <ListingFacilitySection
+            facility={facility}
+            listingContext={{
+              listingId: listing.id,
+              listingVariantId,
+              title: listing.title || product.name,
+              thumbnailUrl: heroImage || product.thumbnailUrl,
+              listingType: listing.listingType,
+              price: listing.listingType === "RENT" ? rentPrice : buyPrice,
+            }}
+          />
+        ) : null}
 
         <ListingReviewsSection
           avgRating={avgRating}

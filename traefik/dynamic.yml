@@ -53,13 +53,13 @@ http:
         - gateway-jwt
       priority: 1
     notification-api-options:
-      rule: "PathPrefix(`/api/v1/notifications`) && Method(`OPTIONS`)"
+      rule: "(PathPrefix(`/api/v1/notifications`) || PathPrefix(`/api/v1/conversations`)) && Method(`OPTIONS`)"
       service: mail-service
       entryPoints:
         - web
       priority: 100
     notification-api:
-      rule: "PathPrefix(`/api/v1/notifications`)"
+      rule: "PathPrefix(`/api/v1/notifications`) || PathPrefix(`/api/v1/conversations`)"
       service: mail-service
       entryPoints:
         - web

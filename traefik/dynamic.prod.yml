@@ -68,7 +68,7 @@ http:
         - gateway-jwt
       priority: 100
     notification-api-options:
-      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/notifications`) && Method(`OPTIONS`)"
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/notifications`) || PathPrefix(`/api/v1/conversations`)) && Method(`OPTIONS`)"
       service: mail-service
       entryPoints:
         - websecure
@@ -76,7 +76,7 @@ http:
         certResolver: letsencrypt
       priority: 100
     notification-api:
-      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/notifications`)"
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/notifications`) || PathPrefix(`/api/v1/conversations`))"
       service: mail-service
       entryPoints:
         - websecure

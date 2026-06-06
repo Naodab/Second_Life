@@ -4,15 +4,34 @@ import { Clock, MapPin, MessageSquare, Package, ShieldCheck, Store } from "lucid
 import { Button } from "@/components/ui/button";
 import { facilityAvatarUrl } from "@/api/facility";
 import type { FacilityOverviewDto } from "@/api/listing";
+import { useAuth } from "@/context/AuthContext";
 import { formatFacilityAddress, resolveFacilityPlaceNames } from "@/lib/facility-display";
+import { buildMessagesHref } from "@/lib/message-navigation";
+
+export type ListingChatContext = {
+  listingId: string;
+  listingVariantId?: string | null;
+  title: string;
+  thumbnailUrl?: string | null;
+  listingType?: string | null;
+  price?: number | null;
+};
 
 type Props = {
   facility: FacilityOverviewDto;
+  listingContext?: ListingChatContext | null;
 };
 
-export function ListingFacilitySection({ facility }: Props) {
+export function ListingFacilitySection({ facility, listingContext }: Props) {
+  const { user } = useAuth();
   const provinceCode = facility.provinceCode?.trim() ?? "";
   const wardCode = facility.wardCode?.trim() ?? "";
+
+  const isOwnFacility = Boolean(
+    user?.id?.trim() &&
+      facility.ownerId?.trim() &&
+      user.id.trim() === facility.ownerId.trim(),
+  );
 
   const { data: places } = useQuery({
     queryKey: ["listingFacilityPlace", provinceCode, wardCode] as const,
@@ -28,6 +47,25 @@ export function ListingFacilitySection({ facility }: Props) {
     wardCode: facility.wardCode,
     provinceCode: facility.provinceCode,
   });
+
+  const chatHref = (() => {
+    if (!facility.id) return "/messages";
+    if (isOwnFacility) {
+      return buildMessagesHref({ facilityId: facility.id, tab: "customers" });
+    }
+    if (listingContext) {
+      return buildMessagesHref({
+        facilityId: facility.id,
+        listingId: listingContext.listingId,
+        listingVariantId: listingContext.listingVariantId ?? undefined,
+        productTitle: listingContext.title,
+        thumbnailUrl: listingContext.thumbnailUrl ?? undefined,
+        listingType: listingContext.listingType ?? undefined,
+        price: listingContext.price ?? undefined,
+      });
+    }
+    return buildMessagesHref({ facilityId: facility.id });
+  })();
 
   return (
     <div className="mt-10 overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 shadow-sm ring-1 ring-border/35 dark:from-card dark:via-card dark:to-muted/10 dark:shadow-xl dark:shadow-black/20 dark:ring-border/25">
@@ -72,9 +110,10 @@ export function ListingFacilitySection({ facility }: Props) {
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap gap-3 lg:items-start">
-            <Link href="/messages">
+            <Link href={chatHref}>
               <Button variant="outline" size="default" className="rounded-full border-border/80 transition-all hover:bg-muted/60 active:scale-[0.99] dark:hover:bg-muted/30">
-                <MessageSquare className="mr-2 h-4 w-4" /> Chat ngay
+                <MessageSquare className="mr-2 h-4 w-4" />
+                {isOwnFacility ? "Tin nhắn khách" : "Chat ngay"}
               </Button>
             </Link>
             <Link href={`/facility/${encodeURIComponent(facility.id)}`}>

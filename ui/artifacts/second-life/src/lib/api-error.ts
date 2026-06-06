@@ -16,6 +16,7 @@ export const ApiErrorCodes = {
   ORDER_NOT_FOUND: 1067,
   ORDER_CANCEL_NOT_ALLOWED: 1068,
   ORDER_STATUS_TRANSITION_NOT_ALLOWED: 1069,
+  CANNOT_MESSAGE_OWN_FACILITY: 1075,
 } as const;
 
 export type ApiErrorKind = "not_found" | "bad_request" | "insufficient_stock" | "server_error" | "generic";
