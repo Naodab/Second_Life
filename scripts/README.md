@@ -116,9 +116,9 @@ cd import_real_data
 python3 crawl_tiki.py
 ```
 
-**Output:** `import_real_data/data/raw_products.json` — gồm attribute value IDs (Condition, Color, Brand, Origin, Warranty, Region, Capacity) và `manufactureYear`.
+**Output:** `import_real_data/data/raw_products.json` — includes attribute value IDs (Condition, Color, Brand, Origin, Warranty, Region, Capacity) and `manufactureYear`.
 
-> Đảm bảo DB đã seed attributes từ `productservice/.../attributes-seed.yml` (khởi động productservice lần đầu hoặc chạy migration).
+> Ensure the DB has seeded attributes from `productservice/.../attributes-seed.yml` (first productservice startup or migration run).
 
 ### Step 2b – Import into the system
 

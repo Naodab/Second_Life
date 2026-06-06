@@ -1,10 +1,10 @@
 # commonservice
 
-Thư viện Spring dùng chung (API response, exception, cấu hình JSON, constants). Có lớp `CommonserviceApplication` phục vụ test/bootstrap; **không có JPA entity** trong module này.
+Shared Spring library (API responses, exceptions, JSON config, constants). Includes a `CommonserviceApplication` class for tests/bootstrap; **no JPA entities** in this module.
 
-## Công nghệ
+## Stack
 
-| Thành phần | Phiên bản / ghi chú |
+| Component | Version / notes |
 | --- | --- |
 | Java | 21 |
 | Spring Boot | `spring-boot-starter`, `spring-boot-starter-web`, `spring-boot-starter-validation` |
@@ -12,6 +12,10 @@ Thư viện Spring dùng chung (API response, exception, cấu hình JSON, const
 | OpenAPI UI | springdoc-openapi (webmvc-ui) |
 | Lombok | Optional |
 
-## Mô hình dữ liệu (JPA)
+## Data model (JPA)
 
-**Không có** — module chỉ chứa DTO/exception/config dùng chung.
+**None** — this module only contains shared DTOs, exceptions, and configuration.
+
+## Main flows
+
+**N/A** — shared library only. No HTTP endpoints or Kafka consumers. Consumed as a Maven dependency by microservices (`ApiResponse`, `ErrorCode`, `AppException`, order notification event types, etc.).
