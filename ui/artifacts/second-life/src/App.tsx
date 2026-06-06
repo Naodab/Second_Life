@@ -22,7 +22,7 @@ import FacilityPage from "@/pages/Facility";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders/index";
-import Messages from "@/pages/Messages";
+import Messages from "@/pages/Messages/MessagesPage";
 import Listings from "@/pages/Listings/index";
 
 function SellerHubLegacyRedirect() {

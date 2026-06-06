@@ -73,7 +73,7 @@ export function MessageComposer({ disabled, onSend }: Props) {
           ))}
         </div>
       ) : null}
-      <div className="flex items-center gap-2 rounded-full border bg-gray-50 p-1 pl-2 focus-within:border-primary">
+      <div className="flex items-center gap-2 rounded-full border border-border bg-muted/40 p-1.5 pl-3 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30">
         <input
           ref={fileInputRef}
           type="file"
@@ -103,7 +103,7 @@ export function MessageComposer({ disabled, onSend }: Props) {
             }
           }}
           disabled={disabled || sending}
-          className="border-transparent bg-transparent px-0 shadow-none focus-visible:ring-0"
+          className="min-h-11 border-transparent bg-transparent px-0 shadow-none focus-visible:ring-0"
         />
         <Button
           size="icon"

@@ -34,14 +34,14 @@ export function MessageProductCardBlock({ card, className }: Props) {
     <Link href={href}>
       <a
         className={cn(
-          "flex gap-3 rounded-xl border bg-background/90 p-2.5 text-left transition-colors hover:bg-muted/40",
-          className,
+          "flex gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-muted/50",
+          className ?? "border-border bg-card",
         )}
       >
         <img
           src={thumb}
           alt={card.title}
-          className="h-16 w-16 shrink-0 rounded-lg object-cover"
+          className="h-20 w-20 shrink-0 rounded-lg object-cover"
         />
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-primary">

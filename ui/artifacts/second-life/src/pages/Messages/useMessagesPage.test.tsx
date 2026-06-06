@@ -11,9 +11,11 @@ import {
   sendConversationMessage,
 } from "@/api/conversations";
 import { useMessagesPage } from "./useMessagesPage";
+import { markInitialAttachSent } from "@/lib/message-navigation";
 
-const { useSearchMock } = vi.hoisted(() => ({
+const { useSearchMock, setLocationMock } = vi.hoisted(() => ({
   useSearchMock: vi.fn(() => ""),
+  setLocationMock: vi.fn(),
 }));
 
 const createConversationMock = vi.mocked(createConversation);
@@ -24,6 +26,7 @@ const markConversationReadMock = vi.mocked(markConversationRead);
 
 vi.mock("wouter", () => ({
   useSearch: () => useSearchMock(),
+  useLocation: () => ["", setLocationMock],
 }));
 
 vi.mock("@/context/AuthContext", () => ({
@@ -91,10 +94,11 @@ describe("useMessagesPage", () => {
       "?facilityId=fac-1&listingId=listing-1&productTitle=M%C3%A1y%20%E1%BA%A3nh&listingType=RENT",
     );
 
-    renderHook(() => useMessagesPage(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useMessagesPage(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(createConversationMock).toHaveBeenCalled();
+      expect(result.current.activeConversationId).toBe("conv-1");
     });
     expect(createConversationMock.mock.calls[0]?.[0]).toEqual({
       facilityId: "fac-1",
@@ -107,6 +111,27 @@ describe("useMessagesPage", () => {
         price: undefined,
       },
     });
+    expect(setLocationMock).toHaveBeenCalledWith("/messages", { replace: true });
+  });
+
+  it("reopens conversation without resending product card on repeat deep link", async () => {
+    const context = {
+      facilityId: "fac-1",
+      listingId: "listing-1",
+      productTitle: "Máy ảnh",
+      listingType: "RENT",
+    };
+    markInitialAttachSent(context);
+    useSearchMock.mockReturnValue(
+      "?facilityId=fac-1&listingId=listing-1&productTitle=M%C3%A1y%20%E1%BA%A3nh&listingType=RENT",
+    );
+
+    renderHook(() => useMessagesPage(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(createConversationMock).toHaveBeenCalled();
+    });
+    expect(createConversationMock.mock.calls[0]?.[0]).toEqual({ facilityId: "fac-1" });
   });
 
   it("sends message for active conversation", async () => {

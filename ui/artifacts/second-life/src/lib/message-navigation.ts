@@ -2,6 +2,7 @@ import type { MessageOrderCard, MessageProductCard } from "@/api/conversations";
 
 export type MessageDeepLinkContext = {
   facilityId: string;
+  tab?: "facilities" | "customers";
   listingId?: string;
   listingVariantId?: string;
   productTitle?: string;
@@ -15,11 +16,64 @@ export type MessageDeepLinkContext = {
   orderAmount?: number;
 };
 
-const STORAGE_KEY = "secondlife.message-context";
+const STORAGE_KEY = "secondlife.message-attach-sent";
+
+export function resolveMessageSearch(search: string): string {
+  const fromRouter = search?.trim();
+  if (fromRouter) return fromRouter;
+  if (typeof window !== "undefined") {
+    return window.location.search ?? "";
+  }
+  return "";
+}
+
+function attachDedupeKey(context: MessageDeepLinkContext): string | null {
+  if (context.orderId && context.orderTitle) {
+    return `order:${context.orderId}`;
+  }
+  if (context.listingId && context.productTitle) {
+    return `product:${context.listingId}:${context.listingVariantId ?? ""}`;
+  }
+  return null;
+}
+
+export function wasInitialAttachSent(context: MessageDeepLinkContext): boolean {
+  const key = attachDedupeKey(context);
+  if (!key) return false;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const sent = JSON.parse(raw) as string[];
+    return Array.isArray(sent) && sent.includes(key);
+  } catch {
+    return false;
+  }
+}
+
+export function markInitialAttachSent(context: MessageDeepLinkContext): void {
+  const key = attachDedupeKey(context);
+  if (!key) return;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const sent = raw ? (JSON.parse(raw) as string[]) : [];
+    if (!sent.includes(key)) {
+      sent.push(key);
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(sent));
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+/** @deprecated use wasInitialAttachSent */
+export function markDeepLinkHandled(context: MessageDeepLinkContext): boolean {
+  return wasInitialAttachSent(context);
+}
 
 export function buildMessagesHref(context: MessageDeepLinkContext): string {
   const params = new URLSearchParams();
   params.set("facilityId", context.facilityId.trim());
+  if (context.tab === "customers") params.set("tab", "customers");
   if (context.listingId?.trim()) params.set("listingId", context.listingId.trim());
   if (context.listingVariantId?.trim()) params.set("listingVariantId", context.listingVariantId.trim());
   if (context.productTitle?.trim()) params.set("productTitle", context.productTitle.trim());
@@ -48,6 +102,7 @@ export function parseMessageDeepLink(search: string): MessageDeepLinkContext | n
 
   return {
     facilityId,
+    tab: params.get("tab")?.trim() === "customers" ? "customers" : undefined,
     listingId: params.get("listingId")?.trim() || undefined,
     listingVariantId: params.get("listingVariantId")?.trim() || undefined,
     productTitle: params.get("productTitle")?.trim() || undefined,
@@ -89,18 +144,6 @@ export function buildInitialMessagePayload(context: MessageDeepLinkContext) {
     };
   }
   return null;
-}
-
-export function markDeepLinkHandled(context: MessageDeepLinkContext): boolean {
-  try {
-    const key = JSON.stringify(context);
-    const previous = sessionStorage.getItem(STORAGE_KEY);
-    if (previous === key) return true;
-    sessionStorage.setItem(STORAGE_KEY, key);
-    return false;
-  } catch {
-    return false;
-  }
 }
 
 export function toProductCardPayload(input: {

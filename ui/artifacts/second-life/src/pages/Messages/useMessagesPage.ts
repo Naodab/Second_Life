@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearch } from "wouter";
+import { useLocation, useSearch } from "wouter";
 
 import {
   createConversation,
@@ -13,10 +13,14 @@ import {
   type MessageResponse,
 } from "@/api/conversations";
 import { useAuth } from "@/context/AuthContext";
+import { ApiErrorCodes, readApiErrorCode } from "@/lib/api-error";
+import { toast } from "@/hooks/use-toast";
 import {
   buildInitialMessagePayload,
-  markDeepLinkHandled,
+  markInitialAttachSent,
   parseMessageDeepLink,
+  resolveMessageSearch,
+  wasInitialAttachSent,
 } from "@/lib/message-navigation";
 
 export type MessagesTab = "facilities" | "customers";
@@ -44,13 +48,15 @@ function formatConversationTime(value?: string | null): string {
 
 export function useMessagesPage() {
   const search = useSearch();
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const profileId = user?.id?.trim() ?? "";
   const queryClient = useQueryClient();
-  const deepLinkHandledRef = useRef(false);
+  const deepLinkInFlightRef = useRef(false);
 
   const [tab, setTab] = useState<MessagesTab>("facilities");
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [focusedConversation, setFocusedConversation] = useState<ConversationResponse | null>(null);
 
   const role = tab === "facilities" ? "buyer" : "seller";
 
@@ -62,10 +68,13 @@ export function useMessagesPage() {
   });
 
   const conversations = conversationsQuery.data ?? [];
-  const activeConversation = useMemo(
-    () => conversations.find((item) => item.id === activeConversationId) ?? null,
-    [conversations, activeConversationId],
-  );
+  const activeConversation = useMemo(() => {
+    if (!activeConversationId) return null;
+    return (
+      conversations.find((item) => item.id === activeConversationId) ??
+      (focusedConversation?.id === activeConversationId ? focusedConversation : null)
+    );
+  }, [conversations, activeConversationId, focusedConversation]);
 
   const messagesQuery = useQuery({
     queryKey: activeConversationId
@@ -79,6 +88,7 @@ export function useMessagesPage() {
   const openConversationMutation = useMutation({
     mutationFn: createConversation,
     onSuccess: (conversation) => {
+      setFocusedConversation(conversation);
       queryClient.setQueryData<ConversationResponse[]>([...CONVERSATIONS_KEY, "buyer"], (prev) => {
         const rows = prev ?? [];
         const without = rows.filter((item) => item.id !== conversation.id);
@@ -86,6 +96,7 @@ export function useMessagesPage() {
       });
       setActiveConversationId(conversation.id);
       setTab("facilities");
+      void queryClient.invalidateQueries({ queryKey: conversationMessagesKey(conversation.id) });
     },
   });
 
@@ -113,36 +124,78 @@ export function useMessagesPage() {
   const markedReadRef = useRef<string | null>(null);
 
   useEffect(() => {
+    const resolvedSearch = resolveMessageSearch(search);
+    const params = new URLSearchParams(
+      resolvedSearch.startsWith("?") ? resolvedSearch.slice(1) : resolvedSearch,
+    );
+    if (params.get("tab")?.trim() === "customers") {
+      setTab("customers");
+    }
+  }, [search]);
+
+  useEffect(() => {
     if (!activeConversationId || !profileId) return;
-    const conversation = conversations.find((item) => item.id === activeConversationId);
+    const conversation = conversations.find((item) => item.id === activeConversationId)
+      ?? (focusedConversation?.id === activeConversationId ? focusedConversation : null);
     if (!conversation || conversation.unreadCount <= 0) return;
     if (markedReadRef.current === activeConversationId) return;
     markedReadRef.current = activeConversationId;
     markReadMutation.mutate(activeConversationId);
-  }, [activeConversationId, conversations, profileId]);
+  }, [activeConversationId, conversations, focusedConversation, profileId]);
 
   useEffect(() => {
-    const context = parseMessageDeepLink(search);
-    if (!context || !profileId || deepLinkHandledRef.current) return;
-    if (markDeepLinkHandled(context)) {
-      deepLinkHandledRef.current = true;
+    const resolvedSearch = resolveMessageSearch(search);
+    const context = parseMessageDeepLink(resolvedSearch);
+    if (!context?.facilityId || !profileId || deepLinkInFlightRef.current) return;
+
+    if (context.tab === "customers") {
+      setTab("customers");
+      setLocation("/messages?tab=customers", { replace: true });
       return;
     }
-    deepLinkHandledRef.current = true;
-    const initialPayload = buildInitialMessagePayload(context);
-    void openConversationMutation.mutateAsync({
-      facilityId: context.facilityId,
-      ...initialPayload,
-    });
+
+    const run = async () => {
+      deepLinkInFlightRef.current = true;
+      const initialPayload = buildInitialMessagePayload(context);
+      const skipAttach = initialPayload ? wasInitialAttachSent(context) : true;
+
+      try {
+        await openConversationMutation.mutateAsync({
+          facilityId: context.facilityId,
+          ...(initialPayload && !skipAttach ? initialPayload : {}),
+        });
+        if (initialPayload && !skipAttach) {
+          markInitialAttachSent(context);
+        }
+        setLocation("/messages", { replace: true });
+      } catch (err) {
+        if (readApiErrorCode(err) === ApiErrorCodes.CANNOT_MESSAGE_OWN_FACILITY) {
+          toast({
+            title: "Không thể nhắn tin với cơ sở của bạn",
+            description: "Xem tin nhắn từ khách hàng ở tab Với khách.",
+          });
+          setTab("customers");
+          setLocation("/messages?tab=customers", { replace: true });
+        }
+      } finally {
+        deepLinkInFlightRef.current = false;
+      }
+    };
+
+    void run();
   }, [search, profileId]);
 
   const selectConversation = useCallback((conversationId: string | null) => {
     setActiveConversationId(conversationId);
+    if (!conversationId) {
+      setFocusedConversation(null);
+    }
   }, []);
 
   const changeTab = useCallback((nextTab: MessagesTab) => {
     setTab(nextTab);
     setActiveConversationId(null);
+    setFocusedConversation(null);
   }, []);
 
   const sendMessage = useCallback(

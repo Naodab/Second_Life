@@ -22,10 +22,12 @@ import { getFacilityById, facilityAvatarUrl } from "@/api/facility";
 import { searchListings } from "@/api/listing";
 import { formatFacilityAddress, resolveFacilityPlaceNames } from "@/lib/facility-display";
 import { mapApiError } from "@/lib/api-error";
+import { useAuth } from "@/context/AuthContext";
 
 const PAGE_SIZE = 12;
 
 export default function FacilityPage() {
+  const { user } = useAuth();
   const [, facilityParams] = useRoute("/facility/:id");
   const [, legacyShopParams] = useRoute("/shop/:id");
   const facilityId = (facilityParams?.id ?? legacyShopParams?.id ?? "").trim();
@@ -135,6 +137,14 @@ export default function FacilityPage() {
   const rating = facility.averageRating ?? 0;
   const orderCount = Number(facility.orderCount ?? 0);
   const viewCount = Number(facility.viewCount ?? 0);
+  const isOwnFacility = Boolean(
+    user?.id?.trim() &&
+      facility.ownerId?.trim() &&
+      user.id.trim() === facility.ownerId.trim(),
+  );
+  const chatHref = isOwnFacility
+    ? buildMessagesHref({ facilityId: facility.id, tab: "customers" })
+    : buildMessagesHref({ facilityId: facility.id });
 
   return (
     <div className="min-h-screen bg-gray-50/30 pb-20">
@@ -202,9 +212,10 @@ export default function FacilityPage() {
             </div>
 
             <div className="flex gap-3 flex-shrink-0 mt-2 md:mt-0">
-              <Link href={buildMessagesHref({ facilityId: facility.id })}>
+              <Link href={chatHref}>
                 <Button variant="outline" className="rounded-full bg-white">
-                  <MessageSquare className="w-4 h-4 mr-2" aria-hidden /> Chat ngay
+                  <MessageSquare className="w-4 h-4 mr-2" aria-hidden />{" "}
+                  {isOwnFacility ? "Tin nhắn khách" : "Chat ngay"}
                 </Button>
               </Link>
               <Button className="rounded-full shadow-md shadow-primary/20 px-6" disabled>

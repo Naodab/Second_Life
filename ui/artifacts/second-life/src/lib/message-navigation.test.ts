@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   buildInitialMessagePayload,
   buildMessagesHref,
-  markDeepLinkHandled,
+  markInitialAttachSent,
   parseMessageDeepLink,
+  resolveMessageSearch,
   toOrderCardPayload,
   toProductCardPayload,
+  wasInitialAttachSent,
 } from "./message-navigation";
 
 describe("message-navigation", () => {
@@ -17,6 +19,12 @@ describe("message-navigation", () => {
   describe("buildMessagesHref", () => {
     it("builds facility-only link", () => {
       expect(buildMessagesHref({ facilityId: "fac-1" })).toBe("/messages?facilityId=fac-1");
+    });
+
+    it("builds seller inbox link", () => {
+      expect(buildMessagesHref({ facilityId: "fac-1", tab: "customers" })).toBe(
+        "/messages?facilityId=fac-1&tab=customers",
+      );
     });
 
     it("includes product context in query string", () => {
@@ -65,6 +73,7 @@ describe("message-navigation", () => {
         ),
       ).toEqual({
         facilityId: "fac-1",
+        tab: undefined,
         listingId: "l1",
         listingVariantId: undefined,
         productTitle: "Camera",
@@ -86,6 +95,7 @@ describe("message-navigation", () => {
         ),
       ).toEqual({
         facilityId: "fac-1",
+        tab: undefined,
         listingId: undefined,
         listingVariantId: undefined,
         productTitle: undefined,
@@ -97,6 +107,24 @@ describe("message-navigation", () => {
         orderStatus: "CONFIRMED",
         orderTitle: "Tent",
         orderAmount: 500_000,
+      });
+    });
+
+    it("parses seller tab deep link", () => {
+      expect(parseMessageDeepLink("?facilityId=fac-1&tab=customers")).toEqual({
+        facilityId: "fac-1",
+        tab: "customers",
+        listingId: undefined,
+        listingVariantId: undefined,
+        productTitle: undefined,
+        thumbnailUrl: undefined,
+        listingType: undefined,
+        price: undefined,
+        orderId: undefined,
+        orderKind: undefined,
+        orderStatus: undefined,
+        orderTitle: undefined,
+        orderAmount: undefined,
       });
     });
   });
@@ -149,11 +177,31 @@ describe("message-navigation", () => {
     });
   });
 
-  describe("markDeepLinkHandled", () => {
-    it("returns false on first handle and true on repeat", () => {
-      const context = { facilityId: "fac-1", listingId: "l1", productTitle: "Camera" };
-      expect(markDeepLinkHandled(context)).toBe(false);
-      expect(markDeepLinkHandled(context)).toBe(true);
+  describe("initial attach dedupe", () => {
+    it("tracks product attach only once per session", () => {
+      const context = {
+        facilityId: "fac-1",
+        listingId: "l1",
+        productTitle: "Camera",
+      };
+      expect(wasInitialAttachSent(context)).toBe(false);
+      markInitialAttachSent(context);
+      expect(wasInitialAttachSent(context)).toBe(true);
+    });
+  });
+
+  describe("resolveMessageSearch", () => {
+    it("falls back to window.location.search when router search is empty", () => {
+      const original = window.location.search;
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: { ...window.location, search: "?facilityId=fac-1" },
+      });
+      expect(resolveMessageSearch("")).toBe("?facilityId=fac-1");
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: { ...window.location, search: original },
+      });
     });
   });
 

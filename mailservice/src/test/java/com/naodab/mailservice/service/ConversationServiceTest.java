@@ -104,7 +104,7 @@ class ConversationServiceTest {
     assertThatThrownBy(() -> conversationService.getOrCreate("seller-1", request("facility-1")))
         .isInstanceOf(AppException.class)
         .extracting(ex -> ((AppException) ex).getErrorCode())
-        .isEqualTo(ErrorCode.FORBIDDEN);
+        .isEqualTo(ErrorCode.CANNOT_MESSAGE_OWN_FACILITY);
   }
 
   @Test

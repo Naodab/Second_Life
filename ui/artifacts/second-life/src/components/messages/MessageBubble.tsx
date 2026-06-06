@@ -31,20 +31,22 @@ export function MessageBubble({ message, isMine, peerAvatarUrl, peerFallback }: 
           <AvatarFallback className="text-xs">{peerFallback}</AvatarFallback>
         </Avatar>
       ) : null}
-      <div className={cn("flex max-w-[78%] flex-col gap-1", isMine ? "items-end" : "items-start")}>
+      <div className={cn("flex max-w-[min(85%,42rem)] flex-col gap-1.5", isMine ? "items-end" : "items-start")}>
         {(hasText || images.length > 0 || hasCard) && (
           <div
             className={cn(
-              "space-y-2 rounded-2xl px-3 py-2.5 text-sm shadow-sm",
-              isMine ? "rounded-tr-none bg-primary text-primary-foreground" : "rounded-tl-none border bg-white",
+              "space-y-3 rounded-2xl px-4 py-3 text-sm shadow-sm",
+              isMine
+                ? "rounded-tr-md bg-primary text-primary-foreground"
+                : "rounded-tl-md border border-border bg-card text-card-foreground",
             )}
           >
-            {hasText ? <p className="whitespace-pre-wrap break-words">{message.content}</p> : null}
+            {hasText ? <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p> : null}
             {images.length > 0 ? (
               <div className={cn("grid gap-2", images.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
                 {images.map((url) => (
-                  <a key={url} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg">
-                    <img src={url} alt="Ảnh đính kèm" className="max-h-56 w-full object-cover" />
+                  <a key={url} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl">
+                    <img src={url} alt="Ảnh đính kèm" className="max-h-72 w-full object-cover" />
                   </a>
                 ))}
               </div>
@@ -52,18 +54,26 @@ export function MessageBubble({ message, isMine, peerAvatarUrl, peerFallback }: 
             {message.productCard ? (
               <MessageProductCardBlock
                 card={message.productCard}
-                className={isMine ? "border-primary-foreground/20 bg-primary-foreground/10 text-foreground" : undefined}
+                className={
+                  isMine
+                    ? "border-primary-foreground/25 bg-background text-foreground shadow-sm"
+                    : "border-border bg-muted/30"
+                }
               />
             ) : null}
             {message.orderCard ? (
               <MessageOrderCardBlock
                 card={message.orderCard}
-                className={isMine ? "border-primary-foreground/20 bg-primary-foreground/10 text-foreground" : undefined}
+                className={
+                  isMine
+                    ? "border-primary-foreground/25 bg-background text-foreground shadow-sm"
+                    : "border-border bg-muted/30"
+                }
               />
             ) : null}
           </div>
         )}
-        <span className="px-1 text-[10px] text-muted-foreground">{formatMessageTime(message.createdAt)}</span>
+        <span className="px-1 text-[11px] text-muted-foreground">{formatMessageTime(message.createdAt)}</span>
       </div>
     </div>
   );

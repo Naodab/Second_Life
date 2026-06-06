@@ -138,7 +138,7 @@ public class ConversationService {
       throw new AppException(ErrorCode.FACILITY_NOT_FOUND);
     }
     if (buyerProfileId.equals(facility.getOwnerId().trim())) {
-      throw new AppException(ErrorCode.FORBIDDEN);
+      throw new AppException(ErrorCode.CANNOT_MESSAGE_OWN_FACILITY);
     }
 
     Instant now = Instant.now();
