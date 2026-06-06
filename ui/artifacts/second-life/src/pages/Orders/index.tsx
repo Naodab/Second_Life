@@ -26,6 +26,7 @@ import {
   type OrderTab,
 } from "./useMyOrdersPage";
 import { OrderCancelButton } from "./OrderCancelButton";
+import { buildMessagesHref } from "@/lib/message-navigation";
 
 export default function Orders() {
   const search = useSearch();
@@ -221,11 +222,23 @@ export default function Orders() {
                             </Button>
                           </Link>
                         )}
-                        <Link href="/messages">
-                          <Button variant="outline" size="sm" className="rounded-full">
-                            <MessageSquare className="w-4 h-4 mr-2" /> Liên hệ người bán
-                          </Button>
-                        </Link>
+                        {order.context?.facilityId ? (
+                          <Link
+                            href={buildMessagesHref({
+                              facilityId: order.context.facilityId,
+                              orderId: order.id,
+                              orderKind: order.kind,
+                              orderStatus: order.status,
+                              orderTitle: orderDisplayTitle(order),
+                              thumbnailUrl: orderThumbnail(order),
+                              orderAmount: orderLineTotal(order) ?? undefined,
+                            })}
+                          >
+                            <Button variant="outline" size="sm" className="rounded-full">
+                              <MessageSquare className="w-4 h-4 mr-2" /> Liên hệ người bán
+                            </Button>
+                          </Link>
+                        ) : null}
                       </div>
                     </div>
                   );

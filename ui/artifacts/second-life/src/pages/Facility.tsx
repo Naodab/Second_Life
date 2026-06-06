@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { buildMessagesHref } from "@/lib/message-navigation";
 import { ListingCard } from "@/components/ListingCard";
 import { ListingPaginationBar } from "@/components/ListingPaginationBar";
 import { ApiErrorState } from "@/components/errors";
@@ -201,7 +202,7 @@ export default function FacilityPage() {
             </div>
 
             <div className="flex gap-3 flex-shrink-0 mt-2 md:mt-0">
-              <Link href="/messages">
+              <Link href={buildMessagesHref({ facilityId: facility.id })}>
                 <Button variant="outline" className="rounded-full bg-white">
                   <MessageSquare className="w-4 h-4 mr-2" aria-hidden /> Chat ngay
                 </Button>
