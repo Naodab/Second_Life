@@ -29,7 +29,7 @@ import { useAuth } from "@/context/AuthContext";
 const PAGE_SIZE = 12;
 
 export default function FacilityPage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [, facilityParams] = useRoute("/facility/:id");
   const [, legacyShopParams] = useRoute("/shop/:id");
   const facilityId = (facilityParams?.id ?? legacyShopParams?.id ?? "").trim();
@@ -213,6 +213,7 @@ export default function FacilityPage() {
                 </div>
               </div>
 
+              {!isAdmin ? (
               <div className="mt-4">
                 <Link href={chatHref}>
                   <Button
@@ -224,6 +225,7 @@ export default function FacilityPage() {
                   </Button>
                 </Link>
               </div>
+              ) : null}
             </div>
 
             {showMap ? (

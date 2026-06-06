@@ -175,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(fallback);
             setIsAdmin(admin);
             setNeedsProfileSetup(!admin);
-            setSellerHubProfileComplete(admin);
+            setSellerHubProfileComplete(false);
           } else {
             await refreshTokenAndFetchUser();
           }
@@ -210,7 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setUser(fromJwt);
       setNeedsProfileSetup(false);
-      setSellerHubProfileComplete(true);
+      setSellerHubProfileComplete(false);
       setIsAdmin(admin);
       return false;
     }
@@ -240,7 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const admin = readIsAdminFromToken(accessToken);
         setUser(fromJwt);
         setNeedsProfileSetup(!admin);
-        setSellerHubProfileComplete(admin);
+        setSellerHubProfileComplete(false);
         return !admin;
       }
     },

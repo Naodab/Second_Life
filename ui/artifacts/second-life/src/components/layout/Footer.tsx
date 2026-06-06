@@ -6,7 +6,7 @@ import { Facebook, Instagram } from "lucide-react";
 
 export function Footer() {
   const [location, setLocation] = useLocation();
-  const { isLoggedIn, sellerHubProfileComplete } = useAuth();
+  const { isLoggedIn, isAdmin, sellerHubProfileComplete } = useAuth();
   if (
     location.startsWith("/manage") ||
     location.startsWith("/listings") ||
@@ -45,21 +45,23 @@ export function Footer() {
               <li><Link href="/search?type=buy" className="hover:text-primary">Tất cả sản phẩm</Link></li>
               <li><Link href="/search?type=rent" className="hover:text-primary">Cho thuê</Link></li>
               <li><Link href="/search" className="hover:text-primary">Danh mục</Link></li>
-              <li>
-                <button
-                  type="button"
-                  className="hover:text-primary text-left"
-                  onClick={() =>
-                    guardSellerHubNavigation(
-                      SELLER_HUB_HOME,
-                      { isLoggedIn, sellerHubProfileComplete },
-                      setLocation,
-                    )
-                  }
-                >
-                  Đăng bán
-                </button>
-              </li>
+              {!isAdmin ? (
+                <li>
+                  <button
+                    type="button"
+                    className="hover:text-primary text-left"
+                    onClick={() =>
+                      guardSellerHubNavigation(
+                        SELLER_HUB_HOME,
+                        { isLoggedIn, isAdmin, sellerHubProfileComplete },
+                        setLocation,
+                      )
+                    }
+                  >
+                    Đăng bán
+                  </button>
+                </li>
+              ) : null}
             </ul>
           </div>
 

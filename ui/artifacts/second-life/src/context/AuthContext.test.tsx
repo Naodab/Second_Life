@@ -131,7 +131,7 @@ describe("AuthContext auth flows", () => {
       expect(needsSetup).toBe(false);
       expect(result.current.isAdmin).toBe(true);
       expect(result.current.needsProfileSetup).toBe(false);
-      expect(result.current.sellerHubProfileComplete).toBe(true);
+      expect(result.current.sellerHubProfileComplete).toBe(false);
     });
 
     it("returns needsSetup=false when admin login response has no profile", async () => {
@@ -207,7 +207,7 @@ describe("AuthContext auth flows", () => {
       expect(needsSetup).toBe(false);
       expect(result.current.isAdmin).toBe(true);
       expect(result.current.needsProfileSetup).toBe(false);
-      expect(result.current.sellerHubProfileComplete).toBe(true);
+      expect(result.current.sellerHubProfileComplete).toBe(false);
     });
 
     it("falls back to JWT claims and skips setup for admin when profile fetch fails", async () => {
@@ -228,7 +228,7 @@ describe("AuthContext auth flows", () => {
       expect(needsSetup).toBe(false);
       expect(result.current.isAdmin).toBe(true);
       expect(result.current.needsProfileSetup).toBe(false);
-      expect(result.current.sellerHubProfileComplete).toBe(true);
+      expect(result.current.sellerHubProfileComplete).toBe(false);
       expect(result.current.user?.email).toBe("admin@example.com");
     });
 

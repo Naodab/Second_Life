@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProfileSetup from "./ProfileSetup";
 import { useAuth } from "@/context/AuthContext";
 import { getCurrentProfile } from "@/api";
+import { ADMIN_HOME } from "@/lib/admin-paths";
 
 const setLocationMock = vi.fn();
 
@@ -47,7 +48,7 @@ describe("ProfileSetup admin bypass", () => {
       isLoading: false,
       isAdmin: true,
       needsProfileSetup: false,
-      sellerHubProfileComplete: true,
+      sellerHubProfileComplete: false,
       user: {
         id: "admin-1",
         email: "admin@example.com",
@@ -66,14 +67,14 @@ describe("ProfileSetup admin bypass", () => {
     });
   });
 
-  it("redirects admin to seller hub returnTo instead of profile setup", async () => {
+  it("redirects admin to admin home instead of seller hub returnTo", async () => {
     window.history.replaceState({}, "", "/profile/setup?returnTo=%2Fmanage");
     useAuthMock.mockReturnValue({
       isLoggedIn: true,
       isLoading: false,
       isAdmin: true,
       needsProfileSetup: false,
-      sellerHubProfileComplete: true,
+      sellerHubProfileComplete: false,
       user: {
         id: "admin-1",
         email: "admin@example.com",
@@ -88,7 +89,7 @@ describe("ProfileSetup admin bypass", () => {
     render(<ProfileSetup />);
 
     await waitFor(() => {
-      expect(setLocationMock).toHaveBeenCalledWith("/manage");
+      expect(setLocationMock).toHaveBeenCalledWith(ADMIN_HOME);
     });
   });
 });

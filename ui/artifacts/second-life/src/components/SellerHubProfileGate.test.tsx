@@ -16,23 +16,25 @@ vi.mock("@/context/AuthContext", () => ({
 
 const useAuthMock = vi.mocked(useAuth);
 
+import { ADMIN_HOME } from "@/lib/admin-paths";
+
 describe("SellerHubProfileGate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("does not redirect admin with incomplete seller profile", () => {
+  it("redirects admin away from seller hub", () => {
     useAuthMock.mockReturnValue({
       isLoggedIn: true,
       isLoading: false,
       isAdmin: true,
-      sellerHubProfileComplete: true,
+      sellerHubProfileComplete: false,
       needsProfileSetup: false,
     } as ReturnType<typeof useAuth>);
 
     render(<SellerHubProfileGate />);
 
-    expect(setLocationMock).not.toHaveBeenCalled();
+    expect(setLocationMock).toHaveBeenCalledWith(ADMIN_HOME, { replace: true });
   });
 
   it("redirects regular user with incomplete seller profile to profile setup", () => {

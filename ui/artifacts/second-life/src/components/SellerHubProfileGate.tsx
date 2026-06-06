@@ -2,9 +2,10 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { loginPathWithReturn, sanitizeReturnTo } from "@/hooks/use-require-auth";
+import { ADMIN_HOME } from "@/lib/admin-paths";
 
 export function SellerHubProfileGate() {
-  const { isLoggedIn, isLoading, sellerHubProfileComplete } = useAuth();
+  const { isLoggedIn, isLoading, isAdmin, sellerHubProfileComplete } = useAuth();
   const [location, setLocation] = useLocation();
 
   useEffect(() => {
@@ -12,6 +13,10 @@ export function SellerHubProfileGate() {
       return;
     }
     if (!location.startsWith("/manage")) {
+      return;
+    }
+    if (isAdmin) {
+      setLocation(ADMIN_HOME, { replace: true });
       return;
     }
     if (sellerHubProfileComplete) {
@@ -22,18 +27,22 @@ export function SellerHubProfileGate() {
     }
     const returnTo = sanitizeReturnTo(location);
     setLocation(`/profile/setup?returnTo=${encodeURIComponent(returnTo)}`);
-  }, [isLoading, isLoggedIn, sellerHubProfileComplete, location, setLocation]);
+  }, [isLoading, isLoggedIn, isAdmin, sellerHubProfileComplete, location, setLocation]);
 
   return null;
 }
 
 export function guardSellerHubNavigation(
   targetPath: string,
-  ctx: { isLoggedIn: boolean; sellerHubProfileComplete: boolean },
+  ctx: { isLoggedIn: boolean; isAdmin: boolean; sellerHubProfileComplete: boolean },
   setLocation: (path: string) => void,
 ): boolean {
   if (!ctx.isLoggedIn) {
     setLocation(loginPathWithReturn(targetPath));
+    return false;
+  }
+  if (ctx.isAdmin) {
+    setLocation(ADMIN_HOME);
     return false;
   }
   if (!ctx.sellerHubProfileComplete) {

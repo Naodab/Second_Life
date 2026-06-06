@@ -96,7 +96,7 @@ export function profileIsCompleteForSellerHub(
 
 export function resolveProfileSetupFlags(profile: ProfilePayload, isAdmin: boolean) {
   if (isAdmin) {
-    return { needsProfileSetup: false, sellerHubProfileComplete: true };
+    return { needsProfileSetup: false, sellerHubProfileComplete: false };
   }
   return {
     needsProfileSetup: profileNeedsSetup(profile),

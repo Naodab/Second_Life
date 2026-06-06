@@ -13,7 +13,10 @@ export function redirectToGoogleOAuth(entry: GoogleOAuthEntry): void {
     "",
   );
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-  const redirectUri = `${window.location.origin}${basePath}/oauth2/callback/google`;
+  const callbackOrigin =
+    (import.meta.env.VITE_FRONTEND_URL as string | undefined)?.trim() ||
+    window.location.origin;
+  const redirectUri = `${callbackOrigin.replace(/\/$/, "")}${basePath}/oauth2/callback/google`;
   const url =
     `${backend}/api/v1/oauth2/authorize/google?redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&oauth_entry=${encodeURIComponent(entry)}`;

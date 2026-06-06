@@ -25,6 +25,7 @@ type Props = {
   onOpenRent: () => void;
   onQuickAddToCart: () => void;
   quickAddLoading?: boolean;
+  hideCommerceActions?: boolean;
 };
 
 export function ListingProductSummary({
@@ -47,6 +48,7 @@ export function ListingProductSummary({
   onOpenRent,
   onQuickAddToCart,
   quickAddLoading,
+  hideCommerceActions,
 }: Props) {
   return (
     <div
@@ -123,6 +125,7 @@ export function ListingProductSummary({
         </div>
       </div>
 
+      {!hideCommerceActions ? (
       <div className="flex flex-col sm:flex-row gap-3">
         {listingType === "RENT" && (
           <Button
@@ -155,6 +158,7 @@ export function ListingProductSummary({
           <ShoppingCart className="w-4 h-4 mr-2" /> {quickAddLoading ? "Đang thêm..." : "Thêm vào giỏ"}
         </Button>
       </div>
+      ) : null}
     </div>
   );
 }

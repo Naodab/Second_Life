@@ -24,7 +24,7 @@ export default function Home() {
   const [listings, setListings] = useState<ListingItemResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { location, reload } = useVisitorLocation();
-  const { user, isLoggedIn, sellerHubProfileComplete } = useAuth();
+  const { user, isLoggedIn, isAdmin, sellerHubProfileComplete } = useAuth();
   const profileId = user?.id?.trim() ? user.id : undefined;
   const [geoReady, setGeoReady] = useState(() => loadVisitorLocation() != null);
 
@@ -157,21 +157,23 @@ export default function Home() {
                     Khám phá chợ
                   </Button>
                 </Link>
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  type="button"
-                  className="rounded-full px-8 text-base bg-white/95 border shadow-sm h-14 backdrop-blur-sm dark:border-zinc-600 dark:bg-zinc-900/85 dark:text-zinc-100 dark:shadow-md dark:backdrop-blur-sm"
-                  onClick={() =>
-                    guardSellerHubNavigation(
-                      SELLER_HUB_HOME,
-                      { isLoggedIn, sellerHubProfileComplete },
-                      setLocation,
-                    )
-                  }
-                >
-                  Bắt đầu bán
-                </Button>
+                {!isAdmin ? (
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    type="button"
+                    className="rounded-full px-8 text-base bg-white/95 border shadow-sm h-14 backdrop-blur-sm dark:border-zinc-600 dark:bg-zinc-900/85 dark:text-zinc-100 dark:shadow-md dark:backdrop-blur-sm"
+                    onClick={() =>
+                      guardSellerHubNavigation(
+                        SELLER_HUB_HOME,
+                        { isLoggedIn, isAdmin, sellerHubProfileComplete },
+                        setLocation,
+                      )
+                    }
+                  >
+                    Bắt đầu bán
+                  </Button>
+                ) : null}
               </div>
             </motion.div>
 

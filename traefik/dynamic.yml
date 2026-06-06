@@ -145,6 +145,15 @@ http:
         - gateway-jwt
       priority: 50
 
+    # Dev SPA — proxy to Vite on the host (npm run dev). Never catch /api/* (Traefik auto-priority
+    # for PathPrefix(`/`) can beat auth-api@priority 1).
+    ui-spa:
+      rule: "PathPrefix(`/`) && !PathPrefix(`/api`)"
+      service: vite-dev
+      entryPoints:
+        - web
+      priority: 1
+
   services:
     auth-service:
       loadBalancer:
@@ -176,3 +185,7 @@ http:
       loadBalancer:
         servers:
           - url: "http://booking-service:8088"
+    vite-dev:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:5173"

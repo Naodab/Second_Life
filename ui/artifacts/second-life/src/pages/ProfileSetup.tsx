@@ -13,6 +13,7 @@ import {
   updateCurrentProfile,
   type ProfilePayload,
 } from "@/api";
+import { resolveAdminSafePath } from "@/lib/admin-access";
 import { sanitizeReturnTo } from "@/hooks/use-require-auth";
 import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { toast } from "@/hooks/use-toast";
@@ -337,16 +338,17 @@ export default function ProfileSetup() {
       return;
     }
     if (!mustCompleteForm) {
-      setLocation(returnTo || "/");
+      setLocation(resolveAdminSafePath(returnTo || "/", isAdmin));
       return;
     }
     if (profile && !profileStillIncomplete(profile, forSellerHub)) {
-      setLocation(returnTo || "/");
+      setLocation(resolveAdminSafePath(returnTo || "/", isAdmin));
     }
   }, [
     isLoading,
     profileLoading,
     isLoggedIn,
+    isAdmin,
     mustCompleteForm,
     profile,
     forSellerHub,

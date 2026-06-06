@@ -12,6 +12,7 @@ import { Header } from "@/components/layout/Header";
 import { NotificationRealtimeListener } from "@/components/NotificationRealtimeListener";
 import { Footer } from "@/components/layout/Footer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminAccessGate } from "@/components/AdminAccessGate";
 import { SellerHubProfileGate } from "@/components/SellerHubProfileGate";
 import { setBaseUrl } from "@workspace/api-client-react";
 
@@ -139,6 +140,7 @@ function App() {
             <AuthProvider>
               <VisitorLocationProvider>
                 <ProfileSetupRedirect />
+                <AdminAccessGate />
                 <SellerHubProfileGate />
                 <NotificationRealtimeListener />
                 <Router />

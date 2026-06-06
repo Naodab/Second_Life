@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, MapPin, MessageSquare, Package, ShieldCheck } from "lucide-react";
+import { Eye, MapPin, MessageSquare, Package, ShieldCheck, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FacilityMapEmbed } from "@/components/FacilityMapEmbed";
 import { facilityAvatarUrl } from "@/api/facility";
@@ -24,10 +24,11 @@ type Props = {
   facility: FacilityOverviewDto;
   listingContext?: ListingChatContext | null;
   className?: string;
+  hideChat?: boolean;
 };
 
-export function ListingFacilitySection({ facility, listingContext, className }: Props) {
-  const { user } = useAuth();
+export function ListingFacilitySection({ facility, listingContext, className, hideChat }: Props) {
+  const { user, isAdmin } = useAuth();
   const provinceCode = facility.provinceCode?.trim() ?? "";
   const wardCode = facility.wardCode?.trim() ?? "";
 
@@ -128,17 +129,29 @@ export function ListingFacilitySection({ facility, listingContext, className }: 
                 </div>
               </div>
 
-              <div className="mt-4">
-                <Link href={chatHref}>
-                  <Button
-                    variant="outline"
-                    size="default"
-                    className="rounded-full border-border/80 transition-all hover:bg-muted/60 active:scale-[0.99] dark:hover:bg-muted/30"
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    {isOwnFacility ? "Tin nhắn khách" : "Chat ngay"}
-                  </Button>
-                </Link>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {!hideChat && !isAdmin ? (
+                  <Link href={chatHref}>
+                    <Button
+                      variant="outline"
+                      size="default"
+                      className="cursor-pointer rounded-full border-border/80 transition-all hover:bg-muted/60 active:scale-[0.99] dark:hover:bg-muted/30"
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      {isOwnFacility ? "Tin nhắn khách" : "Chat ngay"}
+                    </Button>
+                  </Link>
+                ) : null}
+                {facility.id ? (
+                  <Link href={`/facility/${encodeURIComponent(facility.id)}`}>
+                    <Button
+                      size="default"
+                      className="cursor-pointer rounded-full border-0 bg-primary/12 text-primary shadow-none transition-all hover:bg-primary/20 active:scale-[0.99] dark:bg-primary/18 dark:hover:bg-primary/28"
+                    >
+                      <Store className="mr-2 h-4 w-4" /> Xem cơ sở
+                    </Button>
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>

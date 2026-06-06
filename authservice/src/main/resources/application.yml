@@ -1,5 +1,6 @@
 server:
   port: ${SERVER_PORT_AUTH_SERVICE:8081}
+  max-http-request-header-size: 32KB
   forward-headers-strategy: native
   servlet:
     multipart:

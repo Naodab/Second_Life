@@ -4,6 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { appHref } from "@/api";
+import { ADMIN_HOME } from "@/lib/admin-paths";
+import { decodeJwtPayloadUnsafe, isAdminRole } from "@/lib/jwtPayload";
 
 function formatOAuthCallbackError(raw: string): string {
   const lower = raw.toLowerCase();
@@ -57,7 +59,10 @@ export default function OAuthCallback() {
 
         handledRef.current = true;
         const needsSetup = await loginWithGoogle(accessToken, refreshToken);
-        const path = needsSetup ? appHref("/profile/setup") : appHref("/");
+        const isAdmin = isAdminRole(decodeJwtPayloadUnsafe(accessToken)?.role);
+        const path = needsSetup
+          ? appHref("/profile/setup")
+          : appHref(isAdmin ? ADMIN_HOME : "/");
         window.location.replace(`${window.location.origin}${path}`);
       } catch (callbackErr) {
         handledRef.current = false;

@@ -52,10 +52,10 @@ describe("profile setup helpers", () => {
   });
 
   describe("resolveProfileSetupFlags", () => {
-    it("bypasses profile checks for admin even with incomplete profile", () => {
+    it("skips profile setup for admin but not seller hub access", () => {
       expect(resolveProfileSetupFlags(incompleteProfile, true)).toEqual({
         needsProfileSetup: false,
-        sellerHubProfileComplete: true,
+        sellerHubProfileComplete: false,
       });
     });
 
