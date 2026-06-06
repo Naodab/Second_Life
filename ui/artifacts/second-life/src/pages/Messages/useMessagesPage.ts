@@ -14,6 +14,13 @@ import {
 } from "@/api/conversations";
 import { useAuth } from "@/context/AuthContext";
 import { ApiErrorCodes, readApiErrorCode } from "@/lib/api-error";
+import {
+  CONVERSATIONS_QUERY_KEY,
+  conversationMessagesQueryKey,
+  conversationsRoleKey,
+  sumConversationUnread,
+} from "@/lib/conversations-cache";
+import { setFocusedConversationId } from "@/lib/message-focus";
 import { toast } from "@/hooks/use-toast";
 import {
   buildInitialMessagePayload,
@@ -24,12 +31,6 @@ import {
 } from "@/lib/message-navigation";
 
 export type MessagesTab = "facilities" | "customers";
-
-const CONVERSATIONS_KEY = ["conversations"] as const;
-
-function conversationMessagesKey(conversationId: string) {
-  return ["conversations", conversationId, "messages"] as const;
-}
 
 function formatConversationTime(value?: string | null): string {
   if (!value) return "";
@@ -46,6 +47,14 @@ function formatConversationTime(value?: string | null): string {
   return date.toLocaleDateString("vi", { day: "2-digit", month: "2-digit" });
 }
 
+function parseConversationId(search: string): string | null {
+  const resolvedSearch = resolveMessageSearch(search);
+  const params = new URLSearchParams(
+    resolvedSearch.startsWith("?") ? resolvedSearch.slice(1) : resolvedSearch,
+  );
+  return params.get("conversationId")?.trim() || null;
+}
+
 export function useMessagesPage() {
   const search = useSearch();
   const [, setLocation] = useLocation();
@@ -60,25 +69,47 @@ export function useMessagesPage() {
 
   const role = tab === "facilities" ? "buyer" : "seller";
 
-  const conversationsQuery = useQuery({
-    queryKey: [...CONVERSATIONS_KEY, role],
-    queryFn: () => listConversations(role),
+  const buyerConversationsQuery = useQuery({
+    queryKey: conversationsRoleKey("buyer"),
+    queryFn: () => listConversations("buyer"),
     enabled: Boolean(profileId),
     staleTime: 15_000,
   });
 
-  const conversations = conversationsQuery.data ?? [];
+  const sellerConversationsQuery = useQuery({
+    queryKey: conversationsRoleKey("seller"),
+    queryFn: () => listConversations("seller"),
+    enabled: Boolean(profileId),
+    staleTime: 15_000,
+  });
+
+  const conversations =
+    tab === "facilities" ? (buyerConversationsQuery.data ?? []) : (sellerConversationsQuery.data ?? []);
+  const conversationsLoading =
+    tab === "facilities" ? buyerConversationsQuery.isLoading : sellerConversationsQuery.isLoading;
+
+  const buyerUnreadCount = sumConversationUnread(buyerConversationsQuery.data);
+  const sellerUnreadCount = sumConversationUnread(sellerConversationsQuery.data);
+
   const activeConversation = useMemo(() => {
     if (!activeConversationId) return null;
+    const buyerRows = buyerConversationsQuery.data ?? [];
+    const sellerRows = sellerConversationsQuery.data ?? [];
     return (
-      conversations.find((item) => item.id === activeConversationId) ??
+      buyerRows.find((item) => item.id === activeConversationId) ??
+      sellerRows.find((item) => item.id === activeConversationId) ??
       (focusedConversation?.id === activeConversationId ? focusedConversation : null)
     );
-  }, [conversations, activeConversationId, focusedConversation]);
+  }, [
+    activeConversationId,
+    buyerConversationsQuery.data,
+    sellerConversationsQuery.data,
+    focusedConversation,
+  ]);
 
   const messagesQuery = useQuery({
     queryKey: activeConversationId
-      ? conversationMessagesKey(activeConversationId)
+      ? conversationMessagesQueryKey(activeConversationId)
       : ["conversations", "none", "messages"],
     queryFn: () => listConversationMessages(activeConversationId!),
     enabled: Boolean(profileId && activeConversationId),
@@ -89,14 +120,16 @@ export function useMessagesPage() {
     mutationFn: createConversation,
     onSuccess: (conversation) => {
       setFocusedConversation(conversation);
-      queryClient.setQueryData<ConversationResponse[]>([...CONVERSATIONS_KEY, "buyer"], (prev) => {
+      queryClient.setQueryData<ConversationResponse[]>(conversationsRoleKey("buyer"), (prev) => {
         const rows = prev ?? [];
         const without = rows.filter((item) => item.id !== conversation.id);
         return [conversation, ...without];
       });
       setActiveConversationId(conversation.id);
       setTab("facilities");
-      void queryClient.invalidateQueries({ queryKey: conversationMessagesKey(conversation.id) });
+      void queryClient.invalidateQueries({
+        queryKey: conversationMessagesQueryKey(conversation.id),
+      });
     },
   });
 
@@ -105,23 +138,29 @@ export function useMessagesPage() {
       sendConversationMessage(conversationId, payload),
     onSuccess: (message, variables) => {
       queryClient.setQueryData<MessageResponse[]>(
-        conversationMessagesKey(variables.conversationId),
+        conversationMessagesQueryKey(variables.conversationId),
         (prev) => [...(prev ?? []), message],
       );
-      void queryClient.invalidateQueries({ queryKey: CONVERSATIONS_KEY });
+      void queryClient.invalidateQueries({ queryKey: CONVERSATIONS_QUERY_KEY });
     },
   });
 
   const markReadMutation = useMutation({
     mutationFn: markConversationRead,
     onSuccess: (conversation) => {
-      queryClient.setQueryData<ConversationResponse[]>([...CONVERSATIONS_KEY, role], (prev) =>
+      const updateRole = profileId === conversation.buyerProfileId ? "buyer" : "seller";
+      queryClient.setQueryData<ConversationResponse[]>(conversationsRoleKey(updateRole), (prev) =>
         (prev ?? []).map((item) => (item.id === conversation.id ? conversation : item)),
       );
     },
   });
 
   const markedReadRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setFocusedConversationId(activeConversationId);
+    return () => setFocusedConversationId(null);
+  }, [activeConversationId]);
 
   useEffect(() => {
     const resolvedSearch = resolveMessageSearch(search);
@@ -131,17 +170,35 @@ export function useMessagesPage() {
     if (params.get("tab")?.trim() === "customers") {
       setTab("customers");
     }
+    const conversationId = parseConversationId(search);
+    if (conversationId) {
+      setActiveConversationId(conversationId);
+    }
   }, [search]);
 
   useEffect(() => {
+    markedReadRef.current = null;
+  }, [activeConversationId, activeConversation?.unreadCount]);
+
+  useEffect(() => {
     if (!activeConversationId || !profileId) return;
-    const conversation = conversations.find((item) => item.id === activeConversationId)
-      ?? (focusedConversation?.id === activeConversationId ? focusedConversation : null);
+    const buyerRows = buyerConversationsQuery.data ?? [];
+    const sellerRows = sellerConversationsQuery.data ?? [];
+    const conversation =
+      buyerRows.find((item) => item.id === activeConversationId) ??
+      sellerRows.find((item) => item.id === activeConversationId) ??
+      (focusedConversation?.id === activeConversationId ? focusedConversation : null);
     if (!conversation || conversation.unreadCount <= 0) return;
     if (markedReadRef.current === activeConversationId) return;
     markedReadRef.current = activeConversationId;
     markReadMutation.mutate(activeConversationId);
-  }, [activeConversationId, conversations, focusedConversation, profileId]);
+  }, [
+    activeConversationId,
+    buyerConversationsQuery.data,
+    sellerConversationsQuery.data,
+    focusedConversation,
+    profileId,
+  ]);
 
   useEffect(() => {
     const resolvedSearch = resolveMessageSearch(search);
@@ -215,7 +272,9 @@ export function useMessagesPage() {
     tab,
     changeTab,
     conversations,
-    conversationsLoading: conversationsQuery.isLoading,
+    conversationsLoading,
+    buyerUnreadCount,
+    sellerUnreadCount,
     activeConversation,
     activeConversationId,
     selectConversation,

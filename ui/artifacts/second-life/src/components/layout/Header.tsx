@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCart } from "@/hooks/use-cart";
+import { useConversationUnreadCounts } from "@/hooks/use-conversation-unread";
 import { useNotifications, type UiNotification } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 import { buildFreshSearchPath, buildSearchPath } from "@/lib/search-url";
@@ -206,6 +207,7 @@ export function Header() {
     isLoading: notificationsLoading,
     markAllRead,
   } = useNotifications();
+  const { totalUnreadCount: messageUnreadCount } = useConversationUnreadCounts();
   const handleOpenNotification = useCallback(
     (notif: UiNotification) => {
       openNotificationLink(notif, setLocation, queryClient);
@@ -341,7 +343,11 @@ export function Header() {
                 <Link href="/messages">
                   <Button variant="ghost" size="icon" className="relative text-foreground hover:bg-primary/10 rounded-full">
                     <MessageSquare className="h-5 w-5" />
-                    <span className="absolute top-1 right-1 h-2 w-2 bg-secondary rounded-full" />
+                    {messageUnreadCount > 0 ? (
+                      <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-background bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                        {messageUnreadCount > 99 ? "99+" : messageUnreadCount}
+                      </span>
+                    ) : null}
                   </Button>
                 </Link>
 

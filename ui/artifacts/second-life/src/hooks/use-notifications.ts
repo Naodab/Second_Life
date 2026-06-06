@@ -10,12 +10,22 @@ import {
   resolveNotificationWebSocketUrl,
   type NotificationResponse,
 } from "@/api/notifications";
+import type { ConversationResponse, MessageResponse } from "@/api/conversations";
+import {
+  applyRealtimeMessage,
+  conversationAlertTitle,
+  messagePreview,
+  roleForViewer,
+} from "@/lib/conversations-cache";
+import { shouldAlertForIncomingMessage } from "@/lib/message-focus";
 import { toast } from "@/hooks/use-toast";
 import { openNotificationLink } from "@/lib/notification-navigation";
 import { useAuth } from "@/context/AuthContext";
 
 const NOTIFICATIONS_KEY = ["notifications"] as const;
 const UNREAD_COUNT_KEY = ["notifications", "unread-count"] as const;
+/** Realtime notification/message toasts auto-dismiss after 10s if untouched. */
+export const REALTIME_ALERT_TOAST_DURATION_MS = 10_000;
 
 export type UiNotification = {
   id: string;
@@ -69,7 +79,7 @@ function showNotificationAlert(
   toast({
     title: ui.title,
     description: ui.body,
-    duration: 8_000,
+    duration: REALTIME_ALERT_TOAST_DURATION_MS,
     className: hasLink ? "cursor-pointer" : undefined,
     onClick: hasLink
       ? () => {
@@ -77,6 +87,47 @@ function showNotificationAlert(
         }
       : undefined,
   });
+}
+
+function showMessageAlert(
+  message: MessageResponse,
+  conversation: ConversationResponse,
+  role: "buyer" | "seller",
+  navigate: (path: string) => void,
+) {
+  const href =
+    role === "seller"
+      ? `/messages?tab=customers&conversationId=${encodeURIComponent(conversation.id)}`
+      : `/messages?conversationId=${encodeURIComponent(conversation.id)}`;
+
+  toast({
+    title: conversationAlertTitle(conversation, role),
+    description: messagePreview(message),
+    duration: REALTIME_ALERT_TOAST_DURATION_MS,
+    className: "cursor-pointer",
+    onClick: () => navigate(href),
+  });
+}
+
+function applyRealtimeMessageEvent(
+  queryClient: ReturnType<typeof useQueryClient>,
+  payload: { message?: MessageResponse; conversation?: ConversationResponse },
+  profileId: string,
+  showAlert: boolean,
+  navigate?: (path: string) => void,
+) {
+  const message = payload.message;
+  const conversation = payload.conversation;
+  if (!message || !conversation || !profileId.trim()) return;
+  if (message.senderProfileId.trim() === profileId.trim()) return;
+
+  applyRealtimeMessage(queryClient, message, conversation, profileId);
+
+  const role = roleForViewer(conversation, profileId);
+  if (!role || !showAlert || !navigate) return;
+  if (!shouldAlertForIncomingMessage(conversation.id)) return;
+
+  showMessageAlert(message, conversation, role, navigate);
 }
 
 function applyRealtimeNotification(
@@ -99,9 +150,10 @@ function applyRealtimeNotification(
 
 /** Mount once at app root so WebSocket + toast work on every page (including seller hub). */
 export function useNotificationRealtimeSync(navigate: (path: string) => void) {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const queryClient = useQueryClient();
   const socketRef = useRef<WebSocket | null>(null);
+  const profileId = user?.id?.trim() ?? "";
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -123,9 +175,15 @@ export function useNotificationRealtimeSync(navigate: (path: string) => void) {
         const parsed = JSON.parse(String(event.data)) as {
           type?: string;
           notification?: NotificationResponse;
+          message?: MessageResponse;
+          conversation?: ConversationResponse;
         };
         if (parsed.type === "NOTIFICATION" && parsed.notification) {
           applyRealtimeNotification(queryClient, parsed.notification, true, navigate);
+          return;
+        }
+        if (parsed.type === "MESSAGE") {
+          applyRealtimeMessageEvent(queryClient, parsed, profileId, true, navigate);
         }
       } catch {
         // ignore malformed websocket payloads
@@ -138,7 +196,7 @@ export function useNotificationRealtimeSync(navigate: (path: string) => void) {
         socketRef.current = null;
       }
     };
-  }, [isLoggedIn, navigate, queryClient]);
+  }, [isLoggedIn, navigate, profileId, queryClient]);
 }
 
 export function useNotifications() {

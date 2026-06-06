@@ -9,12 +9,23 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useMessagesPage } from "./useMessagesPage";
 
+function TabUnreadBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold leading-none text-primary-foreground">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 export default function MessagesPage() {
   const {
     tab,
     changeTab,
     conversations,
     conversationsLoading,
+    buyerUnreadCount,
+    sellerUnreadCount,
     activeConversation,
     activeConversationId,
     selectConversation,
@@ -65,6 +76,7 @@ export default function MessagesPage() {
                 )}
               >
                 <Store className="h-4 w-4" /> Với cơ sở
+                <TabUnreadBadge count={buyerUnreadCount} />
               </button>
               <button
                 type="button"
@@ -77,6 +89,7 @@ export default function MessagesPage() {
                 )}
               >
                 <User className="h-4 w-4" /> Với khách
+                <TabUnreadBadge count={sellerUnreadCount} />
               </button>
             </div>
           </div>
