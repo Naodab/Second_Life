@@ -128,6 +128,12 @@ public class FacilityController {
     return ResponseEntity.ok(ApiResponse.<Void>builder().build());
   }
 
+  @PostMapping("/{id}/record-order")
+  public ResponseEntity<ApiResponse<Void>> recordOrder(@PathVariable String id) {
+    facilityService.recordOrder(id);
+    return ResponseEntity.ok(ApiResponse.<Void>builder().build());
+  }
+
   @GetMapping("/{facilityId}/listing-variant-ids")
   public ResponseEntity<ApiResponse<List<String>>> listListingVariantIdsForFacility(
       @PathVariable String facilityId,

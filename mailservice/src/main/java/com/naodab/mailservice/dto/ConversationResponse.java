@@ -16,6 +16,7 @@ public class ConversationResponse {
   String sellerProfileId;
   String facilityId;
   String facilityName;
+  String facilityImageUrl;
   String lastMessagePreview;
   Instant lastMessageAt;
   long unreadCount;

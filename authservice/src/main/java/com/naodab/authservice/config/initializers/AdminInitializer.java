@@ -43,6 +43,7 @@ public class AdminInitializer implements ApplicationRunner {
         .email(accountAdminEmail)
         .password(passwordEncoder.encode(accountAdminPassword))
         .role(Role.ADMIN)
+        .emailVerified(true)
         .build();
 
     accountRepository.save(account);

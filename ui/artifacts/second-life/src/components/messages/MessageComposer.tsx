@@ -63,7 +63,7 @@ export function MessageComposer({ disabled, onSend }: Props) {
               <img src={url} alt="" className="h-full w-full object-cover" />
               <button
                 type="button"
-                className="absolute right-0 top-0 rounded-bl bg-black/60 p-0.5 text-white"
+                className="absolute right-0 top-0 cursor-pointer rounded-bl bg-black/60 p-0.5 text-white"
                 onClick={() => setPendingImages((prev) => prev.filter((item) => item !== url))}
                 aria-label="Xóa ảnh"
               >

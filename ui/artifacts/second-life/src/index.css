@@ -96,6 +96,16 @@
 
   --radius: 1rem;
   /* Soft rounded corners everywhere */
+
+  /* Layout: chiều cao header site + padding dọc block full-viewport (messages, facility card listing) */
+  --site-header-height: 4.75rem;
+  --site-block-inset-y: 3rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --site-header-height: 7.5rem;
+  }
 }
 
 .dark {

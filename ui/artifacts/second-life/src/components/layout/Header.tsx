@@ -3,8 +3,9 @@ import { Link, useLocation, useSearch } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search, ShoppingCart, Bell, MessageSquare, User, ChevronDown, LogOut,
-  Package, Store, ShoppingBag, Truck, CheckCircle2, X, Info
+  Package, Store, ShoppingBag, Truck, CheckCircle2, X, Info, Shield
 } from "lucide-react";
+import { ADMIN_HOME } from "@/lib/admin-paths";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
@@ -194,10 +195,14 @@ function SearchSuggestionPanel({
 export function Header() {
   const [pathname, setLocation] = useLocation();
   const search = useSearch();
-  const { user, isLoggedIn, logout, sellerHubProfileComplete } = useAuth();
+  const { user, isLoggedIn, isAdmin, logout, sellerHubProfileComplete } = useAuth();
 
   const openSellerHub = () => {
-    guardSellerHubNavigation(SELLER_HUB_HOME, { isLoggedIn, sellerHubProfileComplete }, setLocation);
+    guardSellerHubNavigation(
+      SELLER_HUB_HOME,
+      { isLoggedIn, isAdmin, sellerHubProfileComplete },
+      setLocation,
+    );
   };
   const { cartItems } = useCart();
   const queryClient = useQueryClient();
@@ -340,31 +345,36 @@ export function Header() {
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 md:gap-3">
             {isLoggedIn ? (
               <>
-                <Link href="/messages">
-                  <Button variant="ghost" size="icon" className="relative text-foreground hover:bg-primary/10 rounded-full">
-                    <MessageSquare className="h-5 w-5" />
-                    {messageUnreadCount > 0 ? (
-                      <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-background bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                        {messageUnreadCount > 99 ? "99+" : messageUnreadCount}
-                      </span>
-                    ) : null}
-                  </Button>
-                </Link>
+                {!isAdmin && (
+                  <Link href="/messages">
+                    <Button variant="ghost" size="icon" className="relative text-foreground hover:bg-primary/10 rounded-full">
+                      <MessageSquare className="h-5 w-5" />
+                      {messageUnreadCount > 0 ? (
+                        <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-background bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                          {messageUnreadCount > 99 ? "99+" : messageUnreadCount}
+                        </span>
+                      ) : null}
+                    </Button>
+                  </Link>
+                )}
 
-                <Link href="/cart">
-                  <Button variant="ghost" size="icon" className="relative text-foreground hover:bg-primary/10 rounded-full">
-                    <ShoppingCart className="h-5 w-5" />
-                    {cartItems.length > 0 && (
-                      <span className="absolute -top-1 -right-1 h-5 w-5 bg-primary text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
-                        {cartItems.length}
-                      </span>
-                    )}
-                  </Button>
-                </Link>
+                {!isAdmin && (
+                  <Link href="/cart">
+                    <Button variant="ghost" size="icon" className="relative text-foreground hover:bg-primary/10 rounded-full">
+                      <ShoppingCart className="h-5 w-5" />
+                      {cartItems.length > 0 && (
+                        <span className="absolute -top-1 -right-1 h-5 w-5 bg-primary text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                          {cartItems.length}
+                        </span>
+                      )}
+                    </Button>
+                  </Link>
+                )}
 
                 <ThemeToggle />
 
                 {/* Notification Bell */}
+                {!isAdmin && (
                 <div ref={notifRef} className="relative hidden sm:block">
                   <Button
                     variant="ghost"
@@ -390,6 +400,7 @@ export function Header() {
                     />
                   )}
                 </div>
+                )}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -418,17 +429,26 @@ export function Header() {
                       </div>
                     </div>
                     <DropdownMenuSeparator />
-                    <Link href="/orders">
+                    {!isAdmin && (<Link href="/orders">
                       <DropdownMenuItem className="cursor-pointer py-3 rounded-xl font-medium">
                         <Package className="mr-2 h-4 w-4 text-primary" /> Đơn hàng của tôi
                       </DropdownMenuItem>
-                    </Link>
-                    <DropdownMenuItem
-                      className="cursor-pointer py-3 rounded-xl font-medium"
-                      onSelect={() => openSellerHub()}
-                    >
-                      <Store className="mr-2 h-4 w-4 text-secondary" /> Quản lý bán hàng
-                    </DropdownMenuItem>
+                    </Link>)}
+                    {!isAdmin && (
+                      <DropdownMenuItem
+                        className="cursor-pointer py-3 rounded-xl font-medium"
+                        onSelect={() => openSellerHub()}
+                      >
+                        <Store className="mr-2 h-4 w-4 text-secondary" /> Quản lý bán hàng
+                      </DropdownMenuItem>
+                    )}
+                    {isAdmin && (
+                      <Link href={ADMIN_HOME}>
+                        <DropdownMenuItem className="cursor-pointer py-3 rounded-xl font-medium">
+                          <Shield className="mr-2 h-4 w-4 text-primary" /> Quản trị
+                        </DropdownMenuItem>
+                      </Link>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="cursor-pointer py-3 rounded-xl text-destructive focus:bg-destructive/10 font-medium" onClick={logout}>
                       <LogOut className="mr-2 h-4 w-4" /> Đăng xuất

@@ -12,6 +12,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.naodab.authservice.config.CookieUtils;
 import com.naodab.authservice.config.HttpCookieOAuth2AuthorizationRequestRepository;
+import com.naodab.authservice.properties.OAuth2Properties;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +30,7 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
   private static final String QUERY_DIFFERENT_PROVIDER_LOGIN = "different_provider_login";
 
   private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
+  private final OAuth2Properties oAuth2Properties;
 
   @Override
   public void onAuthenticationFailure(
@@ -78,7 +80,10 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
       fallback = request.getParameter(HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME);
     }
     if (fallback == null || fallback.isBlank()) {
-      fallback = "/oauth2/redirect";
+      fallback = oAuth2Properties.getAuthorizedRedirectUris().stream()
+          .filter(uri -> uri != null && !uri.isBlank())
+          .findFirst()
+          .orElse("http://localhost:5173/oauth2/callback/google");
     }
 
     log.error("OAuth2 fallback error detail: {}", exception.getMessage());

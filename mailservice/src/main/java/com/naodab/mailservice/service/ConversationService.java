@@ -147,6 +147,7 @@ public class ConversationService {
         .sellerProfileId(facility.getOwnerId().trim())
         .facilityId(facilityId.trim())
         .facilityName(facility.getName())
+        .facilityImageUrl(StringUtils.hasText(facility.getImageUrl()) ? facility.getImageUrl().trim() : null)
         .lastMessageAt(now)
         .createdAt(now)
         .updatedAt(now)
@@ -190,21 +191,39 @@ public class ConversationService {
   }
 
   private ConversationResponse toResponse(ConversationDocument document, String viewerProfileId) {
-    long unreadCount = viewerProfileId.equals(document.getBuyerProfileId())
-        ? document.getUnreadByBuyer()
-        : document.getUnreadBySeller();
+    ConversationDocument resolved = backfillFacilityImageIfMissing(document);
+    long unreadCount = viewerProfileId.equals(resolved.getBuyerProfileId())
+        ? resolved.getUnreadByBuyer()
+        : resolved.getUnreadBySeller();
     return ConversationResponse.builder()
-        .id(document.getId())
-        .buyerProfileId(document.getBuyerProfileId())
-        .sellerProfileId(document.getSellerProfileId())
-        .facilityId(document.getFacilityId())
-        .facilityName(document.getFacilityName())
-        .lastMessagePreview(document.getLastMessagePreview())
-        .lastMessageAt(document.getLastMessageAt())
+        .id(resolved.getId())
+        .buyerProfileId(resolved.getBuyerProfileId())
+        .sellerProfileId(resolved.getSellerProfileId())
+        .facilityId(resolved.getFacilityId())
+        .facilityName(resolved.getFacilityName())
+        .facilityImageUrl(resolved.getFacilityImageUrl())
+        .lastMessagePreview(resolved.getLastMessagePreview())
+        .lastMessageAt(resolved.getLastMessageAt())
         .unreadCount(unreadCount)
-        .createdAt(document.getCreatedAt())
-        .updatedAt(document.getUpdatedAt())
+        .createdAt(resolved.getCreatedAt())
+        .updatedAt(resolved.getUpdatedAt())
         .build();
+  }
+
+  private ConversationDocument backfillFacilityImageIfMissing(ConversationDocument document) {
+    if (StringUtils.hasText(document.getFacilityImageUrl()) || !StringUtils.hasText(document.getFacilityId())) {
+      return document;
+    }
+    try {
+      FacilitySummary facility = productClients.getFacility(document.getBuyerProfileId(), document.getFacilityId());
+      if (StringUtils.hasText(facility.getImageUrl())) {
+        document.setFacilityImageUrl(facility.getImageUrl().trim());
+        return conversationRepository.save(document);
+      }
+    } catch (RuntimeException ex) {
+      log.debug("Skip facility image backfill for {}: {}", document.getFacilityId(), ex.getMessage());
+    }
+    return document;
   }
 
   private MessageResponse toMessageResponse(MessageDocument document) {

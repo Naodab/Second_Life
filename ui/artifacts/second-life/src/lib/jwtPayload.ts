@@ -1,6 +1,13 @@
+export type JwtRole = "ADMIN" | "USER" | (string & {});
+
+export function isAdminRole(role: string | undefined | null): boolean {
+  return role === "ADMIN";
+}
+
 export function decodeJwtPayloadUnsafe(token: string): {
   sub?: string;
   profileId?: string;
+  role?: JwtRole;
 } | null {
   try {
     const parts = token.split(".");
@@ -13,7 +20,7 @@ export function decodeJwtPayloadUnsafe(token: string): {
       base64 += "=".repeat(4 - pad);
     }
     const json = atob(base64);
-    return JSON.parse(json) as { sub?: string; profileId?: string };
+    return JSON.parse(json) as { sub?: string; profileId?: string; role?: JwtRole };
   } catch {
     return null;
   }

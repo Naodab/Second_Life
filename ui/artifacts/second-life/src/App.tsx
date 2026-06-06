@@ -12,6 +12,7 @@ import { Header } from "@/components/layout/Header";
 import { NotificationRealtimeListener } from "@/components/NotificationRealtimeListener";
 import { Footer } from "@/components/layout/Footer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminAccessGate } from "@/components/AdminAccessGate";
 import { SellerHubProfileGate } from "@/components/SellerHubProfileGate";
 import { setBaseUrl } from "@workspace/api-client-react";
 
@@ -24,6 +25,8 @@ import Checkout from "@/pages/Checkout";
 import Orders from "@/pages/Orders/index";
 import Messages from "@/pages/Messages/MessagesPage";
 import Listings from "@/pages/Listings/index";
+import Admin from "@/pages/Admin/index";
+import { AdminRoute } from "@/components/AdminRoute";
 
 function SellerHubLegacyRedirect() {
   const [, setLocation] = useLocation();
@@ -75,7 +78,10 @@ function ScrollToTop() {
 
 function Router() {
   const [location] = useLocation();
-  const isSellerHub = location.startsWith("/manage") || location.startsWith("/listings");
+  const isSellerHub =
+    location.startsWith("/manage") ||
+    location.startsWith("/listings") ||
+    location.startsWith("/admin");
   const isAuthPage =
     location === "/login" ||
     location === "/register" ||
@@ -83,10 +89,11 @@ function Router() {
     location === "/profile/setup" ||
     location.startsWith("/oauth2/callback/");
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-dvh flex-col">
       <ScrollToTop />
       {!isAuthPage && !isSellerHub && <Header />}
-      <main className="flex flex-1 flex-col">
+      <main className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/search" component={Search} />
@@ -99,6 +106,7 @@ function Router() {
           <ProtectedRoute path="/messages" component={Messages} />
           <ProtectedRoute path="/listings" component={SellerHubLegacyRedirect} />
           <ProtectedRoute path="/manage/*?" component={Listings} />
+          <AdminRoute path="/admin/*?" component={Admin} />
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
           <Route path="/oauth2/callback/google" component={OAuthCallback} />
@@ -106,6 +114,7 @@ function Router() {
           <ProtectedRoute path="/profile/setup" component={ProfileSetup} />
           <Route component={NotFound} />
         </Switch>
+        </div>
       </main>
       {!isAuthPage && !isSellerHub && <Footer />}
     </div>
@@ -131,6 +140,7 @@ function App() {
             <AuthProvider>
               <VisitorLocationProvider>
                 <ProfileSetupRedirect />
+                <AdminAccessGate />
                 <SellerHubProfileGate />
                 <NotificationRealtimeListener />
                 <Router />

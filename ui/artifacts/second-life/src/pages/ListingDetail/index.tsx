@@ -10,6 +10,8 @@ import {
 } from "@/api/inventory";
 import { useCart } from "@/hooks/use-cart";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useAuth } from "@/context/AuthContext";
+import { canUseMarketplaceActions } from "@/lib/admin-access";
 import { buildCheckoutHref, setPendingCheckoutLine } from "@/checkout/checkout-session";
 import { useToast } from "@/hooks/use-toast";
 import { mapApiError } from "@/lib/api-error";
@@ -75,7 +77,9 @@ export default function ListingDetail() {
   const [variantSelection, setVariantSelection] = useState<Record<string, string>>({});
 
   const { addToCart, isAdding } = useCart();
+  const { isAdmin } = useAuth();
   const { requireAuth } = useRequireAuth();
+  const marketplaceActionsEnabled = canUseMarketplaceActions(isAdmin);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -426,12 +430,14 @@ export default function ListingDetail() {
               }}
               onQuickAddToCart={handleQuickAddToCart}
               quickAddLoading={isAdding}
+              hideCommerceActions={!marketplaceActionsEnabled}
             />
           </div>
         </div>
 
         {facility?.id ? (
-          <ListingFacilitySection
+          <div className="mt-10">
+            <ListingFacilitySection
             facility={facility}
             listingContext={{
               listingId: listing.id,
@@ -441,7 +447,8 @@ export default function ListingDetail() {
               listingType: listing.listingType,
               price: listing.listingType === "RENT" ? rentPrice : buyPrice,
             }}
-          />
+            />
+          </div>
         ) : null}
 
         <ListingReviewsSection

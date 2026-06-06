@@ -27,4 +27,8 @@ public interface FacilityService {
   List<String> listListingVariantIdsForOwner(String profileId);
 
   String resolveOwnerProfileIdByListingVariantId(String listingVariantId);
+
+  void recordView(String facilityId);
+
+  void recordOrder(String facilityId);
 }

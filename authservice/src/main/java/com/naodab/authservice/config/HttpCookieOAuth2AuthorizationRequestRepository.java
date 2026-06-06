@@ -1,9 +1,16 @@
 package com.naodab.authservice.config;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
+import jakarta.annotation.PreDestroy;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -17,8 +24,25 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
   public static final String OAUTH_ENTRY_COOKIE_NAME = "oauth_entry";
   private static final int COOKIE_EXPIRE_SECONDS = 180;
 
+  private final ConcurrentHashMap<String, OAuth2AuthorizationRequest> authorizationRequests =
+      new ConcurrentHashMap<>();
+  private final ScheduledExecutorService evictor = Executors.newSingleThreadScheduledExecutor(r -> {
+    Thread thread = new Thread(r, "oauth2-auth-request-evictor");
+    thread.setDaemon(true);
+    return thread;
+  });
+
   @Override
   public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
+    String state = request.getParameter("state");
+    if (StringUtils.hasText(state)) {
+      OAuth2AuthorizationRequest fromMemory = authorizationRequests.get(state);
+      if (fromMemory != null) {
+        return fromMemory;
+      }
+    }
+
+    // Legacy cookie fallback (pre–state-cache deploys / rolling restarts).
     return CookieUtils.getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME)
         .map(cookie -> CookieUtils.deserialize(cookie, OAuth2AuthorizationRequest.class))
         .orElse(null);
@@ -36,8 +60,14 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
       return;
     }
 
-    CookieUtils.addCookie(response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME,
-        CookieUtils.serialize(authorizationRequest), COOKIE_EXPIRE_SECONDS);
+    // Drop legacy serialized cookie (Tomcat default 8KB header limit → HTTP 400 on Google callback).
+    CookieUtils.deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
+
+    String state = authorizationRequest.getState();
+    if (StringUtils.hasText(state)) {
+      authorizationRequests.put(state, authorizationRequest);
+      evictor.schedule(() -> authorizationRequests.remove(state), COOKIE_EXPIRE_SECONDS, TimeUnit.SECONDS);
+    }
 
     String redirectUriAfterLogin = request.getParameter(REDIRECT_URI_PARAM_COOKIE_NAME);
     if (redirectUriAfterLogin != null && !redirectUriAfterLogin.isBlank()) {
@@ -58,7 +88,11 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
   public OAuth2AuthorizationRequest removeAuthorizationRequest(
       HttpServletRequest request,
       HttpServletResponse response) {
-    return this.loadAuthorizationRequest(request);
+    OAuth2AuthorizationRequest loaded = loadAuthorizationRequest(request);
+    if (loaded != null && StringUtils.hasText(loaded.getState())) {
+      authorizationRequests.remove(loaded.getState());
+    }
+    return loaded;
   }
 
   public void removeAuthorizationRequestCookies(
@@ -67,5 +101,10 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
     CookieUtils.deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
     CookieUtils.deleteCookie(request, response, REDIRECT_URI_PARAM_COOKIE_NAME);
     CookieUtils.deleteCookie(request, response, OAUTH_ENTRY_COOKIE_NAME);
+  }
+
+  @PreDestroy
+  void shutdownEvictor() {
+    evictor.shutdownNow();
   }
 }

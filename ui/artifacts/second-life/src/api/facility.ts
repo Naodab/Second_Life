@@ -105,6 +105,37 @@ export async function createFacility(body: FacilityCreateBody): Promise<Facility
   return unwrapApiData(raw);
 }
 
+export type SearchFacilitiesParams = {
+  page?: number;
+  pageSize?: number;
+  name?: string | null;
+  provinceCode?: string | null;
+  wardCode?: string | null;
+  ownerId?: string | null;
+};
+
+export async function searchAllFacilities(
+  params: SearchFacilitiesParams = {},
+): Promise<FacilityResponse[]> {
+  const q = new URLSearchParams();
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
+  if (params.name?.trim()) q.set("name", params.name.trim());
+  if (params.provinceCode?.trim()) q.set("provinceCode", params.provinceCode.trim());
+  if (params.wardCode?.trim()) q.set("wardCode", params.wardCode.trim());
+  if (params.ownerId?.trim()) q.set("ownerId", params.ownerId.trim());
+  const qs = q.toString();
+  const raw = await customFetch<ApiResponseEnvelope<FacilityResponse[]>>(
+    `/api/v1/facilities/search${qs ? `?${qs}` : ""}`,
+    { method: "GET", headers: { "Content-Type": "application/json" } },
+  );
+  const data = unwrapApiData(raw);
+  if (!Array.isArray(data)) return [];
+  return data
+    .map((f) => normalizeFacilityResponse(f))
+    .filter((f): f is FacilityResponse => f != null);
+}
+
 export async function getMyFacilities(): Promise<FacilityResponse[]> {
   const raw = await customFetch<ApiResponseEnvelope<FacilityResponse[]>>(`/api/v1/facilities/me`, {
     method: "GET",

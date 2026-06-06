@@ -3,6 +3,7 @@ package com.naodab.authservice.services;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import com.naodab.authservice.dto.event.EmailVerificationEvent;
 import com.naodab.authservice.dto.event.ForgotPasswordEvent;
@@ -19,6 +20,7 @@ import com.naodab.authservice.kafka.EmailProducerService;
 import com.naodab.authservice.kafka.ForgotPasswordProducer;
 import com.naodab.authservice.kafka.CreateProfileProducer;
 import com.naodab.authservice.models.Account;
+import com.naodab.authservice.models.Account.Role;
 import com.naodab.authservice.models.AuthProvider;
 import com.naodab.authservice.repositories.AccountRepository;
 import com.naodab.authservice.security.JwtTokenProvider;
@@ -103,8 +105,7 @@ public class AuthService {
       return emptyAuthResponse();
     }
 
-    ProfileResponse profile = profileClient.getProfileById(account.getProfileId())
-        .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
+    ProfileResponse profile = resolveAuthProfile(account);
 
     String accessToken = generateAccessToken(account);
     String refreshToken = jwtTokenProvider.generateRefreshToken(account.getEmail());
@@ -131,8 +132,7 @@ public class AuthService {
     Account account = accountRepository.findByEmail(email)
         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-    ProfileResponse profile = profileClient.getProfileById(account.getProfileId())
-        .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
+    ProfileResponse profile = resolveAuthProfile(account);
 
     if (!refreshToken.equals(account.getRefreshToken())) {
       throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
@@ -173,8 +173,7 @@ public class AuthService {
     account.setRefreshToken(refreshToken);
     accountRepository.save(account);
 
-    ProfileResponse profile = profileClient.getProfileById(account.getProfileId())
-        .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
+    ProfileResponse profile = resolveAuthProfile(account);
 
     return AuthResponse.builder()
         .accessToken(accessToken)
@@ -259,5 +258,16 @@ public class AuthService {
 
   private String generateAccessToken(Account account) {
     return jwtTokenProvider.generateAccessToken(account.getEmail(), account.getProfileId(), account.getRole());
+  }
+
+  private ProfileResponse resolveAuthProfile(Account account) {
+    if (account.getRole() == Role.ADMIN) {
+      return null;
+    }
+    if (!StringUtils.hasText(account.getProfileId())) {
+      throw new AppException(ErrorCode.PROFILE_NOT_FOUND);
+    }
+    return profileClient.getProfileById(account.getProfileId())
+        .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
   }
 }

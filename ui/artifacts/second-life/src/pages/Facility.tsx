@@ -17,17 +17,19 @@ import { buildMessagesHref } from "@/lib/message-navigation";
 import { ListingCard } from "@/components/ListingCard";
 import { ListingPaginationBar } from "@/components/ListingPaginationBar";
 import { ApiErrorState } from "@/components/errors";
+import { FacilityMapEmbed } from "@/components/FacilityMapEmbed";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFacilityById, facilityAvatarUrl } from "@/api/facility";
 import { searchListings } from "@/api/listing";
 import { formatFacilityAddress, resolveFacilityPlaceNames } from "@/lib/facility-display";
+import { facilityHasMap } from "@/lib/google-maps";
 import { mapApiError } from "@/lib/api-error";
 import { useAuth } from "@/context/AuthContext";
 
 const PAGE_SIZE = 12;
 
 export default function FacilityPage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [, facilityParams] = useRoute("/facility/:id");
   const [, legacyShopParams] = useRoute("/shop/:id");
   const facilityId = (facilityParams?.id ?? legacyShopParams?.id ?? "").trim();
@@ -145,98 +147,108 @@ export default function FacilityPage() {
   const chatHref = isOwnFacility
     ? buildMessagesHref({ facilityId: facility.id, tab: "customers" })
     : buildMessagesHref({ facilityId: facility.id });
+  const showMap = facilityHasMap({ ...facility, searchAddress: fullAddress });
 
   return (
-    <div className="min-h-screen bg-gray-50/30 pb-20">
-      <div className="bg-gradient-to-br from-primary/15 via-primary/8 to-transparent h-44 sm:h-56 relative border-b border-primary/10">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/25 pb-20 dark:to-muted/15">
+      <div className="relative h-44 border-b border-primary/10 bg-gradient-to-br from-primary/15 via-primary/8 to-transparent sm:h-56 dark:border-primary/15 dark:from-primary/20 dark:via-primary/10 dark:to-transparent">
         <div
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-20 dark:opacity-30"
           style={{
             backgroundImage:
               "radial-gradient(circle at 20% 50%, var(--primary) 0%, transparent 60%), radial-gradient(circle at 80% 20%, var(--secondary) 0%, transparent 60%)",
           }}
         />
         <div className="absolute -bottom-16 left-6 sm:left-10">
-          <div className="bg-white p-2 rounded-3xl shadow-lg border">
+          <div className="rounded-3xl border border-border/70 bg-card p-2 shadow-lg dark:border-border/50 dark:bg-card/95 dark:shadow-black/30">
             <img
               src={facilityAvatarUrl(facility)}
               alt={facility.name}
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover"
+              className="h-24 w-24 rounded-2xl object-cover sm:h-28 sm:w-28"
             />
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
-        <div className="bg-white rounded-3xl border shadow-sm p-6 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start gap-5">
-            <div>
-              <h1 className="text-2xl font-display font-bold flex items-center gap-2">
+      <div className="mx-auto mt-20 max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 rounded-3xl border border-border/70 bg-card p-6 shadow-sm ring-1 ring-border/35 dark:border-border/50 dark:bg-card/95 dark:shadow-xl dark:shadow-black/20 dark:ring-border/25">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+            <div className="min-w-0 flex-1">
+              <h1 className="flex items-center gap-2 font-display text-2xl font-bold text-foreground">
                 {facility.name}
-                {orderCount > 50 ? <ShieldCheck className="w-5 h-5 text-primary" aria-hidden /> : null}
+                {orderCount > 50 ? <ShieldCheck className="h-5 w-5 text-primary" aria-hidden /> : null}
               </h1>
               {fullAddress ? (
-                <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
-                  <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden />
+                <div className="mt-1 flex items-start gap-1 text-sm text-muted-foreground">
+                  <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden />
                   <span>{fullAddress}</span>
                 </div>
               ) : null}
               {facility.description?.trim() ? (
-                <p className="text-sm text-muted-foreground mt-3 max-w-2xl">{facility.description.trim()}</p>
+                <p className="mt-3 max-w-2xl text-sm text-muted-foreground">{facility.description.trim()}</p>
               ) : null}
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5 text-amber-500 font-semibold">
-                  <Star className="w-4 h-4 fill-current" aria-hidden />
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5 font-semibold text-amber-500 dark:text-amber-400">
+                  <Star className="h-4 w-4 fill-current" aria-hidden />
                   <span>{rating}</span>
                 </div>
-                <span className="text-gray-300" aria-hidden>
+                <span className="text-muted-foreground/40" aria-hidden>
                   •
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <Package className="w-4 h-4" aria-hidden />
+                  <Package className="h-4 w-4" aria-hidden />
                   <span>
                     <strong className="text-foreground">{orderCount}</strong> đơn đã bán / cho thuê
                   </span>
                 </div>
-                <span className="text-gray-300" aria-hidden>
+                <span className="text-muted-foreground/40" aria-hidden>
                   •
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <Eye className="w-4 h-4" aria-hidden />
+                  <Eye className="h-4 w-4" aria-hidden />
                   <span>
                     <strong className="text-foreground">{viewCount}</strong> lượt xem
                   </span>
                 </div>
               </div>
+
+              {!isAdmin ? (
+              <div className="mt-4">
+                <Link href={chatHref}>
+                  <Button
+                    variant="outline"
+                    className="rounded-full border-border/80 transition-all hover:bg-muted/60 dark:hover:bg-muted/30"
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" aria-hidden />{" "}
+                    {isOwnFacility ? "Tin nhắn khách" : "Chat ngay"}
+                  </Button>
+                </Link>
+              </div>
+              ) : null}
             </div>
 
-            <div className="flex gap-3 flex-shrink-0 mt-2 md:mt-0">
-              <Link href={chatHref}>
-                <Button variant="outline" className="rounded-full bg-white">
-                  <MessageSquare className="w-4 h-4 mr-2" aria-hidden />{" "}
-                  {isOwnFacility ? "Tin nhắn khách" : "Chat ngay"}
-                </Button>
-              </Link>
-              <Button className="rounded-full shadow-md shadow-primary/20 px-6" disabled>
-                Theo dõi
-              </Button>
-            </div>
+            {showMap ? (
+              <FacilityMapEmbed
+                facility={{ ...facility, searchAddress: fullAddress }}
+                className="w-full shrink-0 lg:w-72 xl:w-80"
+              />
+            ) : null}
           </div>
         </div>
 
         <div>
-          <h2 className="text-xl font-display font-bold mb-5 flex items-center gap-2">
-            <Store className="w-5 h-5 text-primary" aria-hidden />
+          <h2 className="mb-5 flex items-center gap-2 font-display text-xl font-bold text-foreground">
+            <Store className="h-5 w-5 text-primary" aria-hidden />
             Bài đăng tại cơ sở
-            <Badge variant="outline" className="ml-2 text-muted-foreground font-normal">
+            <Badge variant="outline" className="ml-2 font-normal text-muted-foreground">
               {totalCount}
             </Badge>
           </h2>
 
           {listingsQuery.isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border text-muted-foreground gap-2">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden />
+            <div className="flex flex-col items-center justify-center gap-2 rounded-3xl border border-border/70 bg-card py-20 text-muted-foreground dark:border-border/50 dark:bg-card/95">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden />
               <p className="text-sm">Đang tải bài đăng…</p>
             </div>
           ) : listingsQuery.isError ? (
@@ -268,9 +280,9 @@ export default function FacilityPage() {
               ) : null}
             </>
           ) : (
-            <div className="text-center py-20 bg-white rounded-3xl border">
-              <Store className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" aria-hidden />
-              <h3 className="text-xl font-bold text-foreground mb-2">Chưa có bài đăng nào</h3>
+            <div className="rounded-3xl border border-border/70 bg-card py-20 text-center dark:border-border/50 dark:bg-card/95">
+              <Store className="mx-auto mb-3 h-12 w-12 text-muted-foreground opacity-50" aria-hidden />
+              <h3 className="mb-2 text-xl font-bold text-foreground">Chưa có bài đăng nào</h3>
               <p className="text-muted-foreground">Cơ sở này chưa có bài đăng đang hoạt động.</p>
             </div>
           )}

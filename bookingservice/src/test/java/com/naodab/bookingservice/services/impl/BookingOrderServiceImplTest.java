@@ -31,6 +31,7 @@ import com.naodab.bookingservice.dto.events.InventoryReservationCreateEvent;
 import com.naodab.bookingservice.dto.request.BookingOrderCreateRequest;
 import com.naodab.bookingservice.dto.request.BookingOrderStatusUpdateRequest;
 import com.naodab.bookingservice.dto.response.BookingOrderResponse;
+import com.naodab.bookingservice.dto.response.ListingVariantContextResponse;
 import com.naodab.bookingservice.mappers.BookingOrderMapper;
 import com.naodab.bookingservice.mappers.CustomerMapper;
 import com.naodab.bookingservice.models.BookingOrder;
@@ -93,6 +94,8 @@ class BookingOrderServiceImplTest {
     Customer customer = sampleCustomer();
     when(customerService.getOwnedCustomerEntity(PROFILE_ID, CUSTOMER_ID)).thenReturn(customer);
     when(inventoryClients.getBuyInventoryCount(LISTING_VARIANT_ID)).thenReturn(5L);
+    when(productClients.getListingVariantContext(LISTING_VARIANT_ID))
+        .thenReturn(ListingVariantContextResponse.builder().facilityId("fac-1").build());
     when(bookingOrderRepository.save(any(BookingOrder.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -108,6 +111,7 @@ class BookingOrderServiceImplTest {
     InOrder inOrder = inOrder(inventoryClients, bookingOrderRepository);
     inOrder.verify(inventoryClients).createBuyReservation(eventCaptor.capture());
     inOrder.verify(bookingOrderRepository).save(any(BookingOrder.class));
+    verify(productClients).recordFacilityOrder("fac-1");
     verify(inventoryClients, never()).releaseBuyReservation(any());
     verify(customerService, never()).createCustomer(any(), any());
 

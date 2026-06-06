@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.naodab.commonservice.exception.AppException;
@@ -61,9 +63,12 @@ public class FacilityServiceImpl implements FacilityService {
   }
 
   @Override
+  @Transactional
   public FacilityResponse getFacilityById(String id) {
     Facility facility = facilityRepository.findByIdAndDeletedAtIsNull(id)
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
+    recordView(facility.getId());
+    facility.setViewCount(nextCount(facility.getViewCount()));
     return facilityMapper.toFacilityResponse(facility);
   }
 
@@ -194,6 +199,31 @@ public class FacilityServiceImpl implements FacilityService {
     return listingVariantRepository.findOwnerIdById(listingVariantId.trim())
         .filter(StringUtils::hasText)
         .orElseThrow(() -> new AppException(ErrorCode.LISTING_VARIANT_NOT_FOUND));
+  }
+
+  @Override
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void recordView(String facilityId) {
+    if (!StringUtils.hasText(facilityId)) {
+      return;
+    }
+    facilityRepository.incrementViewCount(facilityId.trim());
+  }
+
+  @Override
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void recordOrder(String facilityId) {
+    if (!StringUtils.hasText(facilityId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    int updated = facilityRepository.incrementOrderCount(facilityId.trim());
+    if (updated == 0) {
+      throw new AppException(ErrorCode.FACILITY_NOT_FOUND);
+    }
+  }
+
+  private static long nextCount(Long current) {
+    return current == null ? 1L : current + 1L;
   }
 
 }

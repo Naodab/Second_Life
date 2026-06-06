@@ -34,7 +34,7 @@ export function MessageProductCardBlock({ card, className }: Props) {
     <Link href={href}>
       <a
         className={cn(
-          "flex gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-muted/50",
+          "flex cursor-pointer gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-muted/50",
           className ?? "border-border bg-card",
         )}
       >

@@ -13,6 +13,7 @@ import {
   updateCurrentProfile,
   type ProfilePayload,
 } from "@/api";
+import { resolveAdminSafePath } from "@/lib/admin-access";
 import { sanitizeReturnTo } from "@/hooks/use-require-auth";
 import { SELLER_HUB_HOME } from "@/lib/seller-hub-paths";
 import { toast } from "@/hooks/use-toast";
@@ -281,12 +282,13 @@ function ProfileSetupForm({
 
 export default function ProfileSetup() {
   const [, setLocation] = useLocation();
-  const { isLoggedIn, isLoading, needsProfileSetup, sellerHubProfileComplete, user, refreshSessionProfile } =
+  const { isLoggedIn, isLoading, isAdmin, needsProfileSetup, sellerHubProfileComplete, user, refreshSessionProfile } =
     useAuth();
   const returnTo = useMemo(() => readReturnToFromSearch(), []);
   const forSellerHub = returnTo.startsWith("/manage");
 
-  const mustCompleteForm = needsProfileSetup || (forSellerHub && !sellerHubProfileComplete);
+  const mustCompleteForm =
+    !isAdmin && (needsProfileSetup || (forSellerHub && !sellerHubProfileComplete));
 
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -336,16 +338,17 @@ export default function ProfileSetup() {
       return;
     }
     if (!mustCompleteForm) {
-      setLocation(returnTo || "/");
+      setLocation(resolveAdminSafePath(returnTo || "/", isAdmin));
       return;
     }
     if (profile && !profileStillIncomplete(profile, forSellerHub)) {
-      setLocation(returnTo || "/");
+      setLocation(resolveAdminSafePath(returnTo || "/", isAdmin));
     }
   }, [
     isLoading,
     profileLoading,
     isLoggedIn,
+    isAdmin,
     mustCompleteForm,
     profile,
     forSellerHub,

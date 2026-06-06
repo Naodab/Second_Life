@@ -94,6 +94,16 @@ export function profileIsCompleteForSellerHub(
   return Boolean(first && last && email && phone && vnPhoneRegex.test(phone));
 }
 
+export function resolveProfileSetupFlags(profile: ProfilePayload, isAdmin: boolean) {
+  if (isAdmin) {
+    return { needsProfileSetup: false, sellerHubProfileComplete: false };
+  }
+  return {
+    needsProfileSetup: profileNeedsSetup(profile),
+    sellerHubProfileComplete: profileIsCompleteForSellerHub(profile),
+  };
+}
+
 export function profileDisplayName(profile: Pick<ProfilePayload, "firstName" | "lastName" | "email">): string {
   const display = [profile.lastName?.trim(), profile.firstName?.trim()].filter(Boolean).join(" ");
   return display || profile.email.split("@")[0] || profile.email;

@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -70,5 +71,19 @@ public interface BookingOrderRepository extends JpaRepository<BookingOrder, Stri
       ORDER BY o.createdAt DESC
       """)
   List<BookingOrder> findActiveByListingVariantIdIn(@Param("variantIds") List<String> variantIds);
+
+  @Query(value = """
+      SELECT o FROM BookingOrder o
+      JOIN FETCH o.customer
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+      ORDER BY o.createdAt DESC
+      """,
+      countQuery = """
+      SELECT COUNT(o) FROM BookingOrder o
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+      """)
+  Page<BookingOrder> findAdminPage(@Param("status") BookingOrderStatus status, Pageable pageable);
 
 }

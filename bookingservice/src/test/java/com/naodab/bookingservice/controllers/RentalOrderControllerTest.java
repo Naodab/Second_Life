@@ -32,7 +32,9 @@ import com.naodab.bookingservice.dto.request.RentalOrderCreateRequest;
 import com.naodab.bookingservice.dto.request.RentalOrderStatusUpdateRequest;
 import com.naodab.bookingservice.dto.response.RentalOrderResponse;
 import com.naodab.bookingservice.models.enums.RentalOrderStatus;
+import com.naodab.bookingservice.services.RentalOrderAdminService;
 import com.naodab.bookingservice.services.RentalOrderService;
+import com.naodab.commonservice.response.PagedItemsResponse;
 import com.naodab.commonservice.constant.AppConstants;
 import com.naodab.commonservice.exception.GlobalExceptionHandler;
 
@@ -48,6 +50,9 @@ class RentalOrderControllerTest {
 
   @Mock
   RentalOrderService rentalOrderService;
+
+  @Mock
+  RentalOrderAdminService rentalOrderAdminService;
 
   @InjectMocks
   RentalOrderController rentalOrderController;
@@ -286,6 +291,37 @@ class RentalOrderControllerTest {
         .andExpect(status().isNoContent());
 
     verify(rentalOrderService).cancelRentalOrder(PROFILE_ID, ORDER_ID);
+  }
+
+  @Test
+  void listRentalOrdersAdmin_requiresAdmin() throws Exception {
+    mockMvc.perform(get("/rental-orders/admin")
+        .header(AppConstants.JWT_CLAIM_ROLE, "USER"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value(1050));
+
+    verify(rentalOrderAdminService, never()).listOrders(any(), any(), any());
+  }
+
+  @Test
+  void listRentalOrdersAdmin_adminOk() throws Exception {
+    when(rentalOrderAdminService.listOrders(0, 20, null))
+        .thenReturn(PagedItemsResponse.<RentalOrderResponse>builder()
+            .page(0)
+            .pageSize(20)
+            .totalCount(1)
+            .items(List.of(sampleResponse(RentalOrderStatus.PENDING)))
+            .build());
+
+    mockMvc.perform(get("/rental-orders/admin")
+        .header(AppConstants.JWT_CLAIM_ROLE, AppConstants.ROLE_ADMIN)
+        .param("page", "0")
+        .param("pageSize", "20"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.totalCount").value(1))
+        .andExpect(jsonPath("$.data.items[0].id").value(ORDER_ID));
+
+    verify(rentalOrderAdminService).listOrders(0, 20, null);
   }
 
   private static RentalOrderCreateRequest validCreateRequest() {

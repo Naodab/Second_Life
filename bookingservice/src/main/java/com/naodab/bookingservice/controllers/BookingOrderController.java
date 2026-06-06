@@ -12,12 +12,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.naodab.bookingservice.dto.request.BookingOrderCreateRequest;
 import com.naodab.bookingservice.dto.request.BookingOrderStatusUpdateRequest;
 import com.naodab.bookingservice.dto.response.BookingOrderResponse;
+import com.naodab.bookingservice.models.enums.BookingOrderStatus;
+import com.naodab.bookingservice.services.BookingOrderAdminService;
 import com.naodab.bookingservice.services.BookingOrderService;
+import com.naodab.commonservice.response.PagedItemsResponse;
 import com.naodab.commonservice.constant.AppConstants;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
@@ -34,6 +38,19 @@ import lombok.experimental.FieldDefaults;
 public class BookingOrderController {
 
   BookingOrderService bookingOrderService;
+  BookingOrderAdminService bookingOrderAdminService;
+
+  @GetMapping("/admin")
+  public ResponseEntity<ApiResponse<PagedItemsResponse<BookingOrderResponse>>> listBookingOrdersAdmin(
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role,
+      @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer pageSize,
+      @RequestParam(required = false) BookingOrderStatus status) {
+    requireAdmin(role);
+    return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<BookingOrderResponse>>builder()
+        .data(bookingOrderAdminService.listOrders(page, pageSize, status))
+        .build());
+  }
 
   @GetMapping
   public ResponseEntity<ApiResponse<List<BookingOrderResponse>>> listBookingOrders(
@@ -87,5 +104,11 @@ public class BookingOrderController {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
     return profileIdHeader.trim();
+  }
+
+  private static void requireAdmin(String role) {
+    if (!AppConstants.ROLE_ADMIN.equals(role)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
   }
 }

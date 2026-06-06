@@ -3,7 +3,10 @@ package com.naodab.bookingservice.repositories;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import com.naodab.bookingservice.models.enums.RentalOrderStatus;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -40,4 +43,18 @@ public interface RentalOrderRepository extends JpaRepository<RentalOrder, String
       ORDER BY o.createdAt DESC
       """)
   List<RentalOrder> findActiveByListingVariantIdIn(@Param("variantIds") List<String> variantIds);
+
+  @Query(value = """
+      SELECT o FROM RentalOrder o
+      JOIN FETCH o.customer
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+      ORDER BY o.createdAt DESC
+      """,
+      countQuery = """
+      SELECT COUNT(o) FROM RentalOrder o
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+      """)
+  Page<RentalOrder> findAdminPage(@Param("status") RentalOrderStatus status, Pageable pageable);
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Cookies from "js-cookie";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { UnverifiedEmailError, useAuth } from "@/context/AuthContext";
 import { redirectToGoogleOAuth } from "@/api";
 import { sanitizeReturnTo } from "@/hooks/use-require-auth";
+import { resolveAdminSafePath } from "@/lib/admin-access";
+import { decodeJwtPayloadUnsafe, isAdminRole } from "@/lib/jwtPayload";
 import { toast } from "@/hooks/use-toast";
 import { mapLoginError } from "@/lib/api-error";
 
@@ -14,9 +17,17 @@ function readReturnToFromSearch(): string {
   return sanitizeReturnTo(params.get("returnTo"));
 }
 
+function readIsAdminFromAccessCookie(): boolean {
+  const token = Cookies.get("accessToken");
+  if (!token) {
+    return false;
+  }
+  return isAdminRole(decodeJwtPayloadUnsafe(token)?.role);
+}
+
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { login, isLoggedIn } = useAuth();
+  const { login, isLoggedIn, isAdmin } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -25,9 +36,9 @@ export default function Login() {
 
   useEffect(() => {
     if (isLoggedIn) {
-      setLocation(readReturnToFromSearch());
+      setLocation(resolveAdminSafePath(readReturnToFromSearch(), isAdmin));
     }
-  }, [isLoggedIn, setLocation]);
+  }, [isLoggedIn, isAdmin, setLocation]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -60,7 +71,11 @@ export default function Login() {
     setIsLoading(true);
     try {
       const needsSetup = await login(email, password);
-      setLocation(needsSetup ? "/profile/setup" : readReturnToFromSearch());
+      setLocation(
+        needsSetup
+          ? "/profile/setup"
+          : resolveAdminSafePath(readReturnToFromSearch(), readIsAdminFromAccessCookie()),
+      );
     } catch (error) {
       if (error instanceof UnverifiedEmailError) {
         toast({

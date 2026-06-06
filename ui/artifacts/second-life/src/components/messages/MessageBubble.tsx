@@ -45,7 +45,7 @@ export function MessageBubble({ message, isMine, peerAvatarUrl, peerFallback }: 
             {images.length > 0 ? (
               <div className={cn("grid gap-2", images.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
                 {images.map((url) => (
-                  <a key={url} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl">
+                  <a key={url} href={url} target="_blank" rel="noreferrer" className="block cursor-pointer overflow-hidden rounded-xl">
                     <img src={url} alt="Ảnh đính kèm" className="max-h-72 w-full object-cover" />
                   </a>
                 ))}
