@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 
@@ -76,6 +77,23 @@ public class ProductController {
     int count = productSearchService.reindexAllProductsFromDatabase();
     log.info("Product search index reindexed: {}", count);
     return ResponseEntity.ok(ApiResponse.<Integer>builder().data(count).build());
+  }
+
+  @GetMapping("/admin/by-owner")
+  public ResponseEntity<ApiResponse<PagedItemsResponse<ProductItemResponse>>> listProductsByOwnerAdmin(
+      @RequestParam String ownerId,
+      @ModelAttribute ProductSearchRequest request,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {
+    if (!AppConstants.ROLE_ADMIN.equals(role)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
+    if (request == null) {
+      request = ProductSearchRequest.builder().build();
+    }
+    request.setOwnerId(ownerId);
+    return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ProductItemResponse>>builder()
+        .data(productSearchService.listOwnedProductItems(request))
+        .build());
   }
 
   @GetMapping("/owned/primary-subcategories")

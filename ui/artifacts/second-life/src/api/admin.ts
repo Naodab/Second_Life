@@ -37,6 +37,41 @@ export type AdminListOrdersParams = {
   page?: number;
   pageSize?: number;
   status?: BookingOrderStatus | RentalOrderStatus | null;
+  buyerProfileId?: string | null;
+  sellerProfileId?: string | null;
+};
+
+export type AdminAccountSellerActivitySummary = {
+  facilities: number;
+  products: number;
+  listings: number;
+  buyOrdersReceived: number;
+  rentOrdersReceived: number;
+};
+
+export type AdminAccountBuyerActivitySummary = {
+  buyOrders: number;
+  rentOrders: number;
+};
+
+export type AdminAccountActivitySummary = {
+  seller: AdminAccountSellerActivitySummary;
+  buyer: AdminAccountBuyerActivitySummary;
+};
+
+export type AdminListProductsByOwnerParams = {
+  ownerId: string;
+  page?: number;
+  pageSize?: number;
+  keyword?: string | null;
+  status?: import("./product").ProductStatus | null;
+};
+
+export type AdminListListingsByOwnerParams = {
+  ownerId: string;
+  page?: number;
+  pageSize?: number;
+  listingStatus?: import("./listing").ListingStatus | null;
 };
 
 export async function adminListAccounts(
@@ -56,6 +91,59 @@ export async function adminListAccounts(
   return unwrapApiData(raw);
 }
 
+export async function adminGetAccount(accountId: string): Promise<AdminAccountResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<AdminAccountResponse>>(
+    `/api/v1/auth/admin/accounts/${encodeURIComponent(accountId.trim())}`,
+    { method: "GET", headers: { "Content-Type": "application/json" } },
+  );
+  return unwrapApiData(raw);
+}
+
+export async function adminGetAccountActivitySummary(
+  accountId: string,
+): Promise<AdminAccountActivitySummary> {
+  const raw = await customFetch<ApiResponseEnvelope<AdminAccountActivitySummary>>(
+    `/api/v1/auth/admin/accounts/${encodeURIComponent(accountId.trim())}/activity-summary`,
+    { method: "GET", headers: { "Content-Type": "application/json" } },
+  );
+  return unwrapApiData(raw);
+}
+
+export async function adminListProductsByOwner(
+  params: AdminListProductsByOwnerParams,
+): Promise<PagedItemsResponse<import("./product").ProductItemResponse>> {
+  const q = new URLSearchParams();
+  q.set("ownerId", params.ownerId.trim());
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
+  if (params.keyword?.trim()) q.set("keyword", params.keyword.trim());
+  if (params.status) q.set("status", params.status);
+  const raw = await customFetch<
+    ApiResponseEnvelope<PagedItemsResponse<import("./product").ProductItemResponse>>
+  >(`/api/v1/products/admin/by-owner?${q.toString()}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return unwrapApiData(raw);
+}
+
+export async function adminListListingsByOwner(
+  params: AdminListListingsByOwnerParams,
+): Promise<PagedItemsResponse<import("./listing").ListingItemResponse>> {
+  const q = new URLSearchParams();
+  q.set("ownerId", params.ownerId.trim());
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
+  if (params.listingStatus) q.set("listingStatus", params.listingStatus);
+  const raw = await customFetch<
+    ApiResponseEnvelope<PagedItemsResponse<import("./listing").ListingItemResponse>>
+  >(`/api/v1/listings/admin/by-owner?${q.toString()}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return unwrapApiData(raw);
+}
+
 export async function adminListBuyOrders(
   params: AdminListOrdersParams = {},
 ): Promise<PagedItemsResponse<BookingOrderResponse>> {
@@ -63,6 +151,8 @@ export async function adminListBuyOrders(
   if (params.page != null) q.set("page", String(params.page));
   if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
   if (params.status) q.set("status", params.status);
+  if (params.buyerProfileId?.trim()) q.set("buyerProfileId", params.buyerProfileId.trim());
+  if (params.sellerProfileId?.trim()) q.set("sellerProfileId", params.sellerProfileId.trim());
   const qs = q.toString();
   const raw = await customFetch<ApiResponseEnvelope<PagedItemsResponse<BookingOrderResponse>>>(
     `/api/v1/orders/admin${qs ? `?${qs}` : ""}`,
@@ -78,6 +168,8 @@ export async function adminListRentOrders(
   if (params.page != null) q.set("page", String(params.page));
   if (params.pageSize != null) q.set("pageSize", String(params.pageSize));
   if (params.status) q.set("status", params.status);
+  if (params.buyerProfileId?.trim()) q.set("buyerProfileId", params.buyerProfileId.trim());
+  if (params.sellerProfileId?.trim()) q.set("sellerProfileId", params.sellerProfileId.trim());
   const qs = q.toString();
   const raw = await customFetch<ApiResponseEnvelope<PagedItemsResponse<RentalOrderResponse>>>(
     `/api/v1/rental-orders/admin${qs ? `?${qs}` : ""}`,

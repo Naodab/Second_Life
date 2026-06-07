@@ -9,7 +9,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import com.naodab.bookingservice.clients.ProductClients;
 import com.naodab.bookingservice.dto.response.RentalOrderResponse;
 import com.naodab.bookingservice.mappers.RentalOrderMapper;
 import com.naodab.bookingservice.models.RentalOrder;
@@ -34,18 +36,36 @@ public class RentalOrderAdminServiceImpl implements RentalOrderAdminService {
 
   RentalOrderRepository rentalOrderRepository;
   RentalOrderMapper rentalOrderMapper;
+  ProductClients productClients;
 
   @Override
   @Transactional(readOnly = true)
   public PagedItemsResponse<RentalOrderResponse> listOrders(
       Integer page,
       Integer pageSize,
-      RentalOrderStatus status) {
+      RentalOrderStatus status,
+      String buyerProfileId,
+      String sellerProfileId) {
     int normalizedPage = normalizePage(page);
     int normalizedSize = normalizePageSize(pageSize);
     Pageable pageable = PageRequest.of(normalizedPage, normalizedSize);
 
-    Page<RentalOrder> orderPage = rentalOrderRepository.findAdminPage(status, pageable);
+    String trimmedBuyerProfileId = trimToNull(buyerProfileId);
+    String trimmedSellerProfileId = trimToNull(sellerProfileId);
+
+    Page<RentalOrder> orderPage;
+    if (StringUtils.hasText(trimmedSellerProfileId)) {
+      List<String> variantIds = productClients.listListingVariantIdsForOwnerAdmin(trimmedSellerProfileId);
+      if (variantIds.isEmpty()) {
+        return emptyPage(normalizedPage, normalizedSize);
+      }
+      orderPage = rentalOrderRepository.findAdminPageByListingVariantIdIn(status, variantIds, pageable);
+    } else if (StringUtils.hasText(trimmedBuyerProfileId)) {
+      orderPage = rentalOrderRepository.findAdminPageByBuyerProfileId(status, trimmedBuyerProfileId, pageable);
+    } else {
+      orderPage = rentalOrderRepository.findAdminPage(status, pageable);
+    }
+
     List<RentalOrderResponse> items = orderPage.getContent().stream()
         .map(order -> rentalOrderMapper.toRentalOrderResponse(order, order.getCustomer()))
         .filter(Objects::nonNull)
@@ -57,6 +77,22 @@ public class RentalOrderAdminServiceImpl implements RentalOrderAdminService {
         .totalCount(orderPage.getTotalElements())
         .items(items)
         .build();
+  }
+
+  private static PagedItemsResponse<RentalOrderResponse> emptyPage(int page, int pageSize) {
+    return PagedItemsResponse.<RentalOrderResponse>builder()
+        .page(page)
+        .pageSize(pageSize)
+        .totalCount(0)
+        .items(List.of())
+        .build();
+  }
+
+  private static String trimToNull(String value) {
+    if (!StringUtils.hasText(value)) {
+      return null;
+    }
+    return value.trim();
   }
 
   private static int normalizePage(Integer page) {

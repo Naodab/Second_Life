@@ -9,7 +9,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import com.naodab.bookingservice.clients.ProductClients;
 import com.naodab.bookingservice.dto.response.BookingOrderResponse;
 import com.naodab.bookingservice.mappers.BookingOrderMapper;
 import com.naodab.bookingservice.models.BookingOrder;
@@ -34,18 +36,36 @@ public class BookingOrderAdminServiceImpl implements BookingOrderAdminService {
 
   BookingOrderRepository bookingOrderRepository;
   BookingOrderMapper bookingOrderMapper;
+  ProductClients productClients;
 
   @Override
   @Transactional(readOnly = true)
   public PagedItemsResponse<BookingOrderResponse> listOrders(
       Integer page,
       Integer pageSize,
-      BookingOrderStatus status) {
+      BookingOrderStatus status,
+      String buyerProfileId,
+      String sellerProfileId) {
     int normalizedPage = normalizePage(page);
     int normalizedSize = normalizePageSize(pageSize);
     Pageable pageable = PageRequest.of(normalizedPage, normalizedSize);
 
-    Page<BookingOrder> orderPage = bookingOrderRepository.findAdminPage(status, pageable);
+    String trimmedBuyerProfileId = trimToNull(buyerProfileId);
+    String trimmedSellerProfileId = trimToNull(sellerProfileId);
+
+    Page<BookingOrder> orderPage;
+    if (StringUtils.hasText(trimmedSellerProfileId)) {
+      List<String> variantIds = productClients.listListingVariantIdsForOwnerAdmin(trimmedSellerProfileId);
+      if (variantIds.isEmpty()) {
+        return emptyPage(normalizedPage, normalizedSize);
+      }
+      orderPage = bookingOrderRepository.findAdminPageByListingVariantIdIn(status, variantIds, pageable);
+    } else if (StringUtils.hasText(trimmedBuyerProfileId)) {
+      orderPage = bookingOrderRepository.findAdminPageByBuyerProfileId(status, trimmedBuyerProfileId, pageable);
+    } else {
+      orderPage = bookingOrderRepository.findAdminPage(status, pageable);
+    }
+
     List<BookingOrderResponse> items = orderPage.getContent().stream()
         .map(order -> bookingOrderMapper.toBookingOrderResponse(order, order.getCustomer()))
         .filter(Objects::nonNull)
@@ -57,6 +77,22 @@ public class BookingOrderAdminServiceImpl implements BookingOrderAdminService {
         .totalCount(orderPage.getTotalElements())
         .items(items)
         .build();
+  }
+
+  private static PagedItemsResponse<BookingOrderResponse> emptyPage(int page, int pageSize) {
+    return PagedItemsResponse.<BookingOrderResponse>builder()
+        .page(page)
+        .pageSize(pageSize)
+        .totalCount(0)
+        .items(List.of())
+        .build();
+  }
+
+  private static String trimToNull(String value) {
+    if (!StringUtils.hasText(value)) {
+      return null;
+    }
+    return value.trim();
   }
 
   private static int normalizePage(Integer page) {

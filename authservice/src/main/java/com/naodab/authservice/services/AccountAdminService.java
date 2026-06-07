@@ -1,5 +1,6 @@
 package com.naodab.authservice.services;
 
+import com.naodab.authservice.dto.response.AdminAccountActivitySummaryResponse;
 import com.naodab.authservice.dto.response.AdminAccountResponse;
 import com.naodab.authservice.models.Account.Role;
 import com.naodab.commonservice.response.PagedItemsResponse;
@@ -11,4 +12,8 @@ public interface AccountAdminService {
       Role role,
       Boolean emailVerified,
       String keyword);
+
+  AdminAccountResponse getAccountById(String accountId);
+
+  AdminAccountActivitySummaryResponse getActivitySummary(String accountId);
 }

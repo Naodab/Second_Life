@@ -55,6 +55,31 @@ public class ProductClients {
     return getStringList(profileId, uri);
   }
 
+  public List<String> listListingVariantIdsForOwnerAdmin(String profileId) {
+    if (!StringUtils.hasText(profileId)) {
+      return List.of();
+    }
+    String base = stripTrailingSlashes(productServiceUrl.trim());
+    String uri = base + "/admin/users/" + profileId.trim() + "/listing-variant-ids";
+    HttpHeaders headers = new HttpHeaders();
+    headers.set(AppConstants.JWT_CLAIM_ROLE, AppConstants.ROLE_ADMIN);
+    try {
+      ResponseEntity<ApiResponse<List<String>>> response = restTemplate.exchange(
+          Objects.requireNonNull(uri),
+          Objects.requireNonNull(HttpMethod.GET),
+          new HttpEntity<>(headers),
+          new ParameterizedTypeReference<ApiResponse<List<String>>>() {});
+      ApiResponse<List<String>> body = response.getBody();
+      if (response.getStatusCode() != HttpStatus.OK || body == null || body.getData() == null) {
+        return List.of();
+      }
+      return body.getData();
+    } catch (RestClientException e) {
+      log.error(LOG_PRODUCT_CALL_FAILED, uri, e.getMessage());
+      return List.of();
+    }
+  }
+
   public ListingVariantContextResponse getListingVariantContext(String listingVariantId) {
     if (!StringUtils.hasText(listingVariantId)) {
       throw new AppException(ErrorCode.INVALID_INPUT);

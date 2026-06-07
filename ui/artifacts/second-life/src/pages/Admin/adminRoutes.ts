@@ -6,6 +6,7 @@ export type AdminRouteParsed =
   | { tag: "facilities" }
   | { tag: "products" }
   | { tag: "users" }
+  | { tag: "users-detail"; accountId: string }
   | { tag: "orders" }
   | { tag: "messages" };
 
@@ -27,6 +28,10 @@ export function adminProductsPath(): string {
 
 export function adminUsersPath(): string {
   return `${ADMIN_BASE}/users`;
+}
+
+export function adminUserDetailPath(accountId: string): string {
+  return `${ADMIN_BASE}/users/${encodeURIComponent(accountId.trim())}`;
 }
 
 export function adminOrdersPath(): string {
@@ -63,8 +68,14 @@ export function parseAdminRoute(pathname: string): AdminRouteParsed | null {
   if (second === "products" && segments.length === 2) {
     return { tag: "products" };
   }
-  if (second === "users" && segments.length === 2) {
-    return { tag: "users" };
+  if (second === "users") {
+    if (segments.length === 2) {
+      return { tag: "users" };
+    }
+    if (segments.length === 3 && segments[2]?.trim()) {
+      return { tag: "users-detail", accountId: decodeURIComponent(segments[2].trim()) };
+    }
+    return null;
   }
   if (second === "orders" && segments.length === 2) {
     return { tag: "orders" };
@@ -76,5 +87,8 @@ export function parseAdminRoute(pathname: string): AdminRouteParsed | null {
 }
 
 export function adminRouteActive(route: AdminRouteParsed | null, tag: AdminRouteParsed["tag"]): boolean {
+  if (tag === "users") {
+    return route?.tag === "users" || route?.tag === "users-detail";
+  }
   return route?.tag === tag;
 }

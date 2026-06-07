@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.naodab.authservice.clients.ProfileClient;
+import com.naodab.authservice.clients.UserActivityClient;
+import com.naodab.authservice.dto.response.AdminAccountActivitySummaryResponse;
 import com.naodab.authservice.dto.response.AdminAccountProfileSummary;
 import com.naodab.authservice.dto.response.AdminAccountResponse;
 import com.naodab.authservice.dto.response.ProfileResponse;
@@ -20,6 +22,8 @@ import com.naodab.authservice.models.Account;
 import com.naodab.authservice.models.Account.Role;
 import com.naodab.authservice.repositories.AccountRepository;
 import com.naodab.authservice.services.AccountAdminService;
+import com.naodab.commonservice.exception.AppException;
+import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.commonservice.response.PagedItemsResponse;
 
 import lombok.AccessLevel;
@@ -38,6 +42,7 @@ public class AccountAdminServiceImpl implements AccountAdminService {
 
   AccountRepository accountRepository;
   ProfileClient profileClient;
+  UserActivityClient userActivityClient;
 
   @Override
   @Transactional(readOnly = true)
@@ -65,6 +70,36 @@ public class AccountAdminServiceImpl implements AccountAdminService {
         .totalCount(accountPage.getTotalElements())
         .items(items)
         .build();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public AdminAccountResponse getAccountById(String accountId) {
+    Account account = requireActiveAccount(accountId);
+    AdminAccountResponse response = toAdminAccountResponse(account);
+    if (response == null) {
+      throw new AppException(ErrorCode.USER_NOT_FOUND);
+    }
+    return response;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public AdminAccountActivitySummaryResponse getActivitySummary(String accountId) {
+    Account account = requireActiveAccount(accountId);
+    if (!StringUtils.hasText(account.getProfileId())) {
+      return userActivityClient.getActivitySummary(null);
+    }
+    return userActivityClient.getActivitySummary(account.getProfileId());
+  }
+
+  private Account requireActiveAccount(String accountId) {
+    if (!StringUtils.hasText(accountId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    return accountRepository.findById(accountId.trim())
+        .filter(account -> account.getDeletedAt() == null)
+        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
   }
 
   private AdminAccountResponse toAdminAccountResponse(Account account) {

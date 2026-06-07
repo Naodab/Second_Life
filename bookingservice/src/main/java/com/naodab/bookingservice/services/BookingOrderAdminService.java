@@ -5,5 +5,10 @@ import com.naodab.bookingservice.models.enums.BookingOrderStatus;
 import com.naodab.commonservice.response.PagedItemsResponse;
 
 public interface BookingOrderAdminService {
-  PagedItemsResponse<BookingOrderResponse> listOrders(Integer page, Integer pageSize, BookingOrderStatus status);
+  PagedItemsResponse<BookingOrderResponse> listOrders(
+      Integer page,
+      Integer pageSize,
+      BookingOrderStatus status,
+      String buyerProfileId,
+      String sellerProfileId);
 }

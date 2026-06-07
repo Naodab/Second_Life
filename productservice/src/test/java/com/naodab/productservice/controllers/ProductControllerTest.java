@@ -185,4 +185,37 @@ class ProductControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.ownerId").value("buyer-prof"));
   }
+
+  @Test
+  void listProductsByOwnerAdmin_requiresAdmin() throws Exception {
+    mockMvc.perform(get("/products/admin/by-owner")
+        .param("ownerId", "owner-1")
+        .header(AppConstants.JWT_CLAIM_ROLE, "USER"))
+        .andExpect(status().isForbidden());
+
+    verify(productSearchService, never()).listOwnedProductItems(any());
+  }
+
+  @Test
+  void listProductsByOwnerAdmin_setsOwnerIdOnRequest() throws Exception {
+    when(productSearchService.listOwnedProductItems(any(ProductSearchRequest.class)))
+        .thenReturn(PagedItemsResponse.<ProductItemResponse>builder()
+            .items(List.of())
+            .totalCount(0)
+            .page(0)
+            .pageSize(20)
+            .build());
+
+    mockMvc.perform(get("/products/admin/by-owner")
+        .header(AppConstants.JWT_CLAIM_ROLE, AppConstants.ROLE_ADMIN)
+        .param("ownerId", "owner-1")
+        .param("page", "0")
+        .param("pageSize", "20"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.totalCount").value(0));
+
+    ArgumentCaptor<ProductSearchRequest> cap = ArgumentCaptor.forClass(ProductSearchRequest.class);
+    verify(productSearchService).listOwnedProductItems(cap.capture());
+    assertThat(cap.getValue().getOwnerId()).isEqualTo("owner-1");
+  }
 }

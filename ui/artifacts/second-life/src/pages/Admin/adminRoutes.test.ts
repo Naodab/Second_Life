@@ -9,6 +9,7 @@ import {
   adminOrdersPath,
   adminProductsPath,
   adminRouteActive,
+  adminUserDetailPath,
   adminUsersPath,
   parseAdminRoute,
 } from "./adminRoutes";
@@ -20,6 +21,7 @@ describe("adminRoutes", () => {
     expect(adminFacilitiesPath()).toBe(`${ADMIN_BASE}/facilities`);
     expect(adminProductsPath()).toBe(`${ADMIN_BASE}/products`);
     expect(adminUsersPath()).toBe(`${ADMIN_BASE}/users`);
+    expect(adminUserDetailPath("acc-1")).toBe(`${ADMIN_BASE}/users/acc-1`);
     expect(adminOrdersPath()).toBe(`${ADMIN_BASE}/orders`);
     expect(adminMessagesPath()).toBe(`${ADMIN_BASE}/messages`);
   });
@@ -30,6 +32,7 @@ describe("adminRoutes", () => {
     expect(parseAdminRoute("/admin/facilities")).toEqual({ tag: "facilities" });
     expect(parseAdminRoute("/admin/products")).toEqual({ tag: "products" });
     expect(parseAdminRoute("/admin/users")).toEqual({ tag: "users" });
+    expect(parseAdminRoute("/admin/users/acc-1")).toEqual({ tag: "users-detail", accountId: "acc-1" });
     expect(parseAdminRoute("/admin/orders")).toEqual({ tag: "orders" });
     expect(parseAdminRoute("/admin/messages")).toEqual({ tag: "messages" });
   });
@@ -50,5 +53,8 @@ describe("adminRoutes", () => {
     expect(adminRouteActive(route, "products")).toBe(true);
     expect(adminRouteActive(route, "facilities")).toBe(false);
     expect(adminRouteActive(null, "products")).toBe(false);
+
+    const userDetailRoute = parseAdminRoute("/admin/users/acc-1");
+    expect(adminRouteActive(userDetailRoute, "users")).toBe(true);
   });
 });
