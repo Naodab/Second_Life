@@ -4,6 +4,7 @@ import { useLocation, useSearch } from "wouter";
 
 import {
   createConversation,
+  getOrCreateAdminSupportConversation,
   listConversationMessages,
   listConversations,
   markConversationRead,
@@ -29,9 +30,9 @@ import {
   resolveMessageSearch,
   wasInitialAttachSent,
 } from "@/lib/message-navigation";
-import { filterConversationsBySearch } from "@/lib/messages-conversation-search";
+import { filterConversationsBySearch, type MessagesConversationTab } from "@/lib/messages-conversation-search";
 
-export type MessagesTab = "facilities" | "customers";
+export type MessagesPageMode = "default" | "admin";
 
 function formatConversationTime(value?: string | null): string {
   if (!value) return "";
@@ -56,64 +57,132 @@ function parseConversationId(search: string): string | null {
   return params.get("conversationId")?.trim() || null;
 }
 
-export function useMessagesPage() {
+function parseTabFromSearch(search: string): MessagesConversationTab | null {
+  const resolvedSearch = resolveMessageSearch(search);
+  const params = new URLSearchParams(
+    resolvedSearch.startsWith("?") ? resolvedSearch.slice(1) : resolvedSearch,
+  );
+  const tab = params.get("tab")?.trim();
+  if (tab === "customers" || tab === "admin" || tab === "facilities") {
+    return tab;
+  }
+  return null;
+}
+
+export function useMessagesPage(options: { mode?: MessagesPageMode } = {}) {
+  const mode = options.mode ?? "default";
   const search = useSearch();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const profileId = user?.id?.trim() ?? "";
   const queryClient = useQueryClient();
   const deepLinkInFlightRef = useRef(false);
+  const adminBootstrapRef = useRef(false);
 
-  const [tab, setTab] = useState<MessagesTab>("facilities");
+  const [tab, setTab] = useState<MessagesConversationTab>(
+    mode === "admin" ? "admin" : "facilities",
+  );
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [focusedConversation, setFocusedConversation] = useState<ConversationResponse | null>(null);
   const [facilitySearchQuery, setFacilitySearchQuery] = useState("");
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
-
-  const role = tab === "facilities" ? "buyer" : "seller";
+  const [adminSearchQuery, setAdminSearchQuery] = useState("");
 
   const buyerConversationsQuery = useQuery({
     queryKey: conversationsRoleKey("buyer"),
     queryFn: () => listConversations("buyer"),
-    enabled: Boolean(profileId),
+    enabled: Boolean(profileId) && mode === "default",
     staleTime: 15_000,
   });
 
   const sellerConversationsQuery = useQuery({
     queryKey: conversationsRoleKey("seller"),
     queryFn: () => listConversations("seller"),
-    enabled: Boolean(profileId),
+    enabled: Boolean(profileId) && mode === "default",
     staleTime: 15_000,
   });
 
-  const conversations =
-    tab === "facilities" ? (buyerConversationsQuery.data ?? []) : (sellerConversationsQuery.data ?? []);
-  const searchQuery = tab === "facilities" ? facilitySearchQuery : customerSearchQuery;
-  const setSearchQuery = tab === "facilities" ? setFacilitySearchQuery : setCustomerSearchQuery;
+  const adminSupportQuery = useQuery({
+    queryKey: conversationsRoleKey("admin-support"),
+    queryFn: () => listConversations("admin-support"),
+    enabled: Boolean(profileId) && mode === "default",
+    staleTime: 15_000,
+  });
+
+  const adminInboxQuery = useQuery({
+    queryKey: conversationsRoleKey("admin"),
+    queryFn: () => listConversations("admin"),
+    enabled: Boolean(profileId) && mode === "admin",
+    staleTime: 15_000,
+  });
+
+  const conversations = useMemo(() => {
+    if (mode === "admin") return adminInboxQuery.data ?? [];
+    if (tab === "facilities") return buyerConversationsQuery.data ?? [];
+    if (tab === "customers") return sellerConversationsQuery.data ?? [];
+    return adminSupportQuery.data ?? [];
+  }, [
+    mode,
+    tab,
+    adminInboxQuery.data,
+    buyerConversationsQuery.data,
+    sellerConversationsQuery.data,
+    adminSupportQuery.data,
+  ]);
+
+  const searchQuery =
+    mode === "admin" || tab === "admin"
+      ? adminSearchQuery
+      : tab === "facilities"
+        ? facilitySearchQuery
+        : customerSearchQuery;
+
+  const setSearchQuery =
+    mode === "admin" || tab === "admin"
+      ? setAdminSearchQuery
+      : tab === "facilities"
+        ? setFacilitySearchQuery
+        : setCustomerSearchQuery;
+
   const filteredConversations = useMemo(
-    () => filterConversationsBySearch(conversations, tab, searchQuery),
-    [conversations, tab, searchQuery],
+    () => filterConversationsBySearch(conversations, mode === "admin" ? "admin" : tab, searchQuery),
+    [conversations, mode, tab, searchQuery],
   );
+
   const hasAnyConversations = conversations.length > 0;
   const conversationsLoading =
-    tab === "facilities" ? buyerConversationsQuery.isLoading : sellerConversationsQuery.isLoading;
+    mode === "admin"
+      ? adminInboxQuery.isLoading
+      : tab === "facilities"
+        ? buyerConversationsQuery.isLoading
+        : tab === "customers"
+          ? sellerConversationsQuery.isLoading
+          : adminSupportQuery.isLoading;
 
   const buyerUnreadCount = sumConversationUnread(buyerConversationsQuery.data);
   const sellerUnreadCount = sumConversationUnread(sellerConversationsQuery.data);
+  const adminSupportUnreadCount = sumConversationUnread(adminSupportQuery.data);
+  const adminInboxUnreadCount = sumConversationUnread(adminInboxQuery.data);
 
   const activeConversation = useMemo(() => {
     if (!activeConversationId) return null;
-    const buyerRows = buyerConversationsQuery.data ?? [];
-    const sellerRows = sellerConversationsQuery.data ?? [];
-    return (
-      buyerRows.find((item) => item.id === activeConversationId) ??
-      sellerRows.find((item) => item.id === activeConversationId) ??
-      (focusedConversation?.id === activeConversationId ? focusedConversation : null)
-    );
+    const pools = [
+      buyerConversationsQuery.data ?? [],
+      sellerConversationsQuery.data ?? [],
+      adminSupportQuery.data ?? [],
+      adminInboxQuery.data ?? [],
+    ];
+    for (const rows of pools) {
+      const found = rows.find((item) => item.id === activeConversationId);
+      if (found) return found;
+    }
+    return focusedConversation?.id === activeConversationId ? focusedConversation : null;
   }, [
     activeConversationId,
     buyerConversationsQuery.data,
     sellerConversationsQuery.data,
+    adminSupportQuery.data,
+    adminInboxQuery.data,
     focusedConversation,
   ]);
 
@@ -143,6 +212,21 @@ export function useMessagesPage() {
     },
   });
 
+  const openAdminSupportMutation = useMutation({
+    mutationFn: getOrCreateAdminSupportConversation,
+    onSuccess: (conversation) => {
+      setFocusedConversation(conversation);
+      queryClient.setQueryData<ConversationResponse[]>(conversationsRoleKey("admin-support"), () => [
+        conversation,
+      ]);
+      setActiveConversationId(conversation.id);
+      setTab("admin");
+      void queryClient.invalidateQueries({
+        queryKey: conversationMessagesQueryKey(conversation.id),
+      });
+    },
+  });
+
   const sendMessageMutation = useMutation({
     mutationFn: ({ conversationId, payload }: { conversationId: string; payload: MessagePayload }) =>
       sendConversationMessage(conversationId, payload),
@@ -158,8 +242,15 @@ export function useMessagesPage() {
   const markReadMutation = useMutation({
     mutationFn: markConversationRead,
     onSuccess: (conversation) => {
-      const updateRole = profileId === conversation.buyerProfileId ? "buyer" : "seller";
-      queryClient.setQueryData<ConversationResponse[]>(conversationsRoleKey(updateRole), (prev) =>
+      const updateKey =
+        mode === "admin" || conversation.conversationType === "ADMIN"
+          ? mode === "admin"
+            ? conversationsRoleKey("admin")
+            : conversationsRoleKey("admin-support")
+          : profileId === conversation.buyerProfileId
+            ? conversationsRoleKey("buyer")
+            : conversationsRoleKey("seller");
+      queryClient.setQueryData<ConversationResponse[]>(updateKey, (prev) =>
         (prev ?? []).map((item) => (item.id === conversation.id ? conversation : item)),
       );
     },
@@ -173,18 +264,24 @@ export function useMessagesPage() {
   }, [activeConversationId]);
 
   useEffect(() => {
-    const resolvedSearch = resolveMessageSearch(search);
-    const params = new URLSearchParams(
-      resolvedSearch.startsWith("?") ? resolvedSearch.slice(1) : resolvedSearch,
-    );
-    if (params.get("tab")?.trim() === "customers") {
-      setTab("customers");
+    if (mode === "admin") return;
+    const parsedTab = parseTabFromSearch(search);
+    if (parsedTab) {
+      setTab(parsedTab);
     }
     const conversationId = parseConversationId(search);
     if (conversationId) {
       setActiveConversationId(conversationId);
     }
-  }, [search]);
+  }, [search, mode]);
+
+  useEffect(() => {
+    if (mode !== "admin") return;
+    const conversationId = parseConversationId(search);
+    if (conversationId) {
+      setActiveConversationId(conversationId);
+    }
+  }, [search, mode]);
 
   useEffect(() => {
     markedReadRef.current = null;
@@ -192,28 +289,32 @@ export function useMessagesPage() {
 
   useEffect(() => {
     if (!activeConversationId || !profileId) return;
-    const buyerRows = buyerConversationsQuery.data ?? [];
-    const sellerRows = sellerConversationsQuery.data ?? [];
-    const conversation =
-      buyerRows.find((item) => item.id === activeConversationId) ??
-      sellerRows.find((item) => item.id === activeConversationId) ??
-      (focusedConversation?.id === activeConversationId ? focusedConversation : null);
+    const conversation = activeConversation;
     if (!conversation || conversation.unreadCount <= 0) return;
     if (markedReadRef.current === activeConversationId) return;
     markedReadRef.current = activeConversationId;
     markReadMutation.mutate(activeConversationId);
+  }, [activeConversationId, activeConversation, profileId]);
+
+  useEffect(() => {
+    if (mode !== "default" || tab !== "admin" || adminBootstrapRef.current) return;
+    if (!profileId || adminSupportQuery.isLoading || openAdminSupportMutation.isPending) return;
+    if ((adminSupportQuery.data ?? []).length > 0) return;
+    adminBootstrapRef.current = true;
+    void openAdminSupportMutation.mutateAsync({});
   }, [
-    activeConversationId,
-    buyerConversationsQuery.data,
-    sellerConversationsQuery.data,
-    focusedConversation,
+    mode,
+    tab,
     profileId,
+    adminSupportQuery.isLoading,
+    adminSupportQuery.data,
+    openAdminSupportMutation,
   ]);
 
   useEffect(() => {
     const resolvedSearch = resolveMessageSearch(search);
     const context = parseMessageDeepLink(resolvedSearch);
-    if (!context?.facilityId || !profileId || deepLinkInFlightRef.current) return;
+    if (!context?.facilityId || !profileId || deepLinkInFlightRef.current || mode === "admin") return;
 
     if (context.tab === "customers") {
       setTab("customers");
@@ -250,7 +351,7 @@ export function useMessagesPage() {
     };
 
     void run();
-  }, [search, profileId]);
+  }, [search, profileId, mode]);
 
   const selectConversation = useCallback((conversationId: string | null) => {
     setActiveConversationId(conversationId);
@@ -259,11 +360,15 @@ export function useMessagesPage() {
     }
   }, []);
 
-  const changeTab = useCallback((nextTab: MessagesTab) => {
-    setTab(nextTab);
-    setActiveConversationId(null);
-    setFocusedConversation(null);
-  }, []);
+  const changeTab = useCallback(
+    (nextTab: MessagesConversationTab) => {
+      if (mode === "admin") return;
+      setTab(nextTab);
+      setActiveConversationId(null);
+      setFocusedConversation(null);
+    },
+    [mode],
+  );
 
   const sendMessage = useCallback(
     async (payload: MessagePayload) => {
@@ -279,6 +384,7 @@ export function useMessagesPage() {
   );
 
   return {
+    mode,
     tab,
     changeTab,
     conversations: filteredConversations,
@@ -289,6 +395,8 @@ export function useMessagesPage() {
     hasAnyConversations,
     buyerUnreadCount,
     sellerUnreadCount,
+    adminSupportUnreadCount,
+    adminInboxUnreadCount,
     activeConversation,
     activeConversationId,
     selectConversation,
@@ -296,7 +404,7 @@ export function useMessagesPage() {
     messagesLoading: messagesQuery.isLoading,
     sendMessage,
     sending: sendMessageMutation.isPending,
-    openingConversation: openConversationMutation.isPending,
+    openingConversation: openConversationMutation.isPending || openAdminSupportMutation.isPending,
     profileId,
     isMine,
     formatConversationTime,

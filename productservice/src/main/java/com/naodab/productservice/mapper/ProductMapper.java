@@ -205,6 +205,8 @@ public class ProductMapper {
         .subCategoryIds(subCategoryIds)
         .primarySubCategoryId(
             product.getPrimarySubCategory() == null ? null : product.getPrimarySubCategory().getId())
+        .primarySubCategoryName(
+            product.getPrimarySubCategory() == null ? null : product.getPrimarySubCategory().getName())
         .attributeIds(attributeIds)
         .attributeValues(attributeValues)
         .variantSkus(variantSkus)
@@ -289,7 +291,7 @@ public class ProductMapper {
         .name(doc.getName())
         .thumbnailImage(doc.getThumbnailUrl())
         .status(doc.getStatus())
-        .primarySubCategoryName(null)
+        .primarySubCategoryName(doc.getPrimarySubCategoryName())
         .primarySubCategoryId(doc.getPrimarySubCategoryId())
         .variantCount(variantCount)
         .createdAt(doc.getCreatedAt())

@@ -6,7 +6,9 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import com.naodab.commonservice.constant.AppConstants;
 import com.naodab.mailservice.service.NotificationWebSocketSessionRegistry;
+import com.naodab.mailservice.support.ConversationConstants;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,9 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
       return;
     }
     sessionRegistry.register(profileId, session);
+    if (AppConstants.ROLE_ADMIN.equals(role(session))) {
+      sessionRegistry.register(ConversationConstants.ADMIN_INBOX_PROFILE_ID, session);
+    }
     log.info("Notification websocket connected for profile {}", profileId);
   }
 
@@ -44,6 +49,11 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
 
   private static String profileId(WebSocketSession session) {
     Object value = session.getAttributes().get(NotificationHandshakeInterceptor.SESSION_PROFILE_ID);
+    return value instanceof String s && !s.isBlank() ? s.trim() : null;
+  }
+
+  private static String role(WebSocketSession session) {
+    Object value = session.getAttributes().get(NotificationHandshakeInterceptor.SESSION_ROLE);
     return value instanceof String s && !s.isBlank() ? s.trim() : null;
   }
 

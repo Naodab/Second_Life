@@ -141,6 +141,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     return fetchProductDocumentsPage(request).documents().stream()
         .map(productMapper::toProductItemResponse)
         .filter(Objects::nonNull)
+        .map(this::enrichPrimarySubCategoryName)
         .toList();
   }
 
@@ -161,6 +162,7 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     List<ProductItemResponse> items = slice.documents().stream()
         .map(productMapper::toProductItemResponse)
         .filter(Objects::nonNull)
+        .map(this::enrichPrimarySubCategoryName)
         .toList();
     return PagedItemsResponse.<ProductItemResponse>builder()
         .items(items)
@@ -249,6 +251,34 @@ public class ProductSearchServiceImpl implements ProductSearchService {
     }
     rows.sort(Comparator.comparing(PrimarySubcategorySummaryResponse::getName, String.CASE_INSENSITIVE_ORDER));
     return rows;
+  }
+
+  private ProductItemResponse enrichPrimarySubCategoryName(ProductItemResponse item) {
+    if (item == null || StringUtils.hasText(item.getPrimarySubCategoryName())) {
+      return item;
+    }
+    String sid = item.getPrimarySubCategoryId();
+    if (!StringUtils.hasText(sid)) {
+      return item;
+    }
+    String label = subCategoryRepository.findById(sid.trim())
+        .map(sc -> sc.getName())
+        .filter(StringUtils::hasText)
+        .map(String::trim)
+        .orElse(null);
+    if (label == null) {
+      return item;
+    }
+    return ProductItemResponse.builder()
+        .id(item.getId())
+        .name(item.getName())
+        .thumbnailImage(item.getThumbnailImage())
+        .status(item.getStatus())
+        .primarySubCategoryName(label)
+        .primarySubCategoryId(item.getPrimarySubCategoryId())
+        .variantCount(item.getVariantCount())
+        .createdAt(item.getCreatedAt())
+        .build();
   }
 
   private static List<String> normalizeIdListPreserveOrder(List<String> raw) {

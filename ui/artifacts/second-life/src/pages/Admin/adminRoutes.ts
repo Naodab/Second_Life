@@ -6,7 +6,8 @@ export type AdminRouteParsed =
   | { tag: "facilities" }
   | { tag: "products" }
   | { tag: "users" }
-  | { tag: "orders" };
+  | { tag: "orders" }
+  | { tag: "messages" };
 
 export function adminListingsPendingPath(): string {
   return `${ADMIN_BASE}/listings/pending`;
@@ -30,6 +31,10 @@ export function adminUsersPath(): string {
 
 export function adminOrdersPath(): string {
   return `${ADMIN_BASE}/orders`;
+}
+
+export function adminMessagesPath(): string {
+  return `${ADMIN_BASE}/messages`;
 }
 
 export function parseAdminRoute(pathname: string): AdminRouteParsed | null {
@@ -63,6 +68,9 @@ export function parseAdminRoute(pathname: string): AdminRouteParsed | null {
   }
   if (second === "orders" && segments.length === 2) {
     return { tag: "orders" };
+  }
+  if (second === "messages" && segments.length === 2) {
+    return { tag: "messages" };
   }
   return null;
 }

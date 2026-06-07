@@ -27,7 +27,9 @@ import com.naodab.mailservice.dto.CreateConversationRequest;
 import com.naodab.mailservice.dto.FacilitySummary;
 import com.naodab.mailservice.dto.SendMessageRequest;
 import com.naodab.mailservice.models.ConversationDocument;
+import com.naodab.mailservice.models.ConversationType;
 import com.naodab.mailservice.models.MessageDocument;
+import com.naodab.mailservice.support.ConversationConstants;
 import com.naodab.mailservice.repositories.ConversationRepository;
 import com.naodab.mailservice.repositories.MessageRepository;
 
@@ -136,7 +138,7 @@ class ConversationServiceTest {
         .title("Máy ảnh")
         .build());
 
-    var response = conversationService.sendMessage("buyer-1", "conv-1", request);
+    var response = conversationService.sendMessage("buyer-1", "conv-1", request, false);
 
     assertThat(response.getProductCard().getTitle()).isEqualTo("Máy ảnh");
     ArgumentCaptor<ConversationDocument> captor = ArgumentCaptor.forClass(ConversationDocument.class);
@@ -165,7 +167,7 @@ class ConversationServiceTest {
     SendMessageRequest request = new SendMessageRequest();
     request.setContent("Xin chào shop");
 
-    var response = conversationService.sendMessage("buyer-1", "conv-1", request);
+    var response = conversationService.sendMessage("buyer-1", "conv-1", request, false);
 
     assertThat(response.getContent()).isEqualTo("Xin chào shop");
     ArgumentCaptor<ConversationDocument> captor = ArgumentCaptor.forClass(ConversationDocument.class);
@@ -185,7 +187,7 @@ class ConversationServiceTest {
     when(conversationRepository.findById("conv-1")).thenReturn(Optional.of(conversation));
     when(conversationRepository.save(any(ConversationDocument.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-    var response = conversationService.markRead("buyer-1", "conv-1");
+    var response = conversationService.markRead("buyer-1", "conv-1", false);
 
     assertThat(response.getUnreadCount()).isZero();
   }
@@ -203,7 +205,7 @@ class ConversationServiceTest {
             message("msg-2", "conv-1", "seller-1", "Reply", Instant.parse("2026-06-01T10:05:00Z")),
             message("msg-1", "conv-1", "buyer-1", "Hello", Instant.parse("2026-06-01T10:00:00Z"))));
 
-    var messages = conversationService.listMessages("buyer-1", "conv-1", 50);
+    var messages = conversationService.listMessages("buyer-1", "conv-1", 50, false);
 
     assertThat(messages).extracting("id").containsExactly("msg-1", "msg-2");
   }
@@ -221,6 +223,24 @@ class ConversationServiceTest {
     facility.setOwnerId(ownerId);
     facility.setImageUrl("https://res.cloudinary.com/demo/image/upload/facility.jpg");
     return facility;
+  }
+
+  @Test
+  void getOrCreateAdminSupport_createsConversation() {
+    when(conversationRepository.findByBuyerProfileIdAndFacilityId(
+        "buyer-1", ConversationConstants.ADMIN_SUPPORT_FACILITY_ID))
+        .thenReturn(Optional.empty());
+    when(conversationRepository.save(any(ConversationDocument.class))).thenAnswer(invocation -> {
+      ConversationDocument doc = invocation.getArgument(0);
+      doc.setId("admin-conv");
+      return doc;
+    });
+
+    var response = conversationService.getOrCreateAdminSupport("buyer-1", null);
+
+    assertThat(response.getId()).isEqualTo("admin-conv");
+    assertThat(response.getConversationType()).isEqualTo(ConversationType.ADMIN.name());
+    assertThat(response.getFacilityName()).isEqualTo(ConversationConstants.ADMIN_SUPPORT_FACILITY_NAME);
   }
 
   private static MessageDocument message(

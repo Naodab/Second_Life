@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
 import { ExternalLink, Loader2, Search } from "lucide-react";
 import { Link } from "wouter";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { facilityAvatarUrl, searchAllFacilities, type FacilityResponse } from "@/api/facility";
+import { getProfileById, profileDisplayName, type ProfilePayload } from "@/api/profile";
 import { ApiErrorState } from "@/components/errors";
 
 const PAGE_SIZE = 15;
@@ -60,6 +63,32 @@ export function FacilitiesView() {
     };
   }, [page, debouncedKeyword]);
 
+  const ownerIds = useMemo(
+    () => [...new Set(rows.map((row) => row.ownerId?.trim()).filter(Boolean))] as string[],
+    [rows],
+  );
+
+  const ownerQueries = useQueries({
+    queries: ownerIds.map((ownerId) => ({
+      queryKey: ["adminFacilityOwner", ownerId] as const,
+      queryFn: () => getProfileById(ownerId),
+      enabled: Boolean(ownerId),
+      staleTime: 60_000,
+      retry: 1,
+    })),
+  });
+
+  const ownerById = useMemo(() => {
+    const map = new Map<string, ProfilePayload>();
+    ownerIds.forEach((id, idx) => {
+      const data = ownerQueries[idx]?.data;
+      if (data) map.set(id, data);
+    });
+    return map;
+  }, [ownerIds, ownerQueries]);
+
+  const ownerLoading = ownerQueries.some((q) => q.isLoading);
+
   if (error) {
     return <ApiErrorState error={error} variant="embedded" />;
   }
@@ -101,7 +130,10 @@ export function FacilitiesView() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => (
+              {rows.map((row) => {
+                const owner = ownerById.get(row.ownerId);
+                const ownerName = owner ? profileDisplayName(owner) : null;
+                return (
                 <TableRow key={row.id}>
                   <TableCell>
                     <img
@@ -115,7 +147,23 @@ export function FacilitiesView() {
                     {row.address || "—"}
                   </TableCell>
                   <TableCell>
-                    <span className="font-mono text-xs text-muted-foreground">{row.ownerId}</span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Avatar className="h-8 w-8 shrink-0 border border-border">
+                        {owner?.avatarUrl?.trim() ? (
+                          <AvatarImage src={owner.avatarUrl.trim()} alt="" />
+                        ) : null}
+                        <AvatarFallback className="text-xs bg-muted">
+                          {(ownerName ?? row.ownerId).slice(0, 1).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        {ownerLoading && !ownerName ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                        ) : (
+                          <div className="text-sm font-medium truncate">{ownerName ?? "—"}</div>
+                        )}
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <Link href={`/facility/${row.id}`} target="_blank">
@@ -125,7 +173,8 @@ export function FacilitiesView() {
                     </Link>
                   </TableCell>
                 </TableRow>
-              ))}
+              );
+              })}
             </TableBody>
           </Table>
         )}

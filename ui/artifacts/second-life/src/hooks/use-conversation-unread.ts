@@ -26,13 +26,22 @@ export function useConversationUnreadCounts() {
     staleTime: 15_000,
   });
 
+  const adminSupportQuery = useQuery({
+    queryKey: conversationsRoleKey("admin-support"),
+    queryFn: () => listConversations("admin-support"),
+    enabled,
+    staleTime: 15_000,
+  });
+
   const buyerUnreadCount = sumConversationUnread(buyerQuery.data);
   const sellerUnreadCount = sumConversationUnread(sellerQuery.data);
+  const adminSupportUnreadCount = sumConversationUnread(adminSupportQuery.data);
 
   return {
     buyerUnreadCount,
     sellerUnreadCount,
-    totalUnreadCount: buyerUnreadCount + sellerUnreadCount,
-    isLoading: buyerQuery.isLoading || sellerQuery.isLoading,
+    adminSupportUnreadCount,
+    totalUnreadCount: buyerUnreadCount + sellerUnreadCount + adminSupportUnreadCount,
+    isLoading: buyerQuery.isLoading || sellerQuery.isLoading || adminSupportQuery.isLoading,
   };
 }

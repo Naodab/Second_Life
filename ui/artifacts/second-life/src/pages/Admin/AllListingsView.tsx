@@ -1,10 +1,20 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ExternalLink, Loader2, Search } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -14,12 +24,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  adminReactivateListing,
+  adminSuspendListing,
   MANAGE_LISTING_STATUSES,
   searchListings,
   type ListingItemResponse,
   type ListingStatus,
 } from "@/api/listing";
 import { ApiErrorState } from "@/components/errors";
+import { toast } from "@/hooks/use-toast";
 import {
   ADMIN_LISTING_STATUS_LABELS,
   formatAdminPrice,
@@ -30,6 +43,8 @@ const PAGE_SIZE = 12;
 const DEFAULT_THUMB =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop";
 
+type ListingAction = { id: string; type: "suspend" | "reactivate" };
+
 export function AllListingsView() {
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
@@ -39,6 +54,31 @@ export function AllListingsView() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [pendingAction, setPendingAction] = useState<ListingAction | null>(null);
+  const [actingId, setActingId] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const loadListings = useCallback(async (cancelled: () => boolean) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await searchListings({
+        page,
+        pageSize: PAGE_SIZE,
+        keyword: debouncedKeyword || undefined,
+        listingStatus: status === "ALL" ? undefined : status,
+        sortBy: "UPDATED_AT_DESC",
+      });
+      if (!cancelled()) {
+        setRows(data.items ?? []);
+        setTotalCount(typeof data.totalCount === "number" ? data.totalCount : 0);
+      }
+    } catch (err) {
+      if (!cancelled()) setError(err);
+    } finally {
+      if (!cancelled()) setLoading(false);
+    }
+  }, [page, debouncedKeyword, status]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedKeyword(keyword.trim()), 350);
@@ -51,31 +91,36 @@ export function AllListingsView() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await searchListings({
-          page,
-          pageSize: PAGE_SIZE,
-          keyword: debouncedKeyword || undefined,
-          listingStatus: status === "ALL" ? undefined : status,
-          sortBy: "UPDATED_AT_DESC",
-        });
-        if (!cancelled) {
-          setRows(data.items ?? []);
-          setTotalCount(typeof data.totalCount === "number" ? data.totalCount : 0);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    void loadListings(() => cancelled);
     return () => {
       cancelled = true;
     };
-  }, [page, debouncedKeyword, status]);
+  }, [loadListings, reloadToken]);
+
+  async function confirmAction() {
+    if (!pendingAction) return;
+    const { id, type } = pendingAction;
+    setPendingAction(null);
+    setActingId(id);
+    try {
+      if (type === "suspend") {
+        await adminSuspendListing(id);
+        toast({ title: "Đã tạm dừng bài đăng" });
+      } else {
+        await adminReactivateListing(id);
+        toast({ title: "Đã kích hoạt lại bài đăng" });
+      }
+      setReloadToken((t) => t + 1);
+    } catch (err) {
+      toast({
+        title: type === "suspend" ? "Không thể tạm dừng bài đăng" : "Không thể kích hoạt lại bài đăng",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setActingId(null);
+    }
+  }
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
@@ -132,11 +177,13 @@ export function AllListingsView() {
                 <TableHead>Cơ sở</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead>Giá</TableHead>
-                <TableHead className="text-right">Xem</TableHead>
+                <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => (
+              {rows.map((row) => {
+                const busy = actingId === row.id;
+                return (
                 <TableRow key={row.id}>
                   <TableCell>
                     <img
@@ -159,14 +206,40 @@ export function AllListingsView() {
                     {formatAdminPrice(row.minPrice, row.maxPrice)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link href={`/listing/${row.id}`} target="_blank">
-                      <Button type="button" variant="ghost" size="sm" className="rounded-lg">
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Button>
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link href={`/listing/${row.id}`} target="_blank">
+                        <Button type="button" variant="ghost" size="sm" className="rounded-lg">
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Button>
+                      </Link>
+                      {row.listingStatus === "ACTIVE" ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-lg"
+                          disabled={busy}
+                          onClick={() => setPendingAction({ id: row.id, type: "suspend" })}
+                        >
+                          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Tạm dừng"}
+                        </Button>
+                      ) : null}
+                      {row.listingStatus === "INACTIVE" ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="rounded-lg"
+                          disabled={busy}
+                          onClick={() => setPendingAction({ id: row.id, type: "reactivate" })}
+                        >
+                          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Kích hoạt"}
+                        </Button>
+                      ) : null}
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              );
+              })}
             </TableBody>
           </Table>
         )}
@@ -201,6 +274,27 @@ export function AllListingsView() {
           </div>
         </div>
       ) : null}
+
+      <AlertDialog open={pendingAction != null} onOpenChange={(open) => !open && setPendingAction(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction?.type === "suspend" ? "Tạm dừng bài đăng?" : "Kích hoạt lại bài đăng?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction?.type === "suspend"
+                ? "Bài đăng sẽ bị ẩn khỏi chợ cho đến khi được kích hoạt lại."
+                : "Bài đăng sẽ hiển thị công khai trên chợ sau khi kích hoạt."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Hủy</AlertDialogCancel>
+            <AlertDialogAction className="rounded-full" onClick={confirmAction}>
+              Xác nhận
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

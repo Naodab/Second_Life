@@ -75,6 +75,9 @@ public class ProductDocument {
   String primarySubCategoryId;
 
   @Field(type = FieldType.Keyword)
+  String primarySubCategoryName;
+
+  @Field(type = FieldType.Keyword)
   List<String> attributeIds;
 
   @Field(type = FieldType.Text, analyzer = "standard")

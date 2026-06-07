@@ -19,6 +19,7 @@ import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.mailservice.dto.ConversationResponse;
+import com.naodab.mailservice.dto.CreateAdminConversationRequest;
 import com.naodab.mailservice.dto.CreateConversationRequest;
 import com.naodab.mailservice.dto.MessageResponse;
 import com.naodab.mailservice.dto.SendMessageRequest;
@@ -40,12 +41,27 @@ public class ConversationController {
   @GetMapping
   public ResponseEntity<ApiResponse<List<ConversationResponse>>> listConversations(
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String roleHeader,
       @RequestParam(defaultValue = "buyer") String role,
       @RequestParam(required = false) Integer limit) {
     String profileId = validateProfileId(profileIdHeader);
-    List<ConversationResponse> data = "seller".equalsIgnoreCase(role)
-        ? conversationService.listAsSeller(profileId, limit)
-        : conversationService.listAsBuyer(profileId, limit);
+    boolean adminRole = isAdminRole(roleHeader);
+    List<ConversationResponse> data;
+    if ("admin".equalsIgnoreCase(role)) {
+      if (!adminRole) {
+        throw new AppException(ErrorCode.FORBIDDEN);
+      }
+      data = conversationService.listAdminSupportInbox(limit);
+    } else if ("admin-support".equalsIgnoreCase(role)) {
+      if (adminRole) {
+        throw new AppException(ErrorCode.FORBIDDEN);
+      }
+      data = conversationService.listAdminSupportAsUser(profileId, limit);
+    } else if ("seller".equalsIgnoreCase(role)) {
+      data = conversationService.listAsSeller(profileId, limit);
+    } else {
+      data = conversationService.listAsBuyer(profileId, limit);
+    }
     return ResponseEntity.ok(ApiResponse.<List<ConversationResponse>>builder().data(data).build());
   }
 
@@ -58,32 +74,53 @@ public class ConversationController {
         .build());
   }
 
+  @PostMapping("/admin")
+  public ResponseEntity<ApiResponse<ConversationResponse>> createAdminSupportConversation(
+      @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String roleHeader,
+      @RequestBody(required = false) CreateAdminConversationRequest request) {
+    if (isAdminRole(roleHeader)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
+    return ResponseEntity.ok(ApiResponse.<ConversationResponse>builder()
+        .data(conversationService.getOrCreateAdminSupport(
+            validateProfileId(profileIdHeader),
+            request == null ? new CreateAdminConversationRequest() : request))
+        .build());
+  }
+
   @GetMapping("/{id}/messages")
   public ResponseEntity<ApiResponse<List<MessageResponse>>> listMessages(
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String roleHeader,
       @PathVariable String id,
       @RequestParam(required = false) Integer limit) {
     return ResponseEntity.ok(ApiResponse.<List<MessageResponse>>builder()
-        .data(conversationService.listMessages(validateProfileId(profileIdHeader), id, limit))
+        .data(conversationService.listMessages(
+            validateProfileId(profileIdHeader), id, limit, isAdminRole(roleHeader)))
         .build());
   }
 
   @PostMapping("/{id}/messages")
   public ResponseEntity<ApiResponse<MessageResponse>> sendMessage(
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String roleHeader,
       @PathVariable String id,
       @Valid @RequestBody SendMessageRequest request) {
     return ResponseEntity.ok(ApiResponse.<MessageResponse>builder()
-        .data(conversationService.sendMessage(validateProfileId(profileIdHeader), id, request))
+        .data(conversationService.sendMessage(
+            validateProfileId(profileIdHeader), id, request, isAdminRole(roleHeader)))
         .build());
   }
 
   @PatchMapping("/{id}/read")
   public ResponseEntity<ApiResponse<ConversationResponse>> markRead(
       @RequestHeader(value = AppConstants.HEADER_PROFILE_ID, required = false) String profileIdHeader,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String roleHeader,
       @PathVariable String id) {
     return ResponseEntity.ok(ApiResponse.<ConversationResponse>builder()
-        .data(conversationService.markRead(validateProfileId(profileIdHeader), id))
+        .data(conversationService.markRead(
+            validateProfileId(profileIdHeader), id, isAdminRole(roleHeader)))
         .build());
   }
 
@@ -92,5 +129,9 @@ public class ConversationController {
       throw new AppException(ErrorCode.UNAUTHORIZED);
     }
     return profileIdHeader.trim();
+  }
+
+  private static boolean isAdminRole(String roleHeader) {
+    return AppConstants.ROLE_ADMIN.equalsIgnoreCase(roleHeader == null ? "" : roleHeader.trim());
   }
 }

@@ -26,6 +26,7 @@ import lombok.experimental.FieldDefaults;
 public class NotificationHandshakeInterceptor implements HandshakeInterceptor {
 
   public static final String SESSION_PROFILE_ID = "profileId";
+  public static final String SESSION_ROLE = "role";
 
   AuthClients authClients;
 
@@ -40,6 +41,10 @@ public class NotificationHandshakeInterceptor implements HandshakeInterceptor {
       return false;
     }
     attributes.put(SESSION_PROFILE_ID, profileId.trim());
+    String role = resolveRole(request);
+    if (StringUtils.hasText(role)) {
+      attributes.put(SESSION_ROLE, role.trim());
+    }
     return true;
   }
 
@@ -50,6 +55,17 @@ public class NotificationHandshakeInterceptor implements HandshakeInterceptor {
       WebSocketHandler wsHandler,
       Exception exception) {
     // no-op
+  }
+
+  private static String resolveRole(ServerHttpRequest request) {
+    if (request instanceof ServletServerHttpRequest servletRequest) {
+      HttpServletRequest httpRequest = servletRequest.getServletRequest();
+      String forwardedRole = httpRequest.getHeader(AppConstants.JWT_CLAIM_ROLE);
+      if (StringUtils.hasText(forwardedRole)) {
+        return forwardedRole.trim();
+      }
+    }
+    return null;
   }
 
   private String resolveProfileId(ServerHttpRequest request) {

@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   FileText,
   LogOut,
+  MessageSquare,
   Package,
   ShoppingBag,
   Store,
@@ -16,6 +17,7 @@ import {
   adminFacilitiesPath,
   adminListingsPath,
   adminListingsPendingPath,
+  adminMessagesPath,
   adminOrdersPath,
   adminProductsPath,
   adminRouteActive,
@@ -100,6 +102,12 @@ export function AdminSidebar({ route, onGoHome }: { route: AdminRouteParsed | nu
           <ShoppingBag className="w-4 h-4" />,
           adminOrdersPath(),
           adminRouteActive(route, "orders"),
+        )}
+        {navLink(
+          "Tin nhắn",
+          <MessageSquare className="w-4 h-4" />,
+          adminMessagesPath(),
+          adminRouteActive(route, "messages"),
         )}
       </nav>
 

@@ -31,6 +31,9 @@ public class ConversationDocument {
   @Id
   String id;
 
+  @Builder.Default
+  ConversationType conversationType = ConversationType.FACILITY;
+
   String buyerProfileId;
   String sellerProfileId;
   String facilityId;

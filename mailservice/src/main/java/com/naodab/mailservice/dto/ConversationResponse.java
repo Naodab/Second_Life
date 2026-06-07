@@ -12,6 +12,7 @@ import lombok.AccessLevel;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ConversationResponse {
   String id;
+  String conversationType;
   String buyerProfileId;
   String sellerProfileId;
   String facilityId;

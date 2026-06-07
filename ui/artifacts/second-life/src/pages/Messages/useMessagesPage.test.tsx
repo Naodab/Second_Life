@@ -35,6 +35,7 @@ vi.mock("@/context/AuthContext", () => ({
 
 vi.mock("@/api/conversations", () => ({
   createConversation: vi.fn(),
+  getOrCreateAdminSupportConversation: vi.fn(),
   listConversations: vi.fn(),
   listConversationMessages: vi.fn(),
   markConversationRead: vi.fn(),

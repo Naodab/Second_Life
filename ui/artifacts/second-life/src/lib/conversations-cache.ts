@@ -8,17 +8,23 @@ export function conversationMessagesQueryKey(conversationId: string) {
   return ["conversations", conversationId, "messages"] as const;
 }
 
-export function conversationsRoleKey(role: "buyer" | "seller") {
+export type ConversationsCacheRole = "buyer" | "seller" | "admin" | "admin-support";
+
+export function conversationsRoleKey(role: ConversationsCacheRole) {
   return [...CONVERSATIONS_QUERY_KEY, role] as const;
 }
 
 export function roleForViewer(
   conversation: ConversationResponse,
   profileId: string,
-): "buyer" | "seller" | null {
+  isAdmin = false,
+): ConversationsCacheRole | null {
   const normalized = profileId.trim();
-  if (conversation.buyerProfileId === normalized) return "buyer";
+  if (conversation.buyerProfileId === normalized) {
+    return conversation.conversationType === "ADMIN" ? "admin-support" : "buyer";
+  }
   if (conversation.sellerProfileId === normalized) return "seller";
+  if (isAdmin && conversation.conversationType === "ADMIN") return "admin";
   return null;
 }
 
@@ -45,10 +51,16 @@ export function messagePreview(message: MessageResponse): string {
 
 export function conversationAlertTitle(
   conversation: ConversationResponse,
-  role: "buyer" | "seller",
+  role: ConversationsCacheRole,
 ): string {
+  if (role === "admin-support") {
+    return conversation.facilityName?.trim() || "Ban quản trị";
+  }
   if (role === "buyer") {
     return conversation.facilityName?.trim() || "Tin nhắn từ cơ sở";
+  }
+  if (role === "admin") {
+    return `Người dùng ${conversation.buyerProfileId.slice(0, 8)}`;
   }
   return `Khách ${conversation.buyerProfileId.slice(0, 8)}`;
 }
@@ -58,8 +70,9 @@ export function applyRealtimeMessage(
   message: MessageResponse,
   conversation: ConversationResponse,
   profileId: string,
+  isAdmin = false,
 ) {
-  const role = roleForViewer(conversation, profileId);
+  const role = roleForViewer(conversation, profileId, isAdmin);
   if (!role) return;
 
   queryClient.setQueryData<ConversationResponse[]>(conversationsRoleKey(role), (prev) =>
