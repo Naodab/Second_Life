@@ -300,12 +300,12 @@ class RentalOrderControllerTest {
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value(1050));
 
-    verify(rentalOrderAdminService, never()).listOrders(any(), any(), any());
+    verify(rentalOrderAdminService, never()).listOrders(any(), any(), any(), any(), any());
   }
 
   @Test
   void listRentalOrdersAdmin_adminOk() throws Exception {
-    when(rentalOrderAdminService.listOrders(0, 20, null))
+    when(rentalOrderAdminService.listOrders(0, 20, null, null, null))
         .thenReturn(PagedItemsResponse.<RentalOrderResponse>builder()
             .page(0)
             .pageSize(20)
@@ -321,7 +321,7 @@ class RentalOrderControllerTest {
         .andExpect(jsonPath("$.data.totalCount").value(1))
         .andExpect(jsonPath("$.data.items[0].id").value(ORDER_ID));
 
-    verify(rentalOrderAdminService).listOrders(0, 20, null);
+    verify(rentalOrderAdminService).listOrders(0, 20, null, null, null);
   }
 
   private static RentalOrderCreateRequest validCreateRequest() {

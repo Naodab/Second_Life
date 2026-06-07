@@ -46,4 +46,30 @@ public interface ListingRepository extends JpaRepository<Listing, String> {
       value = "select l.id from Listing l order by l.id asc",
       countQuery = "select count(l) from Listing l")
   Page<String> findAllListingIds(Pageable pageable);
+
+  @Query("""
+      SELECT COUNT(l) FROM Listing l
+      JOIN l.facility f
+      WHERE f.ownerId = :ownerId AND f.deletedAt IS NULL
+      """)
+  long countByFacilityOwnerIdAndFacilityDeletedAtIsNull(@Param("ownerId") String ownerId);
+
+  @Query(value = """
+      SELECT l FROM Listing l
+      JOIN FETCH l.product p
+      JOIN FETCH l.facility f
+      WHERE f.ownerId = :ownerId AND f.deletedAt IS NULL
+        AND (:listingStatus IS NULL OR l.listingStatus = :listingStatus)
+      ORDER BY l.id DESC
+      """,
+      countQuery = """
+      SELECT COUNT(l) FROM Listing l
+      JOIN l.facility f
+      WHERE f.ownerId = :ownerId AND f.deletedAt IS NULL
+        AND (:listingStatus IS NULL OR l.listingStatus = :listingStatus)
+      """)
+  Page<Listing> findAdminPageByOwnerId(
+      @Param("ownerId") String ownerId,
+      @Param("listingStatus") Listing.ListingStatus listingStatus,
+      Pageable pageable);
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Loader2, Search } from "lucide-react";
+import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import {
 import type { AdminAccountRole } from "@/api/admin";
 import { ApiErrorState } from "@/components/errors";
 import { useAdminUsersPage } from "./useAdminUsersPage";
+import { adminUserDetailPath } from "./adminRoutes";
 
 const PAGE_SIZE = 15;
 
@@ -37,6 +39,7 @@ function formatCreatedAt(value?: string | null): string {
 }
 
 export function UsersView() {
+  const [, setLocation] = useLocation();
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [accountRole, setAccountRole] = useState<"ALL" | AdminAccountRole>("ALL");
@@ -134,7 +137,11 @@ export function UsersView() {
             </TableHeader>
             <TableBody>
               {items.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => setLocation(adminUserDetailPath(row.id))}
+                >
                   <TableCell className="font-medium">{row.email}</TableCell>
                   <TableCell>{displayName(row.profile, row.email)}</TableCell>
                   <TableCell>

@@ -77,6 +77,12 @@ external:
 profile-service:
   url: ${PROFILE_SERVICE_URL:}
 
+product-service:
+  url: ${PRODUCT_SERVICE_URL:}
+
+booking-service:
+  url: ${BOOKING_SERVICE_URL:}
+
 account:
   admin:
     email: ${ACCOUNT_ADMIN_EMAIL:}

@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -63,6 +66,33 @@ public class ListingAdminServiceImpl implements ListingAdminService {
     return PagedItemsResponse.<ListingItemResponse>builder()
         .items(items)
         .totalCount(esPage.totalCount())
+        .page(normalizedPage)
+        .pageSize(normalizedSize)
+        .build();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public PagedItemsResponse<ListingItemResponse> listListingsByOwner(
+      String ownerId,
+      Integer page,
+      Integer pageSize,
+      Listing.ListingStatus listingStatus) {
+    if (!StringUtils.hasText(ownerId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    int normalizedPage = OpenSearchNativeQueryHelper.normalizePage(page);
+    int normalizedSize = OpenSearchNativeQueryHelper.normalizePageSize(pageSize, defaultListingPageSize);
+    Pageable pageable = PageRequest.of(normalizedPage, normalizedSize);
+    Page<Listing> listingPage = listingRepository.findAdminPageByOwnerId(
+        ownerId.trim(), listingStatus, pageable);
+    List<ListingItemResponse> items = listingPage.getContent().stream()
+        .map(listingMapper::toListingItemResponse)
+        .filter(Objects::nonNull)
+        .toList();
+    return PagedItemsResponse.<ListingItemResponse>builder()
+        .items(items)
+        .totalCount(listingPage.getTotalElements())
         .page(normalizedPage)
         .pageSize(normalizedSize)
         .build();

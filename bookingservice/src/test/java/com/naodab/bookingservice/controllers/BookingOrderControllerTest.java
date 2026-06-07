@@ -299,12 +299,12 @@ class BookingOrderControllerTest {
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value(1050));
 
-    verify(bookingOrderAdminService, never()).listOrders(any(), any(), any());
+    verify(bookingOrderAdminService, never()).listOrders(any(), any(), any(), any(), any());
   }
 
   @Test
   void listBookingOrdersAdmin_adminOk() throws Exception {
-    when(bookingOrderAdminService.listOrders(0, 20, null))
+    when(bookingOrderAdminService.listOrders(0, 20, null, null, null))
         .thenReturn(PagedItemsResponse.<BookingOrderResponse>builder()
             .page(0)
             .pageSize(20)
@@ -326,7 +326,7 @@ class BookingOrderControllerTest {
         .andExpect(jsonPath("$.data.totalCount").value(1))
         .andExpect(jsonPath("$.data.items[0].id").value(ORDER_ID));
 
-    verify(bookingOrderAdminService).listOrders(0, 20, null);
+    verify(bookingOrderAdminService).listOrders(0, 20, null, null, null);
   }
 
   private static BookingOrderCreateRequest validCreateRequest() {

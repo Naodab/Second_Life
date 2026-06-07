@@ -86,4 +86,49 @@ public interface BookingOrderRepository extends JpaRepository<BookingOrder, Stri
       """)
   Page<BookingOrder> findAdminPage(@Param("status") BookingOrderStatus status, Pageable pageable);
 
+  @Query("SELECT COUNT(o) FROM BookingOrder o JOIN o.customer c WHERE c.profileId = :profileId AND o.deletedAt IS NULL")
+  long countActiveByBuyerProfileId(@Param("profileId") String profileId);
+
+  @Query("SELECT COUNT(o) FROM BookingOrder o WHERE o.listingVariantId IN :variantIds AND o.deletedAt IS NULL")
+  long countActiveByListingVariantIdIn(@Param("variantIds") List<String> variantIds);
+
+  @Query(value = """
+      SELECT o FROM BookingOrder o
+      JOIN FETCH o.customer c
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+        AND c.profileId = :buyerProfileId
+      ORDER BY o.createdAt DESC
+      """,
+      countQuery = """
+      SELECT COUNT(o) FROM BookingOrder o
+      JOIN o.customer c
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+        AND c.profileId = :buyerProfileId
+      """)
+  Page<BookingOrder> findAdminPageByBuyerProfileId(
+      @Param("status") BookingOrderStatus status,
+      @Param("buyerProfileId") String buyerProfileId,
+      Pageable pageable);
+
+  @Query(value = """
+      SELECT o FROM BookingOrder o
+      JOIN FETCH o.customer c
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+        AND o.listingVariantId IN :variantIds
+      ORDER BY o.createdAt DESC
+      """,
+      countQuery = """
+      SELECT COUNT(o) FROM BookingOrder o
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+        AND o.listingVariantId IN :variantIds
+      """)
+  Page<BookingOrder> findAdminPageByListingVariantIdIn(
+      @Param("status") BookingOrderStatus status,
+      @Param("variantIds") List<String> variantIds,
+      Pageable pageable);
+
 }
