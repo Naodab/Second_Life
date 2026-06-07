@@ -261,13 +261,25 @@ public class AuthService {
   }
 
   private ProfileResponse resolveAuthProfile(Account account) {
-    if (account.getRole() == Role.ADMIN) {
-      return null;
-    }
+    ensureAdminProfileLinked(account);
     if (!StringUtils.hasText(account.getProfileId())) {
       throw new AppException(ErrorCode.PROFILE_NOT_FOUND);
     }
     return profileClient.getProfileById(account.getProfileId())
         .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
+  }
+
+  private void ensureAdminProfileLinked(Account account) {
+    if (account.getRole() != Role.ADMIN || StringUtils.hasText(account.getProfileId())) {
+      return;
+    }
+    String profileId = profileClient.ensureProfileIdForEmail(account.getEmail(), "Ban", "quản trị")
+        .orElseThrow(() -> {
+          log.error("Failed to ensure profile for admin account {}", account.getEmail());
+          return new AppException(ErrorCode.PROFILE_NOT_FOUND);
+        });
+    account.setProfileId(profileId);
+    accountRepository.save(account);
+    log.info("Linked admin account {} to profile {}", account.getEmail(), profileId);
   }
 }

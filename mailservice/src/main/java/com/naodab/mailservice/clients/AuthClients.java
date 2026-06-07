@@ -37,6 +37,10 @@ public class AuthClients {
   String authServiceUrl;
 
   public Optional<String> resolveProfileId(String accessToken) {
+    return resolveAuthContext(accessToken).map(AuthForwardContext::profileId);
+  }
+
+  public Optional<AuthForwardContext> resolveAuthContext(String accessToken) {
     if (!StringUtils.hasText(accessToken)) {
       return Optional.empty();
     }
@@ -50,10 +54,13 @@ public class AuthClients {
       ResponseEntity<Void> response = restTemplate.exchange(
           uri, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
       String profileId = response.getHeaders().getFirst(AppConstants.HEADER_PROFILE_ID);
-      if (StringUtils.hasText(profileId)) {
-        return Optional.of(profileId.trim());
+      if (!StringUtils.hasText(profileId)) {
+        return Optional.empty();
       }
-      return Optional.empty();
+      String role = response.getHeaders().getFirst(AppConstants.JWT_CLAIM_ROLE);
+      return Optional.of(new AuthForwardContext(
+          profileId.trim(),
+          StringUtils.hasText(role) ? role.trim() : null));
     } catch (RestClientException ex) {
       log.warn("Auth forward-auth failed for websocket handshake: {}", ex.getMessage());
       return Optional.empty();

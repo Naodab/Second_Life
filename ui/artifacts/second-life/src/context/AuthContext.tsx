@@ -138,6 +138,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSellerHubProfileComplete(flags.sellerHubProfileComplete);
   }, []);
 
+  const applyAdminSessionFromToken = useCallback((accessToken: string) => {
+    const fromJwt = userFromAccessToken(accessToken);
+    if (!fromJwt) {
+      return false;
+    }
+    setUser(fromJwt);
+    setIsAdmin(true);
+    setNeedsProfileSetup(false);
+    setSellerHubProfileComplete(false);
+    return true;
+  }, []);
+
   const refreshTokenAndFetchUser = async () => {
     const refreshToken = Cookies.get("refreshToken");
     if (refreshToken) {
@@ -145,9 +157,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { accessToken, refreshToken: newRefreshToken } = await apiRefreshToken({ refreshToken });
         Cookies.set("accessToken", accessToken, { ...authCookieBase, expires: 1 });
         Cookies.set("refreshToken", newRefreshToken, { ...authCookieBase, expires: 7 });
-        const profile = await loadProfileForAccessToken(accessToken);
-        applyProfile(profile);
-        setIsAdmin(readIsAdminFromToken(accessToken));
+        if (readIsAdminFromToken(accessToken)) {
+          if (!applyAdminSessionFromToken(accessToken)) {
+            throw new Error("Admin token missing subject");
+          }
+        } else {
+          const profile = await loadProfileForAccessToken(accessToken);
+          applyProfile(profile);
+          setIsAdmin(false);
+        }
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
         Cookies.remove("accessToken", authCookieBase);
@@ -164,20 +182,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       const token = Cookies.get("accessToken");
       if (token) {
-        try {
-          const profile = await loadProfileForAccessToken(token);
-          applyProfile(profile);
-        } catch (error) {
-          console.error("Failed to fetch profile with existing token:", error);
-          const fallback = userFromAccessToken(token);
-          if (fallback) {
-            const admin = readIsAdminFromToken(token);
-            setUser(fallback);
-            setIsAdmin(admin);
-            setNeedsProfileSetup(!admin);
-            setSellerHubProfileComplete(false);
-          } else {
-            await refreshTokenAndFetchUser();
+        const admin = readIsAdminFromToken(token);
+        if (admin) {
+          applyAdminSessionFromToken(token);
+        } else {
+          try {
+            const profile = await loadProfileForAccessToken(token);
+            applyProfile(profile);
+          } catch (error) {
+            console.error("Failed to fetch profile with existing token:", error);
+            const fallback = userFromAccessToken(token);
+            if (fallback) {
+              setUser(fallback);
+              setIsAdmin(false);
+              setNeedsProfileSetup(true);
+              setSellerHubProfileComplete(false);
+            } else {
+              await refreshTokenAndFetchUser();
+            }
           }
         }
       }
@@ -186,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     void checkAuth();
-  }, [applyProfile, syncAdminFromCookie]);
+  }, [applyAdminSessionFromToken, applyProfile, syncAdminFromCookie]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     const { accessToken, refreshToken, profile } = await apiLogin({ email, password });
@@ -200,56 +222,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const admin = readIsAdminFromToken(accessToken);
 
-    if (!profile) {
-      if (!admin) {
-        throw new Error("Login response missing profile");
+    if (admin) {
+      if (!applyAdminSessionFromToken(accessToken)) {
+        throw new Error("Login response missing admin identity");
       }
-      const fromJwt = userFromAccessToken(accessToken);
-      if (!fromJwt) {
-        throw new Error("Login response missing profile");
-      }
-      setUser(fromJwt);
-      setNeedsProfileSetup(false);
-      setSellerHubProfileComplete(false);
-      setIsAdmin(admin);
       return false;
     }
 
+    if (!profile) {
+      throw new Error("Login response missing profile");
+    }
+
     applyProfile(profile as ProfilePayload);
-    setIsAdmin(admin);
-    return admin ? false : profileNeedsSetup(profile as ProfilePayload);
+    setIsAdmin(false);
+    return profileNeedsSetup(profile as ProfilePayload);
   };
 
   const loginWithGoogle = useCallback(
     async (accessToken: string, refreshToken: string): Promise<boolean> => {
       Cookies.set("accessToken", accessToken, { ...authCookieBase, expires: 1 });
       Cookies.set("refreshToken", refreshToken, { ...authCookieBase, expires: 7 });
-      setIsAdmin(readIsAdminFromToken(accessToken));
+
+      if (readIsAdminFromToken(accessToken)) {
+        if (!applyAdminSessionFromToken(accessToken)) {
+          throw new Error("OAuth token missing admin identity");
+        }
+        return false;
+      }
 
       try {
         const profile = await loadProfileForAccessToken(accessToken);
         applyProfile(profile);
-        const admin = readIsAdminFromToken(accessToken);
-        return admin ? false : profileNeedsSetup(profile);
+        setIsAdmin(false);
+        return profileNeedsSetup(profile);
       } catch (profileErr) {
         console.warn("Profile fetch after OAuth failed, using JWT claims:", profileErr);
         const fromJwt = userFromAccessToken(accessToken);
         if (!fromJwt) {
           throw profileErr;
         }
-        const admin = readIsAdminFromToken(accessToken);
         setUser(fromJwt);
-        setNeedsProfileSetup(!admin);
+        setIsAdmin(false);
+        setNeedsProfileSetup(true);
         setSellerHubProfileComplete(false);
-        return !admin;
+        return true;
       }
     },
-    [applyProfile],
+    [applyAdminSessionFromToken, applyProfile],
   );
 
   const refreshSessionProfile = useCallback(async () => {
     const token = Cookies.get("accessToken");
-    if (!token) {
+    if (!token || readIsAdminFromToken(token)) {
       return;
     }
     const profile = await loadProfileForAccessToken(token);

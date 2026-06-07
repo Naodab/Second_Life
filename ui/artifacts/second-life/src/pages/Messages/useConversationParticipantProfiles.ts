@@ -4,9 +4,10 @@ import { useQueries } from "@tanstack/react-query";
 import { getProfileById, profileDisplayName, type ProfilePayload } from "@/api/profile";
 
 export function useConversationParticipantProfiles(profileIds: string[]) {
+  const profileIdsKey = profileIds.join("\0");
   const uniqueIds = useMemo(
-    () => [...new Set(profileIds.map((id) => id.trim()).filter(Boolean))],
-    [profileIds],
+    () => [...new Set(profileIdsKey.split("\0").map((id) => id.trim()).filter(Boolean))],
+    [profileIdsKey],
   );
 
   const queries = useQueries({

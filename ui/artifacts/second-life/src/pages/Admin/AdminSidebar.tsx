@@ -13,6 +13,7 @@ import {
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import { useConversationUnreadCounts } from "@/hooks/use-conversation-unread";
 import {
   adminFacilitiesPath,
   adminListingsPath,
@@ -27,8 +28,15 @@ import {
 
 export function AdminSidebar({ route, onGoHome }: { route: AdminRouteParsed | null; onGoHome: () => void }) {
   const { logout } = useAuth();
+  const { adminInboxUnreadCount } = useConversationUnreadCounts();
 
-  function navLink(label: string, icon: ReactNode, href: string, active: boolean) {
+  function navLink(
+    label: string,
+    icon: ReactNode,
+    href: string,
+    active: boolean,
+    unreadCount = 0,
+  ) {
     return (
       <Link
         href={href}
@@ -37,7 +45,13 @@ export function AdminSidebar({ route, onGoHome }: { route: AdminRouteParsed | nu
           active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
         )}
       >
-        {icon} {label}
+        {icon}
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {unreadCount > 0 ? (
+          <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold leading-none text-primary-foreground">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        ) : null}
       </Link>
     );
   }
@@ -108,6 +122,7 @@ export function AdminSidebar({ route, onGoHome }: { route: AdminRouteParsed | nu
           <MessageSquare className="w-4 h-4" />,
           adminMessagesPath(),
           adminRouteActive(route, "messages"),
+          adminInboxUnreadCount,
         )}
       </nav>
 

@@ -123,8 +123,9 @@ function applyRealtimeMessageEvent(
 ) {
   const message = payload.message;
   const conversation = payload.conversation;
-  if (!message || !conversation || !profileId.trim()) return;
-  if (message.senderProfileId.trim() === profileId.trim()) return;
+  if (!message || !conversation) return;
+  if (!isAdmin && !profileId.trim()) return;
+  if (profileId.trim() && message.senderProfileId.trim() === profileId.trim()) return;
 
   applyRealtimeMessage(queryClient, message, conversation, profileId, isAdmin);
 
@@ -159,6 +160,10 @@ export function useNotificationRealtimeSync(navigate: (path: string) => void) {
   const queryClient = useQueryClient();
   const socketRef = useRef<WebSocket | null>(null);
   const profileId = user?.id?.trim() ?? "";
+  const profileIdRef = useRef(profileId);
+  const isAdminRef = useRef(isAdmin);
+  profileIdRef.current = profileId;
+  isAdminRef.current = isAdmin;
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -188,7 +193,14 @@ export function useNotificationRealtimeSync(navigate: (path: string) => void) {
           return;
         }
         if (parsed.type === "MESSAGE") {
-          applyRealtimeMessageEvent(queryClient, parsed, profileId, isAdmin, true, navigate);
+          applyRealtimeMessageEvent(
+            queryClient,
+            parsed,
+            profileIdRef.current,
+            isAdminRef.current,
+            true,
+            navigate,
+          );
         }
       } catch {
         // ignore malformed websocket payloads
@@ -201,7 +213,7 @@ export function useNotificationRealtimeSync(navigate: (path: string) => void) {
         socketRef.current = null;
       }
     };
-  }, [isLoggedIn, navigate, profileId, queryClient]);
+  }, [isLoggedIn, isAdmin, navigate, profileId, queryClient]);
 }
 
 export function useNotifications() {

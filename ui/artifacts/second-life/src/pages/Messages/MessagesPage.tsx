@@ -36,6 +36,7 @@ export default function MessagesPage({
     changeTab,
     conversations,
     conversationsLoading,
+    conversationsError,
     searchQuery,
     setSearchQuery,
     hasConversationSearch,
@@ -70,11 +71,12 @@ export default function MessagesPage({
   );
 
   const activeBuyerId = isAdminInbox ? activeConversation?.buyerProfileId ?? "" : "";
-  const { displayName, avatarUrl, loading: profilesLoading } = useConversationParticipantProfiles(
-    isAdminInbox
-      ? [...participantIds, activeBuyerId].filter(Boolean)
-      : [],
+  const inboxParticipantIds = useMemo(
+    () => (isAdminInbox ? [...participantIds, activeBuyerId].filter(Boolean) : []),
+    [isAdminInbox, participantIds, activeBuyerId],
   );
+  const { displayName, avatarUrl, loading: profilesLoading } =
+    useConversationParticipantProfiles(inboxParticipantIds);
 
   const peerTitle = isAdminInbox
     ? displayName(activeConversation?.buyerProfileId ?? "") ??
@@ -213,7 +215,13 @@ export default function MessagesPage({
               </p>
             </div>
 
-            {conversationsLoading || openingConversation ? (
+            {conversationsError ? (
+              <p className="px-6 py-12 text-center text-sm leading-relaxed text-destructive">
+                {isAdminInbox
+                  ? "Không tải được hộp thư. Hãy đăng xuất và đăng nhập lại."
+                  : "Không tải được danh sách tin nhắn. Vui lòng thử lại sau."}
+              </p>
+            ) : conversationsLoading || openingConversation ? (
               <div className="flex items-center justify-center py-16 text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>

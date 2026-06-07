@@ -73,12 +73,12 @@ export function useMessagesPage(options: { mode?: MessagesPageMode } = {}) {
   const mode = options.mode ?? "default";
   const search = useSearch();
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const profileId = user?.id?.trim() ?? "";
+  const canUseMessaging = Boolean(profileId) || (isAdmin && mode === "admin");
   const queryClient = useQueryClient();
   const deepLinkInFlightRef = useRef(false);
   const adminBootstrapRef = useRef(false);
-
   const [tab, setTab] = useState<MessagesConversationTab>(
     mode === "admin" ? "admin" : "facilities",
   );
@@ -88,31 +88,33 @@ export function useMessagesPage(options: { mode?: MessagesPageMode } = {}) {
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [adminSearchQuery, setAdminSearchQuery] = useState("");
 
+  const userMessagingEnabled = Boolean(profileId) && !isAdmin && mode === "default";
+
   const buyerConversationsQuery = useQuery({
     queryKey: conversationsRoleKey("buyer"),
     queryFn: () => listConversations("buyer"),
-    enabled: Boolean(profileId) && mode === "default",
+    enabled: userMessagingEnabled,
     staleTime: 15_000,
   });
 
   const sellerConversationsQuery = useQuery({
     queryKey: conversationsRoleKey("seller"),
     queryFn: () => listConversations("seller"),
-    enabled: Boolean(profileId) && mode === "default",
+    enabled: userMessagingEnabled,
     staleTime: 15_000,
   });
 
   const adminSupportQuery = useQuery({
     queryKey: conversationsRoleKey("admin-support"),
     queryFn: () => listConversations("admin-support"),
-    enabled: Boolean(profileId) && mode === "default",
+    enabled: userMessagingEnabled,
     staleTime: 15_000,
   });
 
   const adminInboxQuery = useQuery({
     queryKey: conversationsRoleKey("admin"),
     queryFn: () => listConversations("admin"),
-    enabled: Boolean(profileId) && mode === "admin",
+    enabled: canUseMessaging && mode === "admin",
     staleTime: 15_000,
   });
 
@@ -150,6 +152,15 @@ export function useMessagesPage(options: { mode?: MessagesPageMode } = {}) {
   );
 
   const hasAnyConversations = conversations.length > 0;
+  const conversationsError =
+    mode === "admin"
+      ? adminInboxQuery.isError
+      : tab === "facilities"
+        ? buyerConversationsQuery.isError
+        : tab === "customers"
+          ? sellerConversationsQuery.isError
+          : adminSupportQuery.isError;
+
   const conversationsLoading =
     mode === "admin"
       ? adminInboxQuery.isLoading
@@ -389,6 +400,7 @@ export function useMessagesPage(options: { mode?: MessagesPageMode } = {}) {
     changeTab,
     conversations: filteredConversations,
     conversationsLoading,
+    conversationsError,
     searchQuery,
     setSearchQuery,
     hasConversationSearch: searchQuery.trim().length > 0,
