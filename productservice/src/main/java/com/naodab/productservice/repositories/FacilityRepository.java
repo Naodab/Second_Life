@@ -51,6 +51,8 @@ public interface FacilityRepository extends JpaRepository<Facility, String>, Jpa
 
   Optional<Facility> findByOwnerIdAndIdAndDeletedAtIsNull(String ownerId, String id);
 
+  long countByOwnerIdAndDeletedAtIsNull(String ownerId);
+
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("""
       UPDATE Facility f

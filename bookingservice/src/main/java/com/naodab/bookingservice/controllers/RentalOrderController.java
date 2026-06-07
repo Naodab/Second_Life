@@ -45,10 +45,12 @@ public class RentalOrderController {
       @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role,
       @RequestParam(required = false) Integer page,
       @RequestParam(required = false) Integer pageSize,
-      @RequestParam(required = false) RentalOrderStatus status) {
+      @RequestParam(required = false) RentalOrderStatus status,
+      @RequestParam(required = false) String buyerProfileId,
+      @RequestParam(required = false) String sellerProfileId) {
     requireAdmin(role);
     return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<RentalOrderResponse>>builder()
-        .data(rentalOrderAdminService.listOrders(page, pageSize, status))
+        .data(rentalOrderAdminService.listOrders(page, pageSize, status, buyerProfileId, sellerProfileId))
         .build());
   }
 

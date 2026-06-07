@@ -3,6 +3,7 @@ package com.naodab.authservice.controllers;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,7 +23,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import com.naodab.authservice.dto.response.AdminAccountActivitySummaryResponse;
+import com.naodab.authservice.dto.response.AdminAccountBuyerActivitySummary;
 import com.naodab.authservice.dto.response.AdminAccountResponse;
+import com.naodab.authservice.dto.response.AdminAccountSellerActivitySummary;
 import com.naodab.authservice.models.Account.Role;
 import com.naodab.authservice.models.AuthProvider;
 import com.naodab.authservice.services.AccountAdminService;
@@ -86,5 +90,70 @@ class AccountAdminControllerTest {
         .andExpect(jsonPath("$.data.items[0].email").value("user@example.com"));
 
     verify(accountAdminService).listAccounts(0, 20, null, null, null);
+  }
+
+  @Test
+  void getAccountById_requiresAdmin() throws Exception {
+    mockMvc.perform(get("/auth/admin/accounts/acc-1")
+        .header(AppConstants.JWT_CLAIM_ROLE, "USER"))
+        .andExpect(status().isForbidden());
+
+    verify(accountAdminService, never()).getAccountById(anyString());
+  }
+
+  @Test
+  void getAccountById_adminOk() throws Exception {
+    when(accountAdminService.getAccountById("acc-1"))
+        .thenReturn(AdminAccountResponse.builder()
+            .id("acc-1")
+            .email("user@example.com")
+            .role(Role.USER)
+            .authProvider(AuthProvider.LOCAL)
+            .emailVerified(true)
+            .active(true)
+            .build());
+
+    mockMvc.perform(get("/auth/admin/accounts/acc-1")
+        .header(AppConstants.JWT_CLAIM_ROLE, AppConstants.ROLE_ADMIN))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.email").value("user@example.com"));
+
+    verify(accountAdminService).getAccountById("acc-1");
+  }
+
+  @Test
+  void getActivitySummary_requiresAdmin() throws Exception {
+    mockMvc.perform(get("/auth/admin/accounts/acc-1/activity-summary")
+        .header(AppConstants.JWT_CLAIM_ROLE, "USER"))
+        .andExpect(status().isForbidden());
+
+    verify(accountAdminService, never()).getActivitySummary(anyString());
+  }
+
+  @Test
+  void getActivitySummary_adminOk() throws Exception {
+    when(accountAdminService.getActivitySummary("acc-1"))
+        .thenReturn(AdminAccountActivitySummaryResponse.builder()
+            .seller(AdminAccountSellerActivitySummary.builder()
+                .facilities(1)
+                .products(2)
+                .listings(3)
+                .buyOrdersReceived(4)
+                .rentOrdersReceived(5)
+                .build())
+            .buyer(AdminAccountBuyerActivitySummary.builder()
+                .buyOrders(6)
+                .rentOrders(7)
+                .build())
+            .build());
+
+    mockMvc.perform(get("/auth/admin/accounts/acc-1/activity-summary")
+        .header(AppConstants.JWT_CLAIM_ROLE, AppConstants.ROLE_ADMIN))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.seller.facilities").value(1))
+        .andExpect(jsonPath("$.data.seller.products").value(2))
+        .andExpect(jsonPath("$.data.buyer.buyOrders").value(6));
+
+    verify(accountAdminService).getActivitySummary("acc-1");
   }
 }

@@ -71,6 +71,21 @@ public class ListingController {
         .build());
   }
 
+  @GetMapping("/admin/by-owner")
+  public ResponseEntity<ApiResponse<PagedItemsResponse<ListingItemResponse>>> listListingsByOwnerAdmin(
+      @RequestParam String ownerId,
+      @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer pageSize,
+      @RequestParam(required = false) ListingStatus listingStatus,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {
+    if (!AppConstants.ROLE_ADMIN.equals(role)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
+    return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<ListingItemResponse>>builder()
+        .data(listingAdminService.listListingsByOwner(ownerId, page, pageSize, listingStatus))
+        .build());
+  }
+
   @PostMapping("/admin/{id}/approve")
   public ResponseEntity<ApiResponse<ListingResponse>> approveListingAdmin(
       @PathVariable String id,

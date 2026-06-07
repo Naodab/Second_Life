@@ -8,6 +8,7 @@ import { OrdersView } from "./OrdersView";
 import { PendingListingsView } from "./PendingListingsView";
 import { ProductsView } from "./ProductsView";
 import { UsersView } from "./UsersView";
+import { UserDetailView } from "./UserDetailView";
 import MessagesPage from "@/pages/Messages/MessagesPage";
 import { parseAdminRoute } from "./adminRoutes";
 
@@ -34,6 +35,7 @@ export default function Admin() {
             {route?.tag === "facilities" && <FacilitiesView />}
             {route?.tag === "products" && <ProductsView />}
             {route?.tag === "users" && <UsersView />}
+            {route?.tag === "users-detail" && <UserDetailView accountId={route.accountId} />}
             {route?.tag === "orders" && <OrdersView />}
             {!route && location.startsWith("/admin") ? (
               <div className="py-20 text-center text-sm text-muted-foreground">Đang chuyển hướng…</div>

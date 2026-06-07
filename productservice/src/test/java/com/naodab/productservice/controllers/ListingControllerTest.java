@@ -303,6 +303,43 @@ class ListingControllerTest {
   }
 
   @Test
+  void listListingsByOwnerAdmin_requiresAdmin() throws Exception {
+    mockMvc.perform(get("/listings/admin/by-owner")
+        .param("ownerId", "owner-1")
+        .header(AppConstants.JWT_CLAIM_ROLE, "USER"))
+        .andExpect(status().isForbidden());
+
+    verify(listingAdminService, never()).listListingsByOwner(any(), any(), any(), any());
+  }
+
+  @Test
+  void listListingsByOwnerAdmin_adminOk() throws Exception {
+    when(listingAdminService.listListingsByOwner("owner-1", 0, 10, ListingStatus.ACTIVE))
+        .thenReturn(PagedItemsResponse.<ListingItemResponse>builder()
+            .items(List.of(ListingItemResponse.builder()
+                .id("lid-1")
+                .title("Listing")
+                .listingStatus(ListingStatus.ACTIVE)
+                .build()))
+            .totalCount(1)
+            .page(0)
+            .pageSize(10)
+            .build());
+
+    mockMvc.perform(get("/listings/admin/by-owner")
+        .header(AppConstants.JWT_CLAIM_ROLE, AppConstants.ROLE_ADMIN)
+        .param("ownerId", "owner-1")
+        .param("page", "0")
+        .param("pageSize", "10")
+        .param("listingStatus", "ACTIVE"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.totalCount").value(1))
+        .andExpect(jsonPath("$.data.items[0].id").value("lid-1"));
+
+    verify(listingAdminService).listListingsByOwner("owner-1", 0, 10, ListingStatus.ACTIVE);
+  }
+
+  @Test
   void updateListing_requiresProfile() throws Exception {
     mockMvc.perform(
         put("/listings/x1")

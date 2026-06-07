@@ -57,4 +57,49 @@ public interface RentalOrderRepository extends JpaRepository<RentalOrder, String
         AND (:status IS NULL OR o.status = :status)
       """)
   Page<RentalOrder> findAdminPage(@Param("status") RentalOrderStatus status, Pageable pageable);
+
+  @Query("SELECT COUNT(o) FROM RentalOrder o JOIN o.customer c WHERE c.profileId = :profileId AND o.deletedAt IS NULL")
+  long countActiveByBuyerProfileId(@Param("profileId") String profileId);
+
+  @Query("SELECT COUNT(o) FROM RentalOrder o WHERE o.listingVariantId IN :variantIds AND o.deletedAt IS NULL")
+  long countActiveByListingVariantIdIn(@Param("variantIds") List<String> variantIds);
+
+  @Query(value = """
+      SELECT o FROM RentalOrder o
+      JOIN FETCH o.customer c
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+        AND c.profileId = :buyerProfileId
+      ORDER BY o.createdAt DESC
+      """,
+      countQuery = """
+      SELECT COUNT(o) FROM RentalOrder o
+      JOIN o.customer c
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+        AND c.profileId = :buyerProfileId
+      """)
+  Page<RentalOrder> findAdminPageByBuyerProfileId(
+      @Param("status") RentalOrderStatus status,
+      @Param("buyerProfileId") String buyerProfileId,
+      Pageable pageable);
+
+  @Query(value = """
+      SELECT o FROM RentalOrder o
+      JOIN FETCH o.customer c
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+        AND o.listingVariantId IN :variantIds
+      ORDER BY o.createdAt DESC
+      """,
+      countQuery = """
+      SELECT COUNT(o) FROM RentalOrder o
+      WHERE o.deletedAt IS NULL
+        AND (:status IS NULL OR o.status = :status)
+        AND o.listingVariantId IN :variantIds
+      """)
+  Page<RentalOrder> findAdminPageByListingVariantIdIn(
+      @Param("status") RentalOrderStatus status,
+      @Param("variantIds") List<String> variantIds,
+      Pageable pageable);
 }

@@ -45,10 +45,12 @@ public class BookingOrderController {
       @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role,
       @RequestParam(required = false) Integer page,
       @RequestParam(required = false) Integer pageSize,
-      @RequestParam(required = false) BookingOrderStatus status) {
+      @RequestParam(required = false) BookingOrderStatus status,
+      @RequestParam(required = false) String buyerProfileId,
+      @RequestParam(required = false) String sellerProfileId) {
     requireAdmin(role);
     return ResponseEntity.ok(ApiResponse.<PagedItemsResponse<BookingOrderResponse>>builder()
-        .data(bookingOrderAdminService.listOrders(page, pageSize, status))
+        .data(bookingOrderAdminService.listOrders(page, pageSize, status, buyerProfileId, sellerProfileId))
         .build());
   }
 

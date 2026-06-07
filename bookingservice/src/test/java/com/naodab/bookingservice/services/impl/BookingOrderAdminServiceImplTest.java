@@ -3,8 +3,11 @@ package com.naodab.bookingservice.services.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
@@ -22,6 +25,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.naodab.bookingservice.clients.LocationClients;
 import com.naodab.bookingservice.clients.LocationClients.LocationLabels;
+import com.naodab.bookingservice.clients.ProductClients;
 import com.naodab.bookingservice.mappers.BookingOrderMapper;
 import com.naodab.bookingservice.mappers.CustomerMapper;
 import com.naodab.bookingservice.models.BookingOrder;
@@ -35,6 +39,9 @@ class BookingOrderAdminServiceImplTest {
 
   @Mock
   BookingOrderRepository bookingOrderRepository;
+
+  @Mock
+  ProductClients productClients;
 
   @InjectMocks
   BookingOrderAdminServiceImpl bookingOrderAdminService;
@@ -77,10 +84,77 @@ class BookingOrderAdminServiceImplTest {
     when(bookingOrderRepository.findAdminPage(isNull(), any(Pageable.class)))
         .thenReturn(new PageImpl<>(List.of(order), org.springframework.data.domain.PageRequest.of(0, 20), 1));
 
-    PagedItemsResponse<?> result = bookingOrderAdminService.listOrders(0, 20, null);
+    PagedItemsResponse<?> result = bookingOrderAdminService.listOrders(0, 20, null, null, null);
 
     assertThat(result.getTotalCount()).isEqualTo(1);
     assertThat(result.getItems()).hasSize(1);
     assertThat(result.getItems().getFirst()).isInstanceOf(com.naodab.bookingservice.dto.response.BookingOrderResponse.class);
+  }
+
+  @Test
+  void listOrders_byBuyerProfileId_usesBuyerRepositoryQuery() {
+    Customer customer = customer("profile-buyer");
+    BookingOrder order = order("order-buyer", customer);
+    when(bookingOrderRepository.findAdminPageByBuyerProfileId(isNull(), eq("profile-buyer"), any(Pageable.class)))
+        .thenReturn(new PageImpl<>(List.of(order), org.springframework.data.domain.PageRequest.of(0, 20), 1));
+
+    PagedItemsResponse<?> result = bookingOrderAdminService.listOrders(0, 20, null, "profile-buyer", null);
+
+    assertThat(result.getTotalCount()).isEqualTo(1);
+    verify(bookingOrderRepository).findAdminPageByBuyerProfileId(isNull(), eq("profile-buyer"), any(Pageable.class));
+    verify(bookingOrderRepository, never()).findAdminPage(any(), any());
+  }
+
+  @Test
+  void listOrders_bySellerProfileId_usesVariantIdsQuery() {
+    Customer customer = customer("profile-buyer");
+    BookingOrder order = order("order-seller", customer);
+    when(productClients.listListingVariantIdsForOwnerAdmin("profile-seller"))
+        .thenReturn(List.of("variant-1", "variant-2"));
+    when(bookingOrderRepository.findAdminPageByListingVariantIdIn(
+        isNull(),
+        eq(List.of("variant-1", "variant-2")),
+        any(Pageable.class)))
+        .thenReturn(new PageImpl<>(List.of(order), org.springframework.data.domain.PageRequest.of(0, 20), 1));
+
+    PagedItemsResponse<?> result = bookingOrderAdminService.listOrders(0, 20, null, null, "profile-seller");
+
+    assertThat(result.getTotalCount()).isEqualTo(1);
+    verify(productClients).listListingVariantIdsForOwnerAdmin("profile-seller");
+  }
+
+  @Test
+  void listOrders_bySellerProfileIdWithoutVariants_returnsEmptyPage() {
+    when(productClients.listListingVariantIdsForOwnerAdmin("profile-seller")).thenReturn(List.of());
+
+    PagedItemsResponse<?> result = bookingOrderAdminService.listOrders(0, 20, null, null, "profile-seller");
+
+    assertThat(result.getTotalCount()).isZero();
+    assertThat(result.getItems()).isEmpty();
+    verify(bookingOrderRepository, never()).findAdminPageByListingVariantIdIn(any(), any(), any());
+  }
+
+  private static Customer customer(String profileId) {
+    return Customer.builder()
+        .id("customer-1")
+        .profileId(profileId)
+        .firstName("An")
+        .lastName("Bùi")
+        .email("an@example.com")
+        .build();
+  }
+
+  private static BookingOrder order(String id, Customer customer) {
+    BookingOrder order = BookingOrder.builder()
+        .id(id)
+        .customer(customer)
+        .listingVariantId("variant-1")
+        .quantity(1)
+        .pickupTime(LocalDateTime.parse("2026-06-10T10:00:00"))
+        .status(BookingOrderStatus.PENDING)
+        .price(100_000L)
+        .build();
+    order.setCreatedAt(LocalDateTime.parse("2026-06-10T09:00:00"));
+    return order;
   }
 }

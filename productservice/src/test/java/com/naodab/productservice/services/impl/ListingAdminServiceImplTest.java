@@ -3,6 +3,7 @@ package com.naodab.productservice.services.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,12 +15,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
+import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingResponse;
+import com.naodab.productservice.dto.response.PagedItemsResponse;
 import com.naodab.productservice.mapper.ListingMapper;
 import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Listing;
@@ -120,6 +126,40 @@ class ListingAdminServiceImplTest {
         org.mockito.ArgumentCaptor.forClass(ListingSearchRequest.class);
     verify(listingSearchService).searchListingsPaged(cap.capture());
     assertThat(cap.getValue().getListingStatus()).isEqualTo(Listing.ListingStatus.PENDING);
+  }
+
+  @Test
+  void listListingsByOwner_mapsRepositoryPage() {
+    ReflectionTestUtils.setField(listingAdminService, "defaultListingPageSize", 20);
+    Listing listing = pendingListing("lid-1");
+    when(listingRepository.findAdminPageByOwnerId(
+        eq("owner-1"),
+        eq(Listing.ListingStatus.ACTIVE),
+        any(Pageable.class)))
+        .thenReturn(new PageImpl<>(List.of(listing), PageRequest.of(0, 10), 1));
+    when(listingMapper.toListingItemResponse(listing))
+        .thenReturn(ListingItemResponse.builder()
+            .id("lid-1")
+            .title("Listing")
+            .listingStatus(Listing.ListingStatus.ACTIVE)
+            .build());
+
+    PagedItemsResponse<ListingItemResponse> page = listingAdminService.listListingsByOwner(
+        " owner-1 ",
+        0,
+        10,
+        Listing.ListingStatus.ACTIVE);
+
+    assertThat(page.getTotalCount()).isEqualTo(1);
+    assertThat(page.getItems()).hasSize(1);
+    assertThat(page.getItems().getFirst().getId()).isEqualTo("lid-1");
+  }
+
+  @Test
+  void listListingsByOwner_blankOwnerId_throws() {
+    assertThatThrownBy(() -> listingAdminService.listListingsByOwner(" ", 0, 10, null))
+        .isInstanceOf(AppException.class)
+        .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
   }
 
   private static Listing pendingListing(String id) {
