@@ -7,8 +7,21 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import com.naodab.mailservice.models.ConversationDocument;
+import com.naodab.mailservice.models.ConversationType;
 
 public interface ConversationRepository extends MongoRepository<ConversationDocument, String> {
+
+  List<ConversationDocument> findByBuyerProfileIdAndConversationTypeNotOrderByLastMessageAtDesc(
+      String buyerProfileId, ConversationType conversationType, Pageable pageable);
+
+  List<ConversationDocument> findBySellerProfileIdAndConversationTypeNotOrderByLastMessageAtDesc(
+      String sellerProfileId, ConversationType conversationType, Pageable pageable);
+
+  List<ConversationDocument> findByBuyerProfileIdAndConversationTypeOrderByLastMessageAtDesc(
+      String buyerProfileId, ConversationType conversationType, Pageable pageable);
+
+  List<ConversationDocument> findByConversationTypeOrderByLastMessageAtDesc(
+      ConversationType conversationType, Pageable pageable);
 
   List<ConversationDocument> findByBuyerProfileIdOrderByLastMessageAtDesc(
       String buyerProfileId, Pageable pageable);

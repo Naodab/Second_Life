@@ -395,6 +395,28 @@ export async function adminRejectListing(listingId: string): Promise<ListingResp
   return unwrapApiData(raw);
 }
 
+export async function adminSuspendListing(listingId: string): Promise<ListingResponseDetailed> {
+  const raw = await customFetch<ApiResponseEnvelope<ListingResponseDetailed>>(
+    `/api/v1/listings/admin/${encodeURIComponent(listingId.trim())}/suspend`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  return unwrapApiData(raw);
+}
+
+export async function adminReactivateListing(listingId: string): Promise<ListingResponseDetailed> {
+  const raw = await customFetch<ApiResponseEnvelope<ListingResponseDetailed>>(
+    `/api/v1/listings/admin/${encodeURIComponent(listingId.trim())}/reactivate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+  return unwrapApiData(raw);
+}
+
 export async function adminListPendingListings(params: {
   page?: number;
   pageSize?: number;

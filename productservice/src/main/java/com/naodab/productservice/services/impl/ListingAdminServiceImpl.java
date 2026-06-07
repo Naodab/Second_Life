@@ -84,6 +84,22 @@ public class ListingAdminServiceImpl implements ListingAdminService {
     return persistAndSync(listing);
   }
 
+  @Override
+  @Transactional
+  public ListingResponse suspendListing(String listingId) {
+    Listing listing = requireListingWithStatus(listingId, Listing.ListingStatus.ACTIVE);
+    listing.setListingStatus(Listing.ListingStatus.INACTIVE);
+    return persistAndSync(listing);
+  }
+
+  @Override
+  @Transactional
+  public ListingResponse reactivateListing(String listingId) {
+    Listing listing = requireListingWithStatus(listingId, Listing.ListingStatus.INACTIVE);
+    listing.setListingStatus(Listing.ListingStatus.ACTIVE);
+    return persistAndSync(listing);
+  }
+
   private Listing requirePendingListing(String listingId) {
     if (!StringUtils.hasText(listingId)) {
       throw new AppException(ErrorCode.INVALID_INPUT);
@@ -91,6 +107,18 @@ public class ListingAdminServiceImpl implements ListingAdminService {
     Listing listing = listingRepository.findWithProductGraphById(listingId.trim())
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
     if (listing.getListingStatus() != Listing.ListingStatus.PENDING) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    return listing;
+  }
+
+  private Listing requireListingWithStatus(String listingId, Listing.ListingStatus expectedStatus) {
+    if (!StringUtils.hasText(listingId)) {
+      throw new AppException(ErrorCode.INVALID_INPUT);
+    }
+    Listing listing = listingRepository.findWithProductGraphById(listingId.trim())
+        .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
+    if (listing.getListingStatus() != expectedStatus) {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
     return listing;

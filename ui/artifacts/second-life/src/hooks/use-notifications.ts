@@ -92,13 +92,17 @@ function showNotificationAlert(
 function showMessageAlert(
   message: MessageResponse,
   conversation: ConversationResponse,
-  role: "buyer" | "seller",
+  role: "buyer" | "seller" | "admin" | "admin-support",
   navigate: (path: string) => void,
 ) {
   const href =
     role === "seller"
       ? `/messages?tab=customers&conversationId=${encodeURIComponent(conversation.id)}`
-      : `/messages?conversationId=${encodeURIComponent(conversation.id)}`;
+      : role === "admin"
+        ? `/admin/messages?conversationId=${encodeURIComponent(conversation.id)}`
+        : role === "admin-support"
+          ? `/messages?tab=admin&conversationId=${encodeURIComponent(conversation.id)}`
+          : `/messages?conversationId=${encodeURIComponent(conversation.id)}`;
 
   toast({
     title: conversationAlertTitle(conversation, role),
@@ -113,17 +117,19 @@ function applyRealtimeMessageEvent(
   queryClient: ReturnType<typeof useQueryClient>,
   payload: { message?: MessageResponse; conversation?: ConversationResponse },
   profileId: string,
+  isAdmin: boolean,
   showAlert: boolean,
   navigate?: (path: string) => void,
 ) {
   const message = payload.message;
   const conversation = payload.conversation;
-  if (!message || !conversation || !profileId.trim()) return;
-  if (message.senderProfileId.trim() === profileId.trim()) return;
+  if (!message || !conversation) return;
+  if (!isAdmin && !profileId.trim()) return;
+  if (profileId.trim() && message.senderProfileId.trim() === profileId.trim()) return;
 
-  applyRealtimeMessage(queryClient, message, conversation, profileId);
+  applyRealtimeMessage(queryClient, message, conversation, profileId, isAdmin);
 
-  const role = roleForViewer(conversation, profileId);
+  const role = roleForViewer(conversation, profileId, isAdmin);
   if (!role || !showAlert || !navigate) return;
   if (!shouldAlertForIncomingMessage(conversation.id)) return;
 
@@ -150,10 +156,14 @@ function applyRealtimeNotification(
 
 /** Mount once at app root so WebSocket + toast work on every page (including seller hub). */
 export function useNotificationRealtimeSync(navigate: (path: string) => void) {
-  const { isLoggedIn, user } = useAuth();
+  const { isLoggedIn, user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const socketRef = useRef<WebSocket | null>(null);
   const profileId = user?.id?.trim() ?? "";
+  const profileIdRef = useRef(profileId);
+  const isAdminRef = useRef(isAdmin);
+  profileIdRef.current = profileId;
+  isAdminRef.current = isAdmin;
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -183,7 +193,14 @@ export function useNotificationRealtimeSync(navigate: (path: string) => void) {
           return;
         }
         if (parsed.type === "MESSAGE") {
-          applyRealtimeMessageEvent(queryClient, parsed, profileId, true, navigate);
+          applyRealtimeMessageEvent(
+            queryClient,
+            parsed,
+            profileIdRef.current,
+            isAdminRef.current,
+            true,
+            navigate,
+          );
         }
       } catch {
         // ignore malformed websocket payloads
@@ -196,7 +213,7 @@ export function useNotificationRealtimeSync(navigate: (path: string) => void) {
         socketRef.current = null;
       }
     };
-  }, [isLoggedIn, navigate, profileId, queryClient]);
+  }, [isLoggedIn, isAdmin, navigate, profileId, queryClient]);
 }
 
 export function useNotifications() {

@@ -1,6 +1,7 @@
 package com.naodab.mailservice.websocket;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -13,6 +14,7 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 import com.naodab.commonservice.constant.AppConstants;
 import com.naodab.commonservice.constant.OrderNotificationConstants;
 import com.naodab.mailservice.clients.AuthClients;
+import com.naodab.mailservice.clients.AuthForwardContext;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +28,7 @@ import lombok.experimental.FieldDefaults;
 public class NotificationHandshakeInterceptor implements HandshakeInterceptor {
 
   public static final String SESSION_PROFILE_ID = "profileId";
+  public static final String SESSION_ROLE = "role";
 
   AuthClients authClients;
 
@@ -35,11 +38,14 @@ public class NotificationHandshakeInterceptor implements HandshakeInterceptor {
       ServerHttpResponse response,
       WebSocketHandler wsHandler,
       Map<String, Object> attributes) {
-    String profileId = resolveProfileId(request);
-    if (!StringUtils.hasText(profileId)) {
+    Optional<AuthForwardContext> auth = resolveAuthContext(request);
+    if (auth.isEmpty() || !StringUtils.hasText(auth.get().profileId())) {
       return false;
     }
-    attributes.put(SESSION_PROFILE_ID, profileId.trim());
+    attributes.put(SESSION_PROFILE_ID, auth.get().profileId().trim());
+    if (StringUtils.hasText(auth.get().role())) {
+      attributes.put(SESSION_ROLE, auth.get().role().trim());
+    }
     return true;
   }
 
@@ -52,22 +58,41 @@ public class NotificationHandshakeInterceptor implements HandshakeInterceptor {
     // no-op
   }
 
-  private String resolveProfileId(ServerHttpRequest request) {
-    if (request instanceof ServletServerHttpRequest servletRequest) {
-      HttpServletRequest httpRequest = servletRequest.getServletRequest();
-      String forwardedProfileId = httpRequest.getHeader(AppConstants.HEADER_PROFILE_ID);
-      if (StringUtils.hasText(forwardedProfileId)) {
-        return forwardedProfileId.trim();
+  private Optional<AuthForwardContext> resolveAuthContext(ServerHttpRequest request) {
+    if (!(request instanceof ServletServerHttpRequest servletRequest)) {
+      return Optional.empty();
+    }
+    HttpServletRequest httpRequest = servletRequest.getServletRequest();
+
+    String profileId = trimToNull(httpRequest.getHeader(AppConstants.HEADER_PROFILE_ID));
+    String role = trimToNull(httpRequest.getHeader(AppConstants.JWT_CLAIM_ROLE));
+
+    if (!StringUtils.hasText(profileId)) {
+      String token = resolveAccessToken(httpRequest);
+      if (!StringUtils.hasText(token)) {
+        return Optional.empty();
       }
+      return authClients.resolveAuthContext(token);
+    }
+
+    if (!StringUtils.hasText(role)) {
       String token = resolveAccessToken(httpRequest);
       if (StringUtils.hasText(token)) {
-        return authClients.resolveProfileId(token).orElse(null);
+        role = authClients.resolveAuthContext(token)
+            .map(AuthForwardContext::role)
+            .filter(StringUtils::hasText)
+            .orElse(null);
       }
     }
-    return null;
+
+    return Optional.of(new AuthForwardContext(profileId, role));
   }
 
   private static String resolveAccessToken(HttpServletRequest request) {
+    String queryToken = request.getParameter("access_token");
+    if (StringUtils.hasText(queryToken)) {
+      return queryToken.trim();
+    }
     Cookie[] cookies = request.getCookies();
     if (cookies == null) {
       return null;
@@ -79,5 +104,12 @@ public class NotificationHandshakeInterceptor implements HandshakeInterceptor {
       }
     }
     return null;
+  }
+
+  private static String trimToNull(String value) {
+    if (!StringUtils.hasText(value)) {
+      return null;
+    }
+    return value.trim();
   }
 }

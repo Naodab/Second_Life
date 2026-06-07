@@ -69,7 +69,7 @@ class AuthServiceTest {
   }
 
   @Test
-  void login_skipsProfileFetchForAdminWithoutProfileId() {
+  void login_linksProfileForAdminWithoutProfileId() {
     Account admin = Account.builder()
         .email("admin@example.com")
         .password("encoded")
@@ -78,10 +78,20 @@ class AuthServiceTest {
         .emailVerified(true)
         .profileId(null)
         .build();
+    ProfileResponse profile = ProfileResponse.builder()
+        .id("admin-profile-1")
+        .email("admin@example.com")
+        .firstName("Ban")
+        .lastName("quản trị")
+        .build();
 
     when(accountRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
     when(passwordEncoder.matches("secret", "encoded")).thenReturn(true);
-    when(jwtTokenProvider.generateAccessToken("admin@example.com", null, Role.ADMIN)).thenReturn("access-token");
+    when(profileClient.ensureProfileIdForEmail("admin@example.com", "Ban", "quản trị"))
+        .thenReturn(Optional.of("admin-profile-1"));
+    when(profileClient.getProfileById("admin-profile-1")).thenReturn(Optional.of(profile));
+    when(jwtTokenProvider.generateAccessToken("admin@example.com", "admin-profile-1", Role.ADMIN))
+        .thenReturn("access-token");
     when(jwtTokenProvider.generateRefreshToken("admin@example.com")).thenReturn("refresh-token");
     when(accountRepository.save(admin)).thenReturn(admin);
 
@@ -90,10 +100,12 @@ class AuthServiceTest {
         .password("secret")
         .build());
 
-    verify(profileClient, never()).getProfileById(any());
+    verify(profileClient).ensureProfileIdForEmail("admin@example.com", "Ban", "quản trị");
+    verify(profileClient).getProfileById("admin-profile-1");
+    assertThat(admin.getProfileId()).isEqualTo("admin-profile-1");
     assertThat(response.getAccessToken()).isEqualTo("access-token");
     assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
-    assertThat(response.getProfile()).isNull();
+    assertThat(response.getProfile()).isEqualTo(profile);
   }
 
   @Test
@@ -154,18 +166,27 @@ class AuthServiceTest {
   }
 
   @Test
-  void refreshToken_skipsProfileFetchForAdmin() {
+  void refreshToken_linksProfileForAdminWithoutProfileId() {
     Account admin = Account.builder()
         .email("admin@example.com")
         .role(Role.ADMIN)
         .profileId(null)
         .refreshToken("refresh-token")
         .build();
+    ProfileResponse profile = ProfileResponse.builder()
+        .id("admin-profile-1")
+        .email("admin@example.com")
+        .firstName("Ban")
+        .build();
 
     when(jwtTokenProvider.validateToken("refresh-token")).thenReturn(true);
     when(jwtTokenProvider.getEmailFromToken("refresh-token")).thenReturn("admin@example.com");
     when(accountRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
-    when(jwtTokenProvider.generateAccessToken("admin@example.com", null, Role.ADMIN)).thenReturn("new-access");
+    when(profileClient.ensureProfileIdForEmail("admin@example.com", "Ban", "quản trị"))
+        .thenReturn(Optional.of("admin-profile-1"));
+    when(profileClient.getProfileById("admin-profile-1")).thenReturn(Optional.of(profile));
+    when(jwtTokenProvider.generateAccessToken("admin@example.com", "admin-profile-1", Role.ADMIN))
+        .thenReturn("new-access");
     when(jwtTokenProvider.generateRefreshToken("admin@example.com")).thenReturn("new-refresh");
     when(accountRepository.save(admin)).thenReturn(admin);
 
@@ -173,8 +194,9 @@ class AuthServiceTest {
         .refreshToken("refresh-token")
         .build());
 
-    verify(profileClient, never()).getProfileById(any());
-    assertThat(response.getProfile()).isNull();
+    verify(profileClient).ensureProfileIdForEmail("admin@example.com", "Ban", "quản trị");
+    verify(profileClient).getProfileById("admin-profile-1");
+    assertThat(response.getProfile()).isEqualTo(profile);
     assertThat(response.getAccessToken()).isEqualTo("new-access");
   }
 

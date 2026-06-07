@@ -95,6 +95,30 @@ public class ListingController {
         .build());
   }
 
+  @PostMapping("/admin/{id}/suspend")
+  public ResponseEntity<ApiResponse<ListingResponse>> suspendListingAdmin(
+      @PathVariable String id,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {
+    if (!AppConstants.ROLE_ADMIN.equals(role)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
+    return ResponseEntity.ok(ApiResponse.<ListingResponse>builder()
+        .data(listingAdminService.suspendListing(id))
+        .build());
+  }
+
+  @PostMapping("/admin/{id}/reactivate")
+  public ResponseEntity<ApiResponse<ListingResponse>> reactivateListingAdmin(
+      @PathVariable String id,
+      @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {
+    if (!AppConstants.ROLE_ADMIN.equals(role)) {
+      throw new AppException(ErrorCode.FORBIDDEN);
+    }
+    return ResponseEntity.ok(ApiResponse.<ListingResponse>builder()
+        .data(listingAdminService.reactivateListing(id))
+        .build());
+  }
+
   @PostMapping("/admin/purge-all")
   public ResponseEntity<ApiResponse<AdminListingPurgeResponse>> purgeAllListingsAdmin(
       @RequestHeader(value = AppConstants.JWT_CLAIM_ROLE, required = false) String role) {

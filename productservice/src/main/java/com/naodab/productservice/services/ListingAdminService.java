@@ -11,4 +11,8 @@ public interface ListingAdminService {
   ListingResponse approveListing(String listingId);
 
   ListingResponse rejectListing(String listingId);
+
+  ListingResponse suspendListing(String listingId);
+
+  ListingResponse reactivateListing(String listingId);
 }

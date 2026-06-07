@@ -1,6 +1,6 @@
 import type { ConversationResponse } from "@/api/conversations";
 
-export type MessagesConversationTab = "facilities" | "customers";
+export type MessagesConversationTab = "facilities" | "customers" | "admin";
 
 function normalizeSearchText(raw: string): string {
   return raw.trim().toLowerCase();
@@ -14,7 +14,7 @@ function conversationSearchHaystack(
     conversation.facilityName,
     conversation.lastMessagePreview,
   ];
-  if (tab === "customers") {
+  if (tab === "customers" || tab === "admin") {
     parts.push(conversation.buyerProfileId);
   }
   return parts
@@ -39,7 +39,7 @@ export function filterConversationsBySearch(
 }
 
 export function messagesSearchPlaceholder(tab: MessagesConversationTab): string {
-  return tab === "facilities"
-    ? "Tìm cơ sở hoặc tin nhắn..."
-    : "Tìm khách, cơ sở hoặc tin nhắn...";
+  if (tab === "facilities") return "Tìm cơ sở hoặc tin nhắn...";
+  if (tab === "admin") return "Tìm tin nhắn...";
+  return "Tìm khách, cơ sở hoặc tin nhắn...";
 }

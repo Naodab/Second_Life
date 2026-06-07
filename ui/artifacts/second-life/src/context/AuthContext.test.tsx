@@ -82,6 +82,24 @@ describe("AuthContext auth flows", () => {
     vi.restoreAllMocks();
   });
 
+  describe("session restore", () => {
+    it("restores admin session from JWT without fetching profile", async () => {
+      cookieStore.set("accessToken", adminToken());
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.isAdmin).toBe(true);
+      expect(result.current.isLoggedIn).toBe(true);
+      expect(result.current.user?.id).toBe("admin-profile");
+      expect(apiMock.getProfileById).not.toHaveBeenCalled();
+      expect(apiMock.getCurrentProfile).not.toHaveBeenCalled();
+    });
+  });
+
   describe("login", () => {
     it("returns needsSetup=true and sets flags for regular user with incomplete profile", async () => {
       const accessToken = userToken();
@@ -185,13 +203,8 @@ describe("AuthContext auth flows", () => {
       expect(result.current.needsProfileSetup).toBe(true);
     });
 
-    it("returns needsSetup=false for admin after Google login", async () => {
+    it("returns needsSetup=false for admin after Google login without fetching profile", async () => {
       const accessToken = adminToken();
-      apiMock.getProfileById.mockResolvedValue({
-        ...incompleteProfile,
-        id: "admin-profile",
-        email: "admin@example.com",
-      });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -208,28 +221,9 @@ describe("AuthContext auth flows", () => {
       expect(result.current.isAdmin).toBe(true);
       expect(result.current.needsProfileSetup).toBe(false);
       expect(result.current.sellerHubProfileComplete).toBe(false);
-    });
-
-    it("falls back to JWT claims and skips setup for admin when profile fetch fails", async () => {
-      const accessToken = adminToken();
-      apiMock.getProfileById.mockRejectedValue(new Error("profile unavailable"));
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      let needsSetup = true;
-      await act(async () => {
-        needsSetup = await result.current.loginWithGoogle(accessToken, "google-admin-refresh");
-      });
-
-      expect(needsSetup).toBe(false);
-      expect(result.current.isAdmin).toBe(true);
-      expect(result.current.needsProfileSetup).toBe(false);
-      expect(result.current.sellerHubProfileComplete).toBe(false);
-      expect(result.current.user?.email).toBe("admin@example.com");
+      expect(result.current.user?.id).toBe("admin-profile");
+      expect(apiMock.getProfileById).not.toHaveBeenCalled();
+      expect(apiMock.getCurrentProfile).not.toHaveBeenCalled();
     });
 
     it("falls back to JWT claims and requires setup for regular user when profile fetch fails", async () => {

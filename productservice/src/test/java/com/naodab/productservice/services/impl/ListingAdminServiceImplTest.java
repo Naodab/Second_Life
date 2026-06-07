@@ -75,6 +75,40 @@ class ListingAdminServiceImplTest {
   }
 
   @Test
+  void suspendListing_setsInactive() {
+    Listing listing = pendingListing("lid-1");
+    listing.setListingStatus(Listing.ListingStatus.ACTIVE);
+    when(listingRepository.findWithProductGraphById("lid-1")).thenReturn(Optional.of(listing));
+    when(listingRepository.save(any(Listing.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(listingVariantRepository.findByListing_Id("lid-1")).thenReturn(List.of());
+    when(listingMapper.toListingResponse(any(), any()))
+        .thenReturn(ListingResponse.builder().id("lid-1").listingStatus(Listing.ListingStatus.INACTIVE).build());
+
+    ListingResponse response = listingAdminService.suspendListing("lid-1");
+
+    assertThat(response.getListingStatus()).isEqualTo(Listing.ListingStatus.INACTIVE);
+    assertThat(listing.getListingStatus()).isEqualTo(Listing.ListingStatus.INACTIVE);
+    verify(listingSearchService).sync(listing);
+  }
+
+  @Test
+  void reactivateListing_setsActive() {
+    Listing listing = pendingListing("lid-1");
+    listing.setListingStatus(Listing.ListingStatus.INACTIVE);
+    when(listingRepository.findWithProductGraphById("lid-1")).thenReturn(Optional.of(listing));
+    when(listingRepository.save(any(Listing.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(listingVariantRepository.findByListing_Id("lid-1")).thenReturn(List.of());
+    when(listingMapper.toListingResponse(any(), any()))
+        .thenReturn(ListingResponse.builder().id("lid-1").listingStatus(Listing.ListingStatus.ACTIVE).build());
+
+    ListingResponse response = listingAdminService.reactivateListing("lid-1");
+
+    assertThat(response.getListingStatus()).isEqualTo(Listing.ListingStatus.ACTIVE);
+    assertThat(listing.getListingStatus()).isEqualTo(Listing.ListingStatus.ACTIVE);
+    verify(listingSearchService).sync(listing);
+  }
+
+  @Test
   void listPendingListings_filtersPendingStatus() {
     ReflectionTestUtils.setField(listingAdminService, "defaultListingPageSize", 20);
     when(listingSearchService.searchListingsPaged(any()))

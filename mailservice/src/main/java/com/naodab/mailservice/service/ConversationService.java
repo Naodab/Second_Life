@@ -18,14 +18,17 @@ import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.mailservice.clients.ProductClients;
 import com.naodab.mailservice.dto.ConversationResponse;
+import com.naodab.mailservice.dto.CreateAdminConversationRequest;
 import com.naodab.mailservice.dto.CreateConversationRequest;
 import com.naodab.mailservice.dto.FacilitySummary;
 import com.naodab.mailservice.dto.MessageResponse;
 import com.naodab.mailservice.dto.SendMessageRequest;
 import com.naodab.mailservice.models.ConversationDocument;
+import com.naodab.mailservice.models.ConversationType;
 import com.naodab.mailservice.models.MessageDocument;
 import com.naodab.mailservice.repositories.ConversationRepository;
 import com.naodab.mailservice.repositories.MessageRepository;
+import com.naodab.mailservice.support.ConversationConstants;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -50,9 +53,10 @@ public class ConversationService {
     String normalizedProfileId = requireProfileId(profileId);
     int pageSize = normalizeLimit(limit);
     return conversationRepository
-        .findByBuyerProfileIdOrderByLastMessageAtDesc(normalizedProfileId, PageRequest.of(0, pageSize))
+        .findByBuyerProfileIdAndConversationTypeNotOrderByLastMessageAtDesc(
+            normalizedProfileId, ConversationType.ADMIN, PageRequest.of(0, pageSize))
         .stream()
-        .map(doc -> toResponse(doc, normalizedProfileId))
+        .map(doc -> toResponse(doc, normalizedProfileId, false))
         .toList();
   }
 
@@ -60,10 +64,45 @@ public class ConversationService {
     String normalizedProfileId = requireProfileId(profileId);
     int pageSize = normalizeLimit(limit);
     return conversationRepository
-        .findBySellerProfileIdOrderByLastMessageAtDesc(normalizedProfileId, PageRequest.of(0, pageSize))
+        .findBySellerProfileIdAndConversationTypeNotOrderByLastMessageAtDesc(
+            normalizedProfileId, ConversationType.ADMIN, PageRequest.of(0, pageSize))
         .stream()
-        .map(doc -> toResponse(doc, normalizedProfileId))
+        .map(doc -> toResponse(doc, normalizedProfileId, false))
         .toList();
+  }
+
+  public List<ConversationResponse> listAdminSupportAsUser(String profileId, Integer limit) {
+    String normalizedProfileId = requireProfileId(profileId);
+    int pageSize = normalizeLimit(limit);
+    return conversationRepository
+        .findByBuyerProfileIdAndConversationTypeOrderByLastMessageAtDesc(
+            normalizedProfileId, ConversationType.ADMIN, PageRequest.of(0, pageSize))
+        .stream()
+        .map(doc -> toResponse(doc, normalizedProfileId, false))
+        .toList();
+  }
+
+  public List<ConversationResponse> listAdminSupportInbox(Integer limit) {
+    int pageSize = normalizeLimit(limit);
+    return conversationRepository
+        .findByConversationTypeOrderByLastMessageAtDesc(ConversationType.ADMIN, PageRequest.of(0, pageSize))
+        .stream()
+        .map(doc -> toResponse(doc, ConversationConstants.ADMIN_INBOX_PROFILE_ID, true))
+        .toList();
+  }
+
+  public ConversationResponse getOrCreateAdminSupport(String profileId, CreateAdminConversationRequest request) {
+    String buyerProfileId = requireProfileId(profileId);
+
+    ConversationDocument conversation = conversationRepository
+        .findByBuyerProfileIdAndFacilityId(buyerProfileId, ConversationConstants.ADMIN_SUPPORT_FACILITY_ID)
+        .orElseGet(() -> createAdminSupportConversation(buyerProfileId));
+
+    if (request != null && MessagePayloadSupport.hasPayload(request)) {
+      persistMessage(conversation, buyerProfileId, request);
+    }
+
+    return toResponse(conversation, buyerProfileId, false);
   }
 
   public ConversationResponse getOrCreate(String profileId, CreateConversationRequest request) {
@@ -78,11 +117,11 @@ public class ConversationService {
       persistMessage(conversation, buyerProfileId, request);
     }
 
-    return toResponse(conversation, buyerProfileId);
+    return toResponse(conversation, buyerProfileId, false);
   }
 
-  public List<MessageResponse> listMessages(String profileId, String conversationId, Integer limit) {
-    requireAccessibleConversation(profileId, conversationId);
+  public List<MessageResponse> listMessages(String profileId, String conversationId, Integer limit, boolean adminRole) {
+    requireAccessibleConversation(profileId, conversationId, adminRole);
     int pageSize = normalizeLimit(limit);
     List<MessageDocument> messages = messageRepository.findByConversationIdOrderByCreatedAtDesc(
         conversationId.trim(), PageRequest.of(0, pageSize));
@@ -92,21 +131,27 @@ public class ConversationService {
         .toList();
   }
 
-  public MessageResponse sendMessage(String profileId, String conversationId, SendMessageRequest request) {
-    ConversationDocument conversation = requireAccessibleConversation(profileId, conversationId);
+  public MessageResponse sendMessage(
+      String profileId,
+      String conversationId,
+      SendMessageRequest request,
+      boolean adminRole) {
+    ConversationDocument conversation = requireAccessibleConversation(profileId, conversationId, adminRole);
     return persistMessage(conversation, requireProfileId(profileId), request);
   }
 
-  public ConversationResponse markRead(String profileId, String conversationId) {
-    ConversationDocument conversation = requireAccessibleConversation(profileId, conversationId);
+  public ConversationResponse markRead(String profileId, String conversationId, boolean adminRole) {
+    ConversationDocument conversation = requireAccessibleConversation(profileId, conversationId, adminRole);
     String normalizedProfileId = requireProfileId(profileId);
     if (normalizedProfileId.equals(conversation.getBuyerProfileId())) {
       conversation.setUnreadByBuyer(0);
+    } else if (isAdminSideViewer(conversation, normalizedProfileId, adminRole)) {
+      conversation.setUnreadBySeller(0);
     } else if (normalizedProfileId.equals(conversation.getSellerProfileId())) {
       conversation.setUnreadBySeller(0);
     }
     ConversationDocument saved = conversationRepository.save(conversation);
-    return toResponse(saved, normalizedProfileId);
+    return toResponse(saved, normalizedProfileId, adminRole);
   }
 
   private MessageResponse persistMessage(
@@ -132,6 +177,20 @@ public class ConversationService {
     return messageResponse;
   }
 
+  private ConversationDocument createAdminSupportConversation(String buyerProfileId) {
+    Instant now = Instant.now();
+    return conversationRepository.save(ConversationDocument.builder()
+        .conversationType(ConversationType.ADMIN)
+        .buyerProfileId(buyerProfileId)
+        .sellerProfileId(ConversationConstants.ADMIN_INBOX_PROFILE_ID)
+        .facilityId(ConversationConstants.ADMIN_SUPPORT_FACILITY_ID)
+        .facilityName(ConversationConstants.ADMIN_SUPPORT_FACILITY_NAME)
+        .lastMessageAt(now)
+        .createdAt(now)
+        .updatedAt(now)
+        .build());
+  }
+
   private ConversationDocument createConversationDocument(String buyerProfileId, String facilityId) {
     FacilitySummary facility = productClients.getFacility(buyerProfileId, facilityId);
     if (!StringUtils.hasText(facility.getOwnerId())) {
@@ -143,6 +202,7 @@ public class ConversationService {
 
     Instant now = Instant.now();
     return conversationRepository.save(ConversationDocument.builder()
+        .conversationType(ConversationType.FACILITY)
         .buyerProfileId(buyerProfileId)
         .sellerProfileId(facility.getOwnerId().trim())
         .facilityId(facilityId.trim())
@@ -154,25 +214,54 @@ public class ConversationService {
         .build());
   }
 
-  private ConversationDocument requireAccessibleConversation(String profileId, String conversationId) {
+  private ConversationDocument requireAccessibleConversation(
+      String profileId,
+      String conversationId,
+      boolean adminRole) {
     String normalizedProfileId = requireProfileId(profileId);
     String normalizedConversationId = requireText(conversationId, ErrorCode.INVALID_INPUT);
     return conversationRepository.findById(normalizedConversationId)
-        .filter(doc -> normalizedProfileId.equals(doc.getBuyerProfileId())
-            || normalizedProfileId.equals(doc.getSellerProfileId()))
+        .filter(doc -> canAccessConversation(doc, normalizedProfileId, adminRole))
         .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
+  }
+
+  private static boolean canAccessConversation(
+      ConversationDocument document,
+      String profileId,
+      boolean adminRole) {
+    if (profileId.equals(document.getBuyerProfileId())
+        || profileId.equals(document.getSellerProfileId())) {
+      return true;
+    }
+    return adminRole && document.getConversationType() == ConversationType.ADMIN;
+  }
+
+  private static boolean isAdminSideViewer(
+      ConversationDocument document,
+      String profileId,
+      boolean adminRole) {
+    return adminRole
+        && document.getConversationType() == ConversationType.ADMIN
+        && ConversationConstants.ADMIN_INBOX_PROFILE_ID.equals(document.getSellerProfileId());
   }
 
   private void pushRealtime(ConversationDocument conversation, MessageResponse message) {
     String recipientProfileId = message.getSenderProfileId().equals(conversation.getBuyerProfileId())
         ? conversation.getSellerProfileId()
         : conversation.getBuyerProfileId();
-    Set<WebSocketSession> sessions = sessionRegistry.sessionsFor(recipientProfileId);
+    Set<WebSocketSession> sessions = ConversationConstants.ADMIN_INBOX_PROFILE_ID.equals(recipientProfileId)
+        ? sessionRegistry.sessionsFor(ConversationConstants.ADMIN_INBOX_PROFILE_ID)
+        : sessionRegistry.sessionsFor(recipientProfileId);
     if (sessions.isEmpty()) {
       return;
     }
     try {
-      ConversationResponse conversationForRecipient = toResponse(conversation, recipientProfileId);
+      boolean recipientIsAdminInbox =
+          ConversationConstants.ADMIN_INBOX_PROFILE_ID.equals(recipientProfileId);
+      ConversationResponse conversationForRecipient = toResponse(
+          conversation,
+          recipientProfileId,
+          recipientIsAdminInbox);
       String payload = objectMapper.writeValueAsString(Map.of(
           "type", "MESSAGE",
           "message", message,
@@ -190,13 +279,25 @@ public class ConversationService {
     }
   }
 
-  private ConversationResponse toResponse(ConversationDocument document, String viewerProfileId) {
+  private ConversationResponse toResponse(
+      ConversationDocument document,
+      String viewerProfileId,
+      boolean adminRole) {
     ConversationDocument resolved = backfillFacilityImageIfMissing(document);
-    long unreadCount = viewerProfileId.equals(resolved.getBuyerProfileId())
-        ? resolved.getUnreadByBuyer()
-        : resolved.getUnreadBySeller();
+    long unreadCount;
+    if (viewerProfileId.equals(resolved.getBuyerProfileId())) {
+      unreadCount = resolved.getUnreadByBuyer();
+    } else if (isAdminSideViewer(resolved, viewerProfileId, adminRole)
+        || ConversationConstants.ADMIN_INBOX_PROFILE_ID.equals(viewerProfileId)) {
+      unreadCount = resolved.getUnreadBySeller();
+    } else {
+      unreadCount = resolved.getUnreadBySeller();
+    }
     return ConversationResponse.builder()
         .id(resolved.getId())
+        .conversationType(resolved.getConversationType() == null
+            ? ConversationType.FACILITY.name()
+            : resolved.getConversationType().name())
         .buyerProfileId(resolved.getBuyerProfileId())
         .sellerProfileId(resolved.getSellerProfileId())
         .facilityId(resolved.getFacilityId())

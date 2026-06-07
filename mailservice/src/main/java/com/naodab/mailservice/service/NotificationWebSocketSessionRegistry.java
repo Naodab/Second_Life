@@ -27,4 +27,15 @@ public class NotificationWebSocketSessionRegistry {
   public Set<WebSocketSession> sessionsFor(String profileId) {
     return sessionsByProfileId.getOrDefault(profileId, Set.of());
   }
+
+  public Set<WebSocketSession> sessionsForMany(Iterable<String> profileIds) {
+    Set<WebSocketSession> merged = ConcurrentHashMap.newKeySet();
+    for (String profileId : profileIds) {
+      if (profileId == null || profileId.isBlank()) {
+        continue;
+      }
+      merged.addAll(sessionsFor(profileId.trim()));
+    }
+    return merged;
+  }
 }

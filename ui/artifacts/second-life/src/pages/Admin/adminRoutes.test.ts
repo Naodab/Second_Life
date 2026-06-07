@@ -5,6 +5,7 @@ import {
   adminFacilitiesPath,
   adminListingsPath,
   adminListingsPendingPath,
+  adminMessagesPath,
   adminOrdersPath,
   adminProductsPath,
   adminRouteActive,
@@ -20,6 +21,7 @@ describe("adminRoutes", () => {
     expect(adminProductsPath()).toBe(`${ADMIN_BASE}/products`);
     expect(adminUsersPath()).toBe(`${ADMIN_BASE}/users`);
     expect(adminOrdersPath()).toBe(`${ADMIN_BASE}/orders`);
+    expect(adminMessagesPath()).toBe(`${ADMIN_BASE}/messages`);
   });
 
   it("parses known admin routes", () => {
@@ -29,6 +31,7 @@ describe("adminRoutes", () => {
     expect(parseAdminRoute("/admin/products")).toEqual({ tag: "products" });
     expect(parseAdminRoute("/admin/users")).toEqual({ tag: "users" });
     expect(parseAdminRoute("/admin/orders")).toEqual({ tag: "orders" });
+    expect(parseAdminRoute("/admin/messages")).toEqual({ tag: "messages" });
   });
 
   it("ignores query string when parsing", () => {

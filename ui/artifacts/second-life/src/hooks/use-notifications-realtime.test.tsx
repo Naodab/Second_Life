@@ -12,8 +12,15 @@ import {
 const toastMock = vi.fn();
 const navigateMock = vi.fn();
 
-const { latestSocketRef } = vi.hoisted(() => ({
+const { latestSocketRef, authStateRef } = vi.hoisted(() => ({
   latestSocketRef: { current: null as MockWebSocket | null },
+  authStateRef: {
+    current: {
+      isLoggedIn: true,
+      user: { id: "buyer-1" },
+      isAdmin: false,
+    },
+  },
 }));
 
 class MockWebSocket {
@@ -38,7 +45,7 @@ vi.mock("js-cookie", () => ({
 }));
 
 vi.mock("@/context/AuthContext", () => ({
-  useAuth: () => ({ isLoggedIn: true, user: { id: "buyer-1" } }),
+  useAuth: () => authStateRef.current,
 }));
 
 vi.mock("@/api/notifications", () => ({
@@ -92,6 +99,11 @@ describe("useNotificationRealtimeSync alerts", () => {
     vi.clearAllMocks();
     MockWebSocket.instances = [];
     latestSocketRef.current = null;
+    authStateRef.current = {
+      isLoggedIn: true,
+      user: { id: "buyer-1" },
+      isAdmin: false,
+    };
     vi.stubGlobal("WebSocket", MockWebSocket);
   });
 
@@ -148,6 +160,37 @@ describe("useNotificationRealtimeSync alerts", () => {
         description: "Shop đây, cần gì ạ?",
         duration: REALTIME_ALERT_TOAST_DURATION_MS,
         className: "cursor-pointer",
+      }),
+    );
+  });
+
+  it("shows admin inbox message toast without profile id", () => {
+    authStateRef.current = {
+      isLoggedIn: true,
+      user: { id: "" },
+      isAdmin: true,
+    };
+
+    renderHook(() => useNotificationRealtimeSync(navigateMock), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => {
+      emitSocketMessage({
+        type: "MESSAGE",
+        message: messageFixture,
+        conversation: {
+          ...conversationFixture,
+          conversationType: "ADMIN",
+          sellerProfileId: "__ADMIN_INBOX__",
+        },
+      });
+    });
+
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "Shop đây, cần gì ạ?",
+        duration: REALTIME_ALERT_TOAST_DURATION_MS,
       }),
     );
   });

@@ -31,8 +31,11 @@ export type MessageResponse = {
   createdAt: string;
 };
 
+export type ConversationType = "FACILITY" | "ADMIN";
+
 export type ConversationResponse = {
   id: string;
+  conversationType?: ConversationType | null;
   buyerProfileId: string;
   sellerProfileId: string;
   facilityId: string;
@@ -56,8 +59,10 @@ export type CreateConversationPayload = MessagePayload & {
   facilityId: string;
 };
 
+export type ConversationListRole = "buyer" | "seller" | "admin" | "admin-support";
+
 export async function listConversations(
-  role: "buyer" | "seller",
+  role: ConversationListRole,
   limit = 50,
 ): Promise<ConversationResponse[]> {
   const raw = await customFetch<ApiResponseEnvelope<ConversationResponse[]>>("/api/v1/conversations", {
@@ -67,6 +72,17 @@ export async function listConversations(
   });
   const rows = unwrapApiData(raw);
   return Array.isArray(rows) ? rows : [];
+}
+
+export async function getOrCreateAdminSupportConversation(
+  payload: MessagePayload = {},
+): Promise<ConversationResponse> {
+  const raw = await customFetch<ApiResponseEnvelope<ConversationResponse>>("/api/v1/conversations/admin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return unwrapApiData(raw);
 }
 
 export async function createConversation(payload: CreateConversationPayload): Promise<ConversationResponse> {
