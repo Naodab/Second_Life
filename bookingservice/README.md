@@ -250,7 +250,7 @@ sequenceDiagram
   User->>UI: Select rent items + rental window
   UI->>B: POST /rental-orders { listingVariantId, startTime, endTime, quantity, customerId }
   Note over B: X-Profile-Id = buyer
-  B->>B: Validate startTime < endTime; load customer; assign orderId
+  B->>B: Validate startTime before endTime; load customer; assign orderId
   B->>I: GET /listing-variants/{id}/availability-in-range?mode=RENT&from=&to=
   I-->>B: min available quantity in slot
   alt insufficient rent slots
