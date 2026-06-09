@@ -223,9 +223,9 @@ flowchart LR
 | Profile provisioning (Kafka) | [profileservice/README.md](../profileservice/README.md) |
 | Create listing, OpenSearch, inventory | [productservice/README.md](../productservice/README.md) |
 | Admin approve listing | [productservice/README.md](../productservice/README.md) |
-| Public search | [productservice/README.md](../productservice/README.md) |
+| Public search (GUEST / USER) | [productservice/README.md](../productservice/README.md) · [activity-diagrams.md](./activity-diagrams.md) |
 | Add to cart | [productservice/README.md](../productservice/README.md) |
-| BUY / RENT order + facility order count | [bookingservice/README.md](../bookingservice/README.md) |
+| BUY / RENT checkout (USER) | [bookingservice/README.md](../bookingservice/README.md) · [activity-diagrams.md](./activity-diagrams.md) |
 | BUY / RENT reservations | [inventoryservice/README.md](../inventoryservice/README.md) |
 | Messaging + WebSocket (facility chat + admin support) | [mailservice/README.md](../mailservice/README.md) |
 | Order notifications | [mailservice/README.md](../mailservice/README.md) |

@@ -6,6 +6,7 @@ Technical documentation and diagrams for **Second Life**. The root README focuse
 |----------|----------|
 | [use-cases.md](./use-cases.md) | GUEST / USER / ADMIN use case diagrams, UI route map |
 | [architecture.md](./architecture.md) | Microservices architecture, service catalog, Traefik, Kafka, end-to-end flows |
+| [activity-diagrams.md](./activity-diagrams.md) | Activity diagrams — search, buy/rent, auth, seller listing, admin approval |
 
 ## Per-service READMEs
 

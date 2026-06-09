@@ -219,11 +219,101 @@ sequenceDiagram
 
 ## Main flows
 
-Called synchronously by **bookingservice** during checkout. Kafka topic `inventory.reservation.create` runs the same logic asynchronously.
+Called synchronously by **bookingservice** during checkout (triggered by **USER** from `/checkout`). Kafka topic `inventory.reservation.create` runs the same logic asynchronously.
 
-### BUY — create and release reservation
+### End-to-end: USER buys (BUY)
+
+```mermaid
+flowchart LR
+  User((USER))
+  UI["Checkout UI"]
+  B[bookingservice]
+  I[inventoryservice]
+
+  User --> UI
+  UI -->|"POST /orders"| B
+  B -->|"GET /availability?mode=BUY"| I
+  B -->|"POST /reservations/buy"| I
+  I --> B --> UI --> User
+```
 
 See [Check availability — BUY: return stock count](#1-check-availability--buy-return-stock-count) for the stock probe. Summary after a successful check:
+
+```mermaid
+sequenceDiagram
+  actor User as USER (buyer)
+  participant UI as Checkout UI
+  participant B as BookingService
+  participant I as InventoryService
+  participant DB as MySQL
+
+  User->>UI: Confirm buy order
+  UI->>B: POST /orders
+  B->>I: GET /listing-variants/{id}/availability?mode=BUY
+  I->>DB: buy_quantity − active reservations
+  I-->>B: availableQuantity
+  B->>I: POST /reservations/buy { reservationId, listingVariantId, quantity }
+  alt sufficient stock
+    I->>DB: INSERT InventoryReservation (PENDING)
+    I-->>B: OK
+    B-->>UI: Order created
+    UI-->>User: Success
+  else insufficient
+    I-->>B: INSUFFICIENT_INVENTORY
+    B-->>UI: Error
+    UI-->>User: Out of stock
+  end
+  opt order cancelled / DB rollback
+    B->>I: DELETE /reservations/{reservationId}
+    I->>DB: status → RELEASED
+  end
+```
+
+### End-to-end: USER rents (RENT)
+
+```mermaid
+flowchart LR
+  User((USER))
+  UI["Checkout UI"]
+  B[bookingservice]
+  I[inventoryservice]
+
+  User -->|"pick rental window"| UI
+  UI -->|"POST /rental-orders"| B
+  B -->|"GET /availability-in-range"| I
+  B -->|"POST /reservations/rent"| I
+  I --> B --> UI --> User
+```
+
+See [Check availability — RENT: slot capacity in range](#3-check-availability--rent-slot-capacity-in-range) for the slot probe. Summary after a successful check:
+
+```mermaid
+sequenceDiagram
+  actor User as USER (buyer)
+  participant UI as Checkout UI
+  participant B as BookingService
+  participant I as InventoryService
+  participant DB as MySQL
+
+  User->>UI: Confirm rent order + dates
+  UI->>B: POST /rental-orders
+  B->>I: GET /availability-in-range?mode=RENT&from=&to=
+  I->>DB: min free slots in window (overlap + turnover)
+  I-->>B: availableQuantity
+  B->>I: POST /reservations/rent { rentalSlotStart, rentalSlotEnd, quantity }
+  alt slot available
+    I->>DB: INSERT InventoryReservation (PENDING, slot fields)
+    I-->>B: OK
+    B-->>UI: Rental order created
+    UI-->>User: Success
+  else insufficient
+    I-->>B: INSUFFICIENT_INVENTORY
+    B-->>UI: Error
+    UI-->>User: Slot unavailable
+  end
+```
+
+### BUY — create and release reservation (service-to-service)
 
 ```mermaid
 sequenceDiagram
@@ -244,7 +334,7 @@ sequenceDiagram
   end
 ```
 
-### RENT — slot availability and reservation
+### RENT — slot availability and reservation (service-to-service)
 
 See [Check availability — RENT: slot capacity in range](#3-check-availability--rent-slot-capacity-in-range) for the slot probe. Summary after a successful check:
 

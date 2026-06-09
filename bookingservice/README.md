@@ -146,30 +146,63 @@ mvn test -pl inventoryservice \
 
 ## Order flows
 
-### BUY — create reservation
+Checkout is initiated by a signed-in **USER** from `/checkout`. Traefik forward-auth injects `X-Profile-Id`; bookingservice orchestrates inventory reservation, order persistence, notifications, and facility metrics.
+
+### BUY — checkout flow (User)
+
+```mermaid
+flowchart LR
+  User((USER))
+  Cart["/cart"]
+  Checkout["/checkout"]
+  B[bookingservice]
+  I[inventoryservice]
+  P[productservice]
+  Mail[mailservice via Kafka]
+
+  User --> Cart --> Checkout
+  Checkout -->|"POST /orders"| B
+  B -->|"GET /availability"| I
+  B -->|"POST /reservations/buy"| I
+  B --> P
+  B --> Mail
+  Mail --> User
+```
 
 ```mermaid
 sequenceDiagram
+  actor User as USER (buyer)
+  participant UI as Checkout UI (/checkout)
   participant B as BookingService
   participant I as InventoryService
   participant P as ProductService
   participant K as Kafka / MailService
+
+  User->>UI: Select cart items, fill customer info
+  UI->>B: POST /orders { listingVariantId, quantity, customerId, pickupTime }
+  Note over B: X-Profile-Id = buyer
   B->>B: Load customer, assign orderId (UUID)
   B->>I: GET /listing-variants/{id}/availability?mode=BUY
-  B->>I: POST /reservations/buy
-  alt reservation OK
-    B->>B: Persist order (DB)
+  I-->>B: availableQuantity
+  alt insufficient stock
+    B-->>UI: INSUFFICIENT_INVENTORY
+    UI-->>User: Show error
+  else stock OK
+    B->>I: POST /reservations/buy { reservationId=orderId, quantity }
+    I-->>B: PENDING reservation
+    B->>B: Persist BookingOrder (DB)
     alt order save fails
       B->>I: DELETE /reservations/{orderId}
+      B-->>UI: Error
+      UI-->>User: Show error
     else order saved
       B->>K: ORDER_CREATED notification (buyer + seller)
-      B->>P: GET /listings/variants/{id}/context
-      P-->>B: facilityId
+      B->>P: GET /listings/variants/{id}/context → facilityId
       B->>P: POST /facilities/{facilityId}/record-order
-      Note over P: Facility.orderCount += 1
+      B-->>UI: BookingOrderResponse
+      UI-->>User: Order success → /orders
+      K-->>User: In-app / email notification
     end
-  else reservation fails
-    Note over B: Order is not created
   end
 ```
 
@@ -184,35 +217,65 @@ sequenceDiagram
 
 `inventoryReservationId` equals `orderId`. The Kafka consumer still supports async reservation events (same `createBuyReservation` logic).
 
-### RENT — create reservation
+### RENT — checkout flow (User)
+
+```mermaid
+flowchart LR
+  User((USER))
+  Cart["/cart"]
+  Checkout["/checkout"]
+  B[bookingservice]
+  I[inventoryservice]
+  P[productservice]
+  Mail[mailservice via Kafka]
+
+  User -->|"pick rental dates"| Cart --> Checkout
+  Checkout -->|"POST /rental-orders"| B
+  B -->|"GET /availability-in-range"| I
+  B -->|"POST /reservations/rent"| I
+  B --> P
+  B --> Mail
+  Mail --> User
+```
 
 ```mermaid
 sequenceDiagram
+  actor User as USER (buyer)
+  participant UI as Checkout UI (/checkout)
   participant B as BookingService
   participant I as InventoryService
   participant P as ProductService
   participant K as Kafka / MailService
-  B->>B: Validate startTime & endTime
-  B->>B: Load customer, assign orderId (UUID)
+
+  User->>UI: Select rent items + rental window
+  UI->>B: POST /rental-orders { listingVariantId, startTime, endTime, quantity, customerId }
+  Note over B: X-Profile-Id = buyer
+  B->>B: Validate startTime < endTime; load customer; assign orderId
   B->>I: GET /listing-variants/{id}/availability-in-range?mode=RENT&from=&to=
-  alt available quantity >= requested
-    B->>I: POST /reservations/rent
+  I-->>B: min available quantity in slot
+  alt insufficient rent slots
+    B-->>UI: INSUFFICIENT_INVENTORY
+    UI-->>User: Show error
+  else slots OK
+    B->>I: POST /reservations/rent { rentalSlotStart, rentalSlotEnd, quantity, referenceId=orderId }
     alt reservation OK
-      B->>B: Persist rental order (DB)
+      B->>B: Persist RentalOrder (status=PENDING)
       alt order save fails
         B->>I: DELETE /reservations/{orderId}
+        B-->>UI: Error
+        UI-->>User: Show error
       else order saved
         B->>K: ORDER_CREATED notification (buyer + seller)
-        B->>P: GET /listings/variants/{id}/context
-        P-->>B: facilityId
+        B->>P: GET /listings/variants/{id}/context → facilityId
         B->>P: POST /facilities/{facilityId}/record-order
-        Note over P: Facility.orderCount += 1
+        B-->>UI: RentalOrderResponse
+        UI-->>User: Order success → /orders
+        K-->>User: In-app / email notification
       end
     else reservation fails
-      Note over B: Rental order is not created
+      B-->>UI: Error
+      UI-->>User: Show error
     end
-  else insufficient rent slots
-    Note over B: INSUFFICIENT_INVENTORY — no reservation, no order
   end
 ```
 
@@ -230,16 +293,21 @@ Reservation payload uses `mode = RENT`. `inventoryReservationId` equals `orderId
 
 ### RENT — cancel while PENDING
 
-Applies when the **buyer** cancels or the **seller** rejects a pending rent order.
+Applies when the **USER** (buyer) cancels or the seller rejects a pending rent order.
 
 ```mermaid
 sequenceDiagram
-  participant U as Buyer or Seller
+  actor User as USER (buyer or seller)
+  participant UI as Orders UI
   participant B as BookingService
   participant I as InventoryService
-  U->>B: DELETE /rental-orders/{id} (buyer)<br/>or PATCH status → CANCELLED (seller)
+
+  User->>UI: Cancel pending rental order
+  UI->>B: DELETE /rental-orders/{id} (buyer)<br/>or PATCH status → CANCELLED (seller)
   B->>B: Verify status is PENDING, set CANCELLED
   B->>I: DELETE /reservations/{orderId}
+  B-->>UI: Updated order
+  UI-->>User: Reservation released
   Note over B: Publish cancellation notification
 ```
 
