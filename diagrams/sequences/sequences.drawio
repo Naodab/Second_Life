@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" pages="4">
+<mxfile host="app.diagrams.net" pages="5">
   <diagram name="register_account" id="lLfpNvN9sLYUksTSj22L">
     <mxGraphModel dx="983" dy="771" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="none" math="0" shadow="0">
       <root>
@@ -643,6 +643,94 @@
             </Array>
             <mxPoint x="370" y="220" as="sourcePoint" />
             <mxPoint x="420" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="X_UeWRtZ0r5vCY28nSuc" name="search_listings">
+    <mxGraphModel dx="1312" dy="717" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="fr2HvPRLd4wDHq1lPaJO-1" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="460" width="60" x="30" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="fr2HvPRLd4wDHq1lPaJO-2" parent="fr2HvPRLd4wDHq1lPaJO-1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};participant=umlActor;" value="" vertex="1">
+          <mxGeometry height="460" width="40" x="10" as="geometry" />
+        </mxCell>
+        <mxCell id="fr2HvPRLd4wDHq1lPaJO-3" parent="fr2HvPRLd4wDHq1lPaJO-1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontStyle=1" value="User" vertex="1">
+          <mxGeometry height="19.166666666666664" width="60" y="25.555555555555557" as="geometry" />
+        </mxCell>
+        <mxCell id="ez_FzbSlXgSrvqJKlSHN-1" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontStyle=1" value="UI" vertex="1">
+          <mxGeometry height="460" width="100" x="260" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="iT8HhY5k_ED2emeRrv1z-1" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontStyle=1" value="ProductService" vertex="1">
+          <mxGeometry height="460" width="110" x="530" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="5XcW20OvsSAWeNXPHpt6-2" parent="iT8HhY5k_ED2emeRrv1z-1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="280" width="10" x="50" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="lOhlI6nUIE-P2obM9Mp_-1" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontStyle=1" value="MySQL" vertex="1">
+          <mxGeometry height="460" width="100" x="700" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="lOhlI6nUIE-P2obM9Mp_-3" parent="1" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontStyle=1" value="OpenSearch" vertex="1">
+          <mxGeometry height="460" width="100" x="820" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="5XcW20OvsSAWeNXPHpt6-6" parent="lOhlI6nUIE-P2obM9Mp_-3" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="80" width="10" x="45" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="5XcW20OvsSAWeNXPHpt6-1" edge="1" parent="1" source="fr2HvPRLd4wDHq1lPaJO-2" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;" target="ez_FzbSlXgSrvqJKlSHN-1" value="Enter keyword, category, location, price range">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="160" y="160" />
+            </Array>
+            <mxPoint x="140" y="350" as="sourcePoint" />
+            <mxPoint x="331" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5XcW20OvsSAWeNXPHpt6-3" edge="1" parent="1" source="ez_FzbSlXgSrvqJKlSHN-1" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;entryX=0;entryY=0;entryDx=0;entryDy=5;fontSize=12;" target="5XcW20OvsSAWeNXPHpt6-2" value="GET /api/v1/listings/search?keyword=&amp;amp;filters…">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="225" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5XcW20OvsSAWeNXPHpt6-4" edge="1" parent="1" source="5XcW20OvsSAWeNXPHpt6-2" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=-5;fontSize=12;" target="ez_FzbSlXgSrvqJKlSHN-1" value="return pagedItemResponse">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="295" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5XcW20OvsSAWeNXPHpt6-7" edge="1" parent="1" source="5XcW20OvsSAWeNXPHpt6-2" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;entryX=0;entryY=0;entryDx=0;entryDy=5;fontSize=12;" target="5XcW20OvsSAWeNXPHpt6-6" value="Native query (keyword, geo, price, category, sort)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="580" y="275" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5XcW20OvsSAWeNXPHpt6-8" edge="1" parent="1" source="5XcW20OvsSAWeNXPHpt6-6" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=-5;fontSize=12;" target="5XcW20OvsSAWeNXPHpt6-2" value="&amp;nbsp;return ListingDocument hits + total">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="580" y="345" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5XcW20OvsSAWeNXPHpt6-9" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;" value="opt" vertex="1">
+          <mxGeometry height="120" width="270" x="520" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="GNsi2_GZ8_3ErNDvZcM1-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontStyle=1;fontSize=16;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="[User has logged in]" vertex="1">
+          <mxGeometry height="20" width="210" x="570" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="GNsi2_GZ8_3ErNDvZcM1-2" parent="1" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" value="" vertex="1">
+          <mxGeometry height="30" width="10" x="745" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="GNsi2_GZ8_3ErNDvZcM1-3" edge="1" parent="1" source="5XcW20OvsSAWeNXPHpt6-2" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;entryX=0;entryY=0;entryDx=0;entryDy=5;fontSize=12;" target="GNsi2_GZ8_3ErNDvZcM1-2" value="Save into searchHistories">
+          <mxGeometry relative="1" x="-0.0011" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="380" y="415" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GNsi2_GZ8_3ErNDvZcM1-5" edge="1" parent="1" source="ez_FzbSlXgSrvqJKlSHN-1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;" target="fr2HvPRLd4wDHq1lPaJO-2" value="display list listings">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="480" />
+            </Array>
+            <mxPoint x="310" y="420" as="sourcePoint" />
+            <mxPoint x="230" y="420" as="targetPoint" />
           </mxGeometry>
         </mxCell>
       </root>
