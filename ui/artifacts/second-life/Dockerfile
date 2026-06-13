@@ -7,7 +7,9 @@ RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json tsconfig.json ./
+COPY patches patches
 COPY lib lib
+COPY scripts scripts
 COPY artifacts/second-life artifacts/second-life
 
 ARG VITE_BACKEND_URL=
