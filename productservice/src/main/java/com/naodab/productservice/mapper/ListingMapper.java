@@ -187,6 +187,8 @@ public class ListingMapper {
         .listingStatus(listing.getListingStatus())
         .minPrice(listing.getMinPrice())
         .maxPrice(listing.getMaxPrice())
+        .aiSuggestedBuyPrice(listing.getAiSuggestedBuyPrice())
+        .aiSuggestedRentPrice(listing.getAiSuggestedRentPrice())
         .variants(variantResponses)
         .build();
   }
@@ -199,6 +201,8 @@ public class ListingMapper {
         .quantity(variant.getQuantity())
         .buyPrice(variant.getBuyPrice())
         .rentPrice(variant.getRentPrice())
+        .aiSuggestedBuyPrice(variant.getAiSuggestedBuyPrice())
+        .aiSuggestedRentPrice(variant.getAiSuggestedRentPrice())
         .rentUnit(variant.getRentUnit())
         .isActive(variant.getIsActive())
         .build();

@@ -28,5 +28,7 @@ public class ListingResponse {
   ListingStatus listingStatus;
   Double minPrice;
   Double maxPrice;
+  Double aiSuggestedBuyPrice;
+  Double aiSuggestedRentPrice;
   List<ListingVariantResponse> variants;
 }

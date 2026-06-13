@@ -218,16 +218,16 @@ flowchart LR
 
 | Journey | Diagram location |
 |---------|------------------|
-| Email register / login / verify | [authservice/README.md](../authservice/README.md) |
+| Email register / login / verify | [authservice/README.md](../authservice/README.md) · [activity-diagrams.md](./activity-diagrams.md#7-đăng-ký-tài-khoản-local-email--password) |
 | Google OAuth login and register | [authservice/README.md](../authservice/README.md) |
 | Profile provisioning (Kafka) | [profileservice/README.md](../profileservice/README.md) |
 | Create listing, OpenSearch, inventory | [productservice/README.md](../productservice/README.md) |
 | Admin approve listing | [productservice/README.md](../productservice/README.md) |
-| Public search | [productservice/README.md](../productservice/README.md) |
+| Public search (GUEST / USER) | [productservice/README.md](../productservice/README.md) · [activity-diagrams.md](./activity-diagrams.md) |
 | Add to cart | [productservice/README.md](../productservice/README.md) |
-| BUY / RENT order + facility order count | [bookingservice/README.md](../bookingservice/README.md) |
+| BUY / RENT checkout (USER) | [bookingservice/README.md](../bookingservice/README.md) · [activity-diagrams.md](./activity-diagrams.md) |
 | BUY / RENT reservations | [inventoryservice/README.md](../inventoryservice/README.md) |
-| Messaging + WebSocket (facility chat + admin support) | [mailservice/README.md](../mailservice/README.md) |
+| Messaging + WebSocket (facility chat + admin support) | [mailservice/README.md](../mailservice/README.md) · [activity-diagrams.md](./activity-diagrams.md#8-chat-với-cửa-hàng-facility) |
 | Order notifications | [mailservice/README.md](../mailservice/README.md) |
 | Province/ward + GIS validation | [locationservice/README.md](../locationservice/README.md) |
 

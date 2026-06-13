@@ -26,6 +26,7 @@ import { ListingRentDialog } from "./ListingRentDialog";
 import { type RentScheduleValidityPayload, type RentScheduleWindow } from "./ListingRentScheduler";
 import { ListingReviewsSection } from "./ListingReviewsSection";
 import { ListingSimilarSection } from "./ListingSimilarSection";
+import { ListingAiPriceSection } from "./ListingAiPriceSection";
 import { ReviewMediaLightbox } from "./ReviewMediaLightbox";
 import { mergeVariantRows, priceBandLabel } from "./listing-detail-utils";
 import {
@@ -329,6 +330,16 @@ export default function ListingDetail() {
     !rentValidity.ok ||
     rentRangeBlocked;
 
+  const currentListedPriceVnd =
+    listing.listingType === "RENT" ? dialogRentUnitPrice : dialogBuyUnitPrice;
+  const cachedAiPriceVnd =
+    listing.listingType === "RENT"
+      ? listing.aiSuggestedRentPrice ?? anchorVariantRow?.lv.aiSuggestedRentPrice
+      : listing.aiSuggestedBuyPrice ?? anchorVariantRow?.lv.aiSuggestedBuyPrice;
+  const variantLabel =
+    anchorVariantRow?.pv?.label?.trim() || anchorVariantRow?.pv?.sku?.trim() || undefined;
+  const detailImageUrls = images.filter((u) => u && !u.includes("unsplash.com"));
+
   const handleAddBuyToCart = async (quantity = buyQty) => {
     if (!requireAuth()) return;
     const payload = buildBuyCartPayload({
@@ -431,6 +442,25 @@ export default function ListingDetail() {
               onQuickAddToCart={handleQuickAddToCart}
               quickAddLoading={isAdding}
               hideCommerceActions={!marketplaceActionsEnabled}
+            />
+
+            <ListingAiPriceSection
+              productName={product.name}
+              productDescription={product.description}
+              listingTitle={listing.title}
+              listingDescription={listing.description}
+              listingType={listing.listingType}
+              rentUnit={rentUnit}
+              subCategoryName={subName}
+              specAttributes={specAttributes}
+              manufactureYear={product.manufactureYear}
+              locationLine={locationLine}
+              currentListedPriceVnd={currentListedPriceVnd > 0 ? currentListedPriceVnd : undefined}
+              medias={product.medias}
+              thumbnailUrl={product.thumbnailUrl}
+              variantLabel={variantLabel}
+              cachedAiPriceVnd={cachedAiPriceVnd ?? undefined}
+              imageUrls={detailImageUrls.length > 0 ? detailImageUrls.slice(0, 2) : undefined}
             />
           </div>
         </div>

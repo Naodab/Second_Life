@@ -365,36 +365,70 @@ Seller resubmit after rejection: `PUT /listings/{id}` with `listingStatus: PENDI
 
 ### Public listing search
 
+GUEST and signed-in USER share the same search API. Traefik does **not** require JWT for `GET /listings/search`. When `X-Profile-Id` is present (USER), search history is saved asynchronously.
+
+#### User search flow (overview)
+
+```mermaid
+flowchart LR
+  User((GUEST / USER))
+  UI["/search page"]
+  P[productservice]
+  OS[(OpenSearch)]
+
+  User -->|"enter keyword, filters, geo"| UI
+  UI -->|"GET /listings/search"| P
+  P -->|"listingStatus=ACTIVE, productStatus=PUBLISHED"| OS
+  OS --> P
+  P --> UI
+  UI --> User
+  User -->|"click result"| UI2["/listing/:id"]
+```
+
+#### Sequence — search with User
+
 ```mermaid
 sequenceDiagram
-  participant UI as Search UI
+  actor User as GUEST or USER
+  participant UI as Search UI (/search)
+  participant T as Traefik
   participant P as ProductService
   participant OS as OpenSearch
   participant DB as MySQL
 
-  UI->>P: GET /listings/search?keyword=&filters…
+  User->>UI: Enter keyword, category, location, price range
+  UI->>T: GET /api/v1/listings/search?keyword=&filters…
+  Note over T: Public route — no JWT required
+  T->>P: Forward request (+ optional X-Profile-Id for USER)
   P->>P: Default filters: listingStatus=ACTIVE, productStatus=PUBLISHED
   P->>OS: Native query (keyword, geo, price, category, sort)
   OS-->>P: ListingDocument hits + total
-  opt profile header present
+  opt USER signed in (X-Profile-Id present)
     P->>DB: Async save SearchHistories
   end
   P-->>UI: PagedItemsResponse
+  UI-->>User: Render listing cards
+  User->>UI: Click listing → /listing/:id
 ```
 
 ### Add to cart (buyer, after listing is ACTIVE)
 
+Requires signed-in **USER** (`X-Profile-Id`). See [bookingservice/README.md](../bookingservice/README.md) for checkout after cart.
+
 ```mermaid
 sequenceDiagram
-  participant UI as Buyer UI
+  actor User as USER (buyer)
+  participant UI as Cart UI (/cart)
   participant P as ProductService
   participant DB as MySQL
 
+  User->>UI: Add item from listing detail
   UI->>P: POST /cart { listingId, listingVariantId, mode, quantity, rental dates? }
   Note over P: Header X-Profile-Id = buyer
   P->>DB: Verify listing ACTIVE, variant active, product PUBLISHED
   P->>DB: INSERT CartItem
   P-->>UI: CartItemResponse
+  UI-->>User: Item in cart
 ```
 
 ## Common environment variables

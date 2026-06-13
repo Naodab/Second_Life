@@ -23,6 +23,24 @@ http:
       tls:
         certResolver: letsencrypt
       priority: 200
+    auth-admin-api-options:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/auth/admin`) && Method(`OPTIONS`)"
+      service: auth-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 210
+    auth-admin-api:
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/api/v1/auth/admin`)"
+      service: auth-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - gateway-jwt
+      priority: 110
     auth-api:
       rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`))"
       service: auth-service

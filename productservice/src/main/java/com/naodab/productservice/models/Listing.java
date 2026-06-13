@@ -59,6 +59,12 @@ public class Listing {
   Double minPrice;
   Double maxPrice;
 
+  @Column(name = "ai_suggested_buy_price")
+  Double aiSuggestedBuyPrice;
+
+  @Column(name = "ai_suggested_rent_price")
+  Double aiSuggestedRentPrice;
+
   public enum ListingType {
     BUY,
     RENT

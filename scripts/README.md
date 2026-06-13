@@ -150,13 +150,40 @@ python3 resume_import.py        # start from item 350 (default)
 python3 resume_import.py 400    # start from item 400
 ```
 
+### Reset bad seed data (Tiki) and re-import
+
+Dữ liệu import từ `crawl_tiki.py` / `seed_system.py` gắn với seller `seller1@secondlife.dev` … `seller8@secondlife.dev`.
+Không có cột `source` trong DB — script purge nhận diện qua `owner_id` seed sellers (+ tuỳ chọn ảnh `tikicdn`).
+
+```bash
+cd import_real_data
+
+# 1. Xem trước sẽ xóa gì (đọc MYSQL_* / OPENSEARCH_* từ repo .env)
+python3 purge_seed_products.py --dry-run
+
+# 2. Xóa MySQL + OpenSearch (orders, cart, inventory, listings, products, facilities)
+python3 purge_seed_products.py --confirm --also-tiki-images \
+  --export-sql purge_seed_products.generated.sql
+
+# 3. Crawl lại (khuyến nghị Chợ Tốt thay Tiki) + import
+python3 crawl_chotot.py
+python3 seed_system.py
+
+# Hoặc một lệnh (có prompt xác nhận):
+chmod +x reset_and_reimport.sh
+./reset_and_reimport.sh              # chotot
+./reset_and_reimport.sh --source tiki
+```
+
+SQL tham khảo thủ công: `purge_seed_products.sql`  
+`cleanup.py` → alias của `purge_seed_products.py` (bản cũ không xóa orders/cart).
+
 ### Other utility scripts
 
 ```bash
 cd import_real_data
 python3 generate_rent_listings.py   # Create additional RENT listings
 python3 fix_categories.py           # Fix category mapping
-python3 cleanup.py                  # Clean up seed data
 ```
 
 ---
