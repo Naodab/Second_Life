@@ -26,6 +26,36 @@ export type AiAnalyzeResponse = {
   attributeValues?: AiAttributeValueRef[] | null;
 };
 
+export type AiSuggestPriceRequest = {
+  productName: string;
+  productDescription?: string;
+  listingTitle?: string;
+  listingDescription?: string;
+  listingType: "BUY" | "RENT";
+  variantLabel?: string;
+  subCategoryNames?: string[];
+  attributeLines?: string[];
+  manufactureYear?: number;
+  rentUnit?: "HOUR" | "DAY" | "WEEK" | "MONTH";
+  regionName?: string;
+  /** Seller's current asking price — AI compares in reasoning */
+  currentListedPriceVnd?: number;
+  /** Base64 JPEG (no data-URL prefix) — preferred for Gemini vision */
+  images?: string[];
+  /** Fallback: server fetches URLs when images omitted */
+  imageUrls?: string[];
+};
+
+export type AiSuggestPriceResponse = {
+  suggestedPriceVnd?: number | null;
+  priceMinVnd?: number | null;
+  priceMaxVnd?: number | null;
+  confidence?: string | null;
+  reasoningBrief?: string | null;
+  listingType?: string | null;
+  rentUnit?: string | null;
+};
+
 export async function generateAiDescription(body: AiDescriptionRequest): Promise<AiDescriptionResponse> {
   const res = await customFetch<ApiResponseEnvelope<AiDescriptionResponse>>("/api/v1/ai/generate-description", {
     method: "POST",
@@ -33,6 +63,18 @@ export async function generateAiDescription(body: AiDescriptionRequest): Promise
     body: JSON.stringify(body),
   });
   return unwrapApiData(res);
+}
+
+export async function imageUrlToBase64(url: string, maxPx = 768, quality = 0.75): Promise<string | null> {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const file = new File([blob], "product.jpg", { type: blob.type || "image/jpeg" });
+    return resizeToBase64(file, maxPx, quality);
+  } catch {
+    return null;
+  }
 }
 
 async function resizeToBase64(file: File, maxPx = 768, quality = 0.75): Promise<string> {
@@ -49,6 +91,15 @@ async function resizeToBase64(file: File, maxPx = 768, quality = 0.75): Promise<
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
+}
+
+export async function suggestAiPrice(body: AiSuggestPriceRequest): Promise<AiSuggestPriceResponse> {
+  const res = await customFetch<ApiResponseEnvelope<AiSuggestPriceResponse>>("/api/v1/ai/suggest-price", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return unwrapApiData(res);
 }
 
 export async function analyzeProductImages(images: File[]): Promise<AiAnalyzeResponse> {

@@ -1,6 +1,7 @@
 package com.naodab.productservice.services.impl;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.naodab.commonservice.exception.AppException;
@@ -8,8 +9,10 @@ import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.config.CacheConfig;
 import com.naodab.productservice.dto.request.AiAnalyzeRequest;
 import com.naodab.productservice.dto.request.AiDescriptionRequest;
+import com.naodab.productservice.dto.request.AiSuggestPriceRequest;
 import com.naodab.productservice.dto.response.AiAnalyzeResponse;
 import com.naodab.productservice.dto.response.AiDescriptionResponse;
+import com.naodab.productservice.dto.response.AiSuggestPriceResponse;
 import com.naodab.productservice.models.Attribute;
 import com.naodab.productservice.models.AttributeValue;
 import com.naodab.productservice.models.Category;
@@ -37,6 +40,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -57,6 +62,65 @@ public class AiServiceImpl implements AiService {
       - Never invent information not present in the input
       - Output ONLY the plain paragraph. No title, no bullets, no markdown.
       """;
+
+  private static final String PRICE_SUGGESTION_SYSTEM_PROMPT = """
+      You are a senior pricing analyst for "Second Life" — a Vietnamese second-hand marketplace (comparable to Chợ Tốt / Facebook Marketplace VN).
+
+      ## Your task
+      Estimate a fair **used-item market price in Vietnam (VND)** for ONE unit described in the user message.
+      Think like a buyer comparing similar listings in Hà Nội & TP.HCM (national average; regional hint if provided).
+
+      ## Market calibration (must follow)
+      1. Prices are **second-hand resale**, NOT new retail, NOT import MSRP, NOT promotional flash-sale prices.
+      2. Cross-check mentally against typical VN classifieds for the same brand/model/spec tier before answering.
+      3. Round final integers to natural VN listing prices (often ending in 0,000 or 50,000 — e.g. 4,950,000 not 4,947,123).
+      4. If `currentListedPriceVnd` is provided, compare your estimate to it in `reasoningBrief` (hợp lý / hơi cao / hơi thấp / rất cao).
+
+      ## Condition from photos (if attached)
+      Grade visible condition, then discount from "good used" baseline:
+      - Like new (95–100%): minimal wear, screen/body clean
+      - Good (80–94%): light scratches OK
+      - Fair (60–79%): obvious wear, dents, or heavy use
+      - Poor (<60%): cracks, missing parts, heavy damage
+      Worse condition → lower price. Never ignore visible defects.
+
+      ## Category heuristics (adjust by specs & condition)
+      - **Phones / tablets**: flagship loses ~25–40%/year early, mid-range ~20–30%; storage/RAM tier matters; check iPhone/Samsung/Oppo/Xiaomi model + capacity.
+      - **Laptops / PC**: CPU generation + RAM + SSD size drive price; gaming GPU adds premium; battery/screen issues −10–25%.
+      - **Cameras / lenses**: body + lens kit; shutter count / fungus / scratches if inferable from text/photos.
+      - **Fashion / bags**: brand tier (luxury vs fast fashion); authenticity uncertainty → confidence LOW & conservative price.
+      - **Furniture / appliances**: size & brand; functional wear vs cosmetic only.
+      - **Kids / books / misc**: usually low ticket; avoid over-estimating vague items.
+
+      ## Listing type
+      - listingType = BUY → `suggestedPriceVnd` = recommended **selling price** for one unit.
+      - listingType = RENT → `suggestedPriceVnd` = **rent fee for ONE rentUnit** (not purchase price).
+        Rent vs resale value (approximate, tune by item):
+        HOUR ~0.2–0.8% · DAY ~1–3% · WEEK ~5–10% · MONTH ~15–25%
+
+      ## Output fields
+      - `priceMinVnd` / `priceMaxVnd`: realistic negotiation band (~±15–25% around suggested).
+      - `confidence`: HIGH = clear brand+model+specs; MEDIUM = partial; LOW = vague/missing key info.
+      - `reasoningBrief`: exactly ONE short Vietnamese sentence (vi-VN) citing the main price driver.
+      - Do NOT invent specs absent from input. If insufficient data → conservative estimate, confidence=LOW.
+      - Output ONLY valid JSON matching the schema. No markdown, no code fences, no extra text.
+
+      ## Output JSON schema
+      {
+        "suggestedPriceVnd": <integer>,
+        "priceMinVnd": <integer>,
+        "priceMaxVnd": <integer>,
+        "confidence": "HIGH" | "MEDIUM" | "LOW",
+        "reasoningBrief": "<Vietnamese string>"
+      }
+      """;
+
+  private static final long MIN_PRICE_VND = 10_000L;
+  private static final long MAX_PRICE_VND = 500_000_000L;
+  private static final int MAX_PRICE_SUGGESTION_IMAGES = 2;
+  private static final int PRICE_SUGGESTION_MAX_OUTPUT_TOKENS = 1024;
+
+  private static final Map<String, Object> PRICE_SUGGESTION_RESPONSE_SCHEMA = priceSuggestionResponseSchema();
 
   private static final String ANALYZE_PROMPT_SUFFIX = """
 
@@ -105,13 +169,56 @@ public class AiServiceImpl implements AiService {
     }
     try {
       String prompt = DESCRIPTION_PROMPT + "\n---\n" + buildDescriptionUserMessage(request);
-      String text = callGemini(List.of(Map.of("text", prompt)), 400, 0.7, null);
+      String text = callGemini(List.of(Map.of("text", prompt)), 400, 0.7, null, null);
       return new AiDescriptionResponse(text.trim());
     } catch (HttpClientErrorException.TooManyRequests e) {
       log.warn("Gemini rate limit (description)");
       throw new AppException(ErrorCode.AI_SERVICE_BUSY);
     } catch (Exception e) {
       log.error("AI description failed", e);
+      throw new AppException(ErrorCode.AI_SERVICE_UNAVAILABLE);
+    }
+  }
+
+  @Override
+  public AiSuggestPriceResponse suggestPrice(AiSuggestPriceRequest request) {
+    if (!isConfigured(geminiApiKey)) {
+      return AiSuggestPriceResponse.builder()
+          .reasoningBrief("Tính năng AI chưa được cấu hình.")
+          .listingType(normalizeListingType(request.getListingType()))
+          .build();
+    }
+    try {
+      String listingType = normalizeListingType(request.getListingType());
+      String rentUnit = normalizeRentUnit(request.getRentUnit(), listingType);
+      List<String> base64Images = resolvePriceSuggestionImages(request);
+      String userMessage = buildPriceSuggestionUserMessage(request, listingType, rentUnit, base64Images.size());
+      String prompt = PRICE_SUGGESTION_SYSTEM_PROMPT + "\n---\n" + userMessage;
+      List<Map<String, Object>> parts = buildPriceSuggestionParts(prompt, base64Images);
+
+      String json = callGemini(
+          parts,
+          PRICE_SUGGESTION_MAX_OUTPUT_TOKENS,
+          0.15,
+          "application/json",
+          PRICE_SUGGESTION_RESPONSE_SCHEMA);
+      GeminiPriceSuggestion raw = parseGeminiPriceSuggestion(json);
+      if (!hasSuggestedPrice(raw) && !base64Images.isEmpty()) {
+        log.warn("AI price JSON incomplete with {} image(s), retrying text-only", base64Images.size());
+        json = callGemini(
+            buildPriceSuggestionParts(prompt, List.of()),
+            PRICE_SUGGESTION_MAX_OUTPUT_TOKENS,
+            0.15,
+            "application/json",
+            PRICE_SUGGESTION_RESPONSE_SCHEMA);
+        raw = parseGeminiPriceSuggestion(json);
+      }
+      return toPriceResponse(raw, listingType, rentUnit);
+    } catch (HttpClientErrorException.TooManyRequests e) {
+      log.warn("Gemini rate limit (suggest-price)");
+      throw new AppException(ErrorCode.AI_SERVICE_BUSY);
+    } catch (Exception e) {
+      log.error("AI suggest-price failed", e);
       throw new AppException(ErrorCode.AI_SERVICE_UNAVAILABLE);
     }
   }
@@ -134,7 +241,7 @@ public class AiServiceImpl implements AiService {
         parts.add(Map.of("inlineData", Map.of("mimeType", "image/jpeg", "data", base64)));
       }
 
-      String json = callGemini(parts, 1024, 0.2, "application/json");
+      String json = callGemini(parts, 1024, 0.2, "application/json", null);
       GeminiAnalysis raw = parseGeminiAnalysis(json);
       return resolveToIds(raw, ctx);
 
@@ -161,6 +268,283 @@ public class AiServiceImpl implements AiService {
         + "Never invent names outside these lists.\n\n"
         + dbContext
         + ANALYZE_PROMPT_SUFFIX;
+  }
+
+  private List<Map<String, Object>> buildPriceSuggestionParts(String prompt, List<String> base64Images) {
+    List<Map<String, Object>> parts = new ArrayList<>();
+    parts.add(Map.of("text", prompt));
+
+    for (String base64 : base64Images) {
+      if (base64 != null && !base64.isBlank()) {
+        parts.add(Map.of("inlineData", Map.of("mimeType", "image/jpeg", "data", base64.trim())));
+      }
+    }
+    return parts;
+  }
+
+  private List<String> resolvePriceSuggestionImages(AiSuggestPriceRequest request) {
+    List<String> resolved = new ArrayList<>();
+    if (request.getImages() != null) {
+      for (String img : request.getImages()) {
+        if (img != null && !img.isBlank()) {
+          resolved.add(img.trim());
+        }
+        if (resolved.size() >= MAX_PRICE_SUGGESTION_IMAGES) {
+          return resolved;
+        }
+      }
+    }
+    if (!resolved.isEmpty() || request.getImageUrls() == null) {
+      return resolved;
+    }
+    for (String url : request.getImageUrls()) {
+      if (url == null || url.isBlank()) {
+        continue;
+      }
+      fetchImageBase64(url.trim()).ifPresent(resolved::add);
+      if (resolved.size() >= MAX_PRICE_SUGGESTION_IMAGES) {
+        break;
+      }
+    }
+    return resolved;
+  }
+
+  private java.util.Optional<String> fetchImageBase64(String url) {
+    try {
+      byte[] bytes = restClient.get()
+          .uri(url)
+          .retrieve()
+          .body(byte[].class);
+      if (bytes == null || bytes.length == 0) {
+        return java.util.Optional.empty();
+      }
+      return java.util.Optional.of(java.util.Base64.getEncoder().encodeToString(bytes));
+    } catch (Exception e) {
+      log.warn("Failed to fetch image for price suggestion: {}", url, e);
+      return java.util.Optional.empty();
+    }
+  }
+
+  private String buildPriceSuggestionUserMessage(
+      AiSuggestPriceRequest request,
+      String listingType,
+      String rentUnit,
+      int attachedImageCount) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("## Product\n");
+    sb.append("name: ").append(request.getProductName().trim()).append("\n");
+    if (notBlank(request.getProductDescription())) {
+      sb.append("description: ").append(request.getProductDescription().trim()).append("\n");
+    }
+    if (request.getManufactureYear() != null && request.getManufactureYear() > 1990) {
+      sb.append("manufactureYear: ").append(request.getManufactureYear()).append("\n");
+    }
+    if (notEmpty(request.getSubCategoryNames())) {
+      sb.append("categories: ").append(String.join(", ", request.getSubCategoryNames())).append("\n");
+    }
+    if (notEmpty(request.getAttributeLines())) {
+      sb.append("attributes:\n");
+      for (String line : request.getAttributeLines()) {
+        if (notBlank(line)) {
+          sb.append("  - ").append(line.trim()).append("\n");
+        }
+      }
+    }
+    if (notBlank(request.getVariantLabel())) {
+      sb.append("variant: ").append(request.getVariantLabel().trim()).append("\n");
+    }
+
+    sb.append("\n## Listing\n");
+    sb.append("listingType: ").append(listingType).append("\n");
+    if ("RENT".equals(listingType)) {
+      sb.append("rentUnit: ").append(rentUnit).append("\n");
+    }
+    if (notBlank(request.getListingTitle())) {
+      sb.append("title: ").append(request.getListingTitle().trim()).append("\n");
+    }
+    if (notBlank(request.getListingDescription())) {
+      sb.append("listingDescription: ").append(request.getListingDescription().trim()).append("\n");
+    }
+    if (notBlank(request.getRegionName())) {
+      sb.append("region: ").append(request.getRegionName().trim()).append("\n");
+    }
+    if (request.getCurrentListedPriceVnd() != null && request.getCurrentListedPriceVnd() > 0) {
+      sb.append("currentListedPriceVnd: ").append(request.getCurrentListedPriceVnd()).append("\n");
+    }
+
+    if (attachedImageCount > 0) {
+      sb.append("\n## Photos\n");
+      sb.append(attachedImageCount).append(" product photo(s) attached — use them to judge condition.\n");
+    }
+
+    sb.append("\nRespond with JSON only.");
+    return sb.toString();
+  }
+
+  private AiSuggestPriceResponse toPriceResponse(
+      GeminiPriceSuggestion raw,
+      String listingType,
+      String rentUnit) {
+    long suggested = clampPrice(raw.getSuggestedPriceVnd());
+    long min = clampPrice(raw.getPriceMinVnd());
+    long max = clampPrice(raw.getPriceMaxVnd());
+
+    if (suggested <= 0) {
+      return AiSuggestPriceResponse.builder()
+          .listingType(listingType)
+          .rentUnit("RENT".equals(listingType) ? rentUnit : null)
+          .confidence("LOW")
+          .reasoningBrief("Không đủ thông tin để ước tính giá.")
+          .build();
+    }
+
+    if (min <= 0 || min > suggested) {
+      min = Math.round(suggested * 0.8);
+    }
+    if (max <= 0 || max < suggested) {
+      max = Math.round(suggested * 1.2);
+    }
+    if (min > max) {
+      long tmp = min;
+      min = max;
+      max = tmp;
+    }
+
+    String confidence = raw.getConfidence();
+    if (confidence == null || !List.of("HIGH", "MEDIUM", "LOW").contains(confidence.toUpperCase())) {
+      confidence = "MEDIUM";
+    } else {
+      confidence = confidence.toUpperCase();
+    }
+
+    return AiSuggestPriceResponse.builder()
+        .suggestedPriceVnd(suggested)
+        .priceMinVnd(min)
+        .priceMaxVnd(max)
+        .confidence(confidence)
+        .reasoningBrief(
+            raw.getReasoningBrief() != null && !raw.getReasoningBrief().isBlank()
+                ? raw.getReasoningBrief().trim()
+                : "Ước tính dựa trên thị trường đồ cũ Việt Nam.")
+        .listingType(listingType)
+        .rentUnit("RENT".equals(listingType) ? rentUnit : null)
+        .build();
+  }
+
+  private long clampPrice(Number value) {
+    if (value == null) {
+      return 0L;
+    }
+    long v = value.longValue();
+    if (v < MIN_PRICE_VND) {
+      return 0L;
+    }
+    return Math.min(v, MAX_PRICE_VND);
+  }
+
+  private GeminiPriceSuggestion parseGeminiPriceSuggestion(String raw) {
+    String json = stripMarkdownCodeFence(raw);
+    if (json.isBlank()) {
+      return new GeminiPriceSuggestion();
+    }
+    try {
+      return objectMapper.readValue(json, GeminiPriceSuggestion.class);
+    } catch (JsonProcessingException e) {
+      log.warn("Failed to parse AI price JSON ({} chars): {}", json.length(), truncateForLog(json));
+      return extractPartialPriceSuggestion(json);
+    } catch (Exception e) {
+      log.warn("Failed to parse AI price JSON: {}", truncateForLog(json), e);
+      return extractPartialPriceSuggestion(json);
+    }
+  }
+
+  private static boolean hasSuggestedPrice(GeminiPriceSuggestion raw) {
+    return raw != null && raw.getSuggestedPriceVnd() != null && raw.getSuggestedPriceVnd() > 0;
+  }
+
+  private static GeminiPriceSuggestion extractPartialPriceSuggestion(String raw) {
+    GeminiPriceSuggestion result = new GeminiPriceSuggestion();
+    result.setSuggestedPriceVnd(extractJsonLong(raw, "suggestedPriceVnd"));
+    result.setPriceMinVnd(extractJsonLong(raw, "priceMinVnd"));
+    result.setPriceMaxVnd(extractJsonLong(raw, "priceMaxVnd"));
+    result.setConfidence(extractJsonString(raw, "confidence"));
+    result.setReasoningBrief(extractJsonString(raw, "reasoningBrief"));
+    return result;
+  }
+
+  private static Long extractJsonLong(String raw, String field) {
+    Matcher matcher = Pattern.compile("\"" + Pattern.quote(field) + "\"\\s*:\\s*(\\d+)").matcher(raw);
+    if (!matcher.find()) {
+      return null;
+    }
+    try {
+      return Long.parseLong(matcher.group(1));
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
+  private static String extractJsonString(String raw, String field) {
+    Matcher matcher = Pattern.compile("\"" + Pattern.quote(field) + "\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
+        .matcher(raw);
+    if (!matcher.find()) {
+      return null;
+    }
+    return matcher.group(1).replace("\\\"", "\"").replace("\\\\", "\\");
+  }
+
+  private static String truncateForLog(String raw) {
+    if (raw == null) {
+      return "";
+    }
+    String oneLine = raw.replace('\n', ' ').replace('\r', ' ').trim();
+    return oneLine.length() <= 160 ? oneLine : oneLine.substring(0, 160) + "...";
+  }
+
+  private static Map<String, Object> priceSuggestionResponseSchema() {
+    Map<String, Object> confidence = new LinkedHashMap<>();
+    confidence.put("type", "string");
+    confidence.put("enum", List.of("HIGH", "MEDIUM", "LOW"));
+
+    Map<String, Object> properties = new LinkedHashMap<>();
+    properties.put("suggestedPriceVnd", Map.of("type", "integer"));
+    properties.put("priceMinVnd", Map.of("type", "integer"));
+    properties.put("priceMaxVnd", Map.of("type", "integer"));
+    properties.put("confidence", confidence);
+    properties.put("reasoningBrief", Map.of("type", "string"));
+
+    Map<String, Object> schema = new LinkedHashMap<>();
+    schema.put("type", "object");
+    schema.put("properties", properties);
+    schema.put(
+        "required",
+        List.of("suggestedPriceVnd", "priceMinVnd", "priceMaxVnd", "confidence", "reasoningBrief"));
+    return schema;
+  }
+
+  private static String normalizeListingType(String listingType) {
+    if (listingType != null && "RENT".equalsIgnoreCase(listingType.trim())) {
+      return "RENT";
+    }
+    return "BUY";
+  }
+
+  private static String normalizeRentUnit(String rentUnit, String listingType) {
+    if (!"RENT".equals(listingType)) {
+      return null;
+    }
+    if (rentUnit == null || rentUnit.isBlank()) {
+      return "DAY";
+    }
+    String u = rentUnit.trim().toUpperCase();
+    return switch (u) {
+      case "HOUR", "DAY", "WEEK", "MONTH" -> u;
+      default -> "DAY";
+    };
+  }
+
+  private boolean notBlank(String s) {
+    return s != null && !s.isBlank();
   }
 
   private String buildDescriptionUserMessage(AiDescriptionRequest request) {
@@ -247,15 +631,23 @@ public class AiServiceImpl implements AiService {
   private record CategoryResolution(List<String> subCategoryIds, List<String> categoryIds) {
   }
 
-  private String callGemini(List<Map<String, Object>> parts, int maxTokens, double temperature,
-      String responseMimeType) {
+  private String callGemini(
+      List<Map<String, Object>> parts,
+      int maxTokens,
+      double temperature,
+      String responseMimeType,
+      Map<String, Object> responseSchema) {
     String url = String.format(GEMINI_BASE_URL, geminiModel, geminiApiKey);
 
     Map<String, Object> genConfig = new HashMap<>();
     genConfig.put("maxOutputTokens", maxTokens);
     genConfig.put("temperature", temperature);
-    if (responseMimeType != null)
+    if (responseMimeType != null) {
       genConfig.put("responseMimeType", responseMimeType);
+    }
+    if (responseSchema != null) {
+      genConfig.put("responseSchema", responseSchema);
+    }
 
     Map<String, Object> body = new HashMap<>();
     body.put("contents", List.of(Map.of("parts", parts)));
@@ -268,10 +660,27 @@ public class AiServiceImpl implements AiService {
         .retrieve()
         .body(JsonNode.class);
 
-    return response
-        .path("candidates").path(0)
-        .path("content").path("parts").path(0)
-        .path("text").asText("").trim();
+    JsonNode candidate = response.path("candidates").path(0);
+    String finishReason = candidate.path("finishReason").asText("");
+    if ("MAX_TOKENS".equals(finishReason)) {
+      log.warn("Gemini response truncated (MAX_TOKENS, maxOutputTokens={})", maxTokens);
+    }
+
+    return extractGeminiText(candidate.path("content"));
+  }
+
+  private static String extractGeminiText(JsonNode content) {
+    JsonNode parts = content.path("parts");
+    if (!parts.isArray()) {
+      return "";
+    }
+    StringBuilder text = new StringBuilder();
+    for (JsonNode part : parts) {
+      if (part.has("text")) {
+        text.append(part.path("text").asText(""));
+      }
+    }
+    return text.toString().trim();
   }
 
   private GeminiAnalysis parseGeminiAnalysis(String raw) {
@@ -315,6 +724,17 @@ public class AiServiceImpl implements AiService {
 
   private boolean notEmpty(List<String> list) {
     return list != null && !list.isEmpty();
+  }
+
+  @Data
+  @NoArgsConstructor
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  static class GeminiPriceSuggestion {
+    private Long suggestedPriceVnd;
+    private Long priceMinVnd;
+    private Long priceMaxVnd;
+    private String confidence;
+    private String reasoningBrief;
   }
 
   @Data

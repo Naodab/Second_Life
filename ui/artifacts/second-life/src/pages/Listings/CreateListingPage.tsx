@@ -6,14 +6,16 @@ import {
   type ListingType,
   type RentUnit,
 } from "@/api/listing";
-import { generateAiDescription } from "@/api/ai";
+import { generateAiDescription, suggestAiPrice, type AiSuggestPriceResponse } from "@/api/ai";
 import {
   getFacilityProductPage,
   getOwnedProductWithVariants,
   getProductVariants,
+  type ProductMediaResponse,
   type ProductStatus,
   type ProductVariantSummaryResponse,
 } from "@/api/product";
+import { AiPriceSuggestionPanel } from "@/components/AiPriceSuggestionPanel";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,10 @@ import { cn } from "@/lib/utils";
 import { ApiError } from "@workspace/api-client-react";
 import type { FacilityWithPlaceNames } from "@/api/facility";
 import { readApiErrorCode } from "@/lib/api-error";
+import {
+  buildSuggestPriceRequest,
+  loadProductImagesForAi,
+} from "@/lib/ai-price-suggestion";
 
 const DEFAULT_PRODUCT_THUMB =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop";
@@ -95,6 +101,8 @@ export function CreateListingPage({
 
   const [submitting, setSubmitting] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiPricing, setAiPricing] = useState(false);
+  const [aiPriceByVariantId, setAiPriceByVariantId] = useState<Record<string, AiSuggestPriceResponse>>({});
 
   useEffect(() => {
     if (!initialFacilityId) return;
@@ -186,7 +194,8 @@ export function CreateListingPage({
       setVariants([]);
       setVariantsError(null);
       setSelectedVariantIds(new Set());
-      setPriceByVariantId({});
+        setPriceByVariantId({});
+      setAiPriceByVariantId({});
       return;
     }
     let cancelled = false;
@@ -199,6 +208,7 @@ export function CreateListingPage({
         setVariants(Array.isArray(list) ? list : []);
         setSelectedVariantIds(new Set());
         setPriceByVariantId({});
+        setAiPriceByVariantId({});
       } catch (e) {
         if (!cancelled) {
           setVariants([]);
@@ -260,6 +270,93 @@ export function CreateListingPage({
       ...prev,
       [vid]: { ...(prev[vid] ?? emptyVariantDraft()), [field]: value },
     }));
+  };
+
+  const loadProductImagesForAiFromId = async (productId: string): Promise<string[]> => {
+    try {
+      const detail = await getOwnedProductWithVariants(productId);
+      return loadProductImagesForAi(
+        (detail?.medias ?? []) as ProductMediaResponse[],
+        detail?.thumbnailUrl,
+      );
+    } catch {
+      const thumb = productOptions.find((p) => p.id === productId)?.thumb;
+      return loadProductImagesForAi([], thumb);
+    }
+  };
+
+  const handleSuggestPrices = async () => {
+    if (!selectedProductId || selectedVariantIds.size === 0) return;
+    const productName = productOptions.find((p) => p.id === selectedProductId)?.name ?? "";
+    if (!productName) return;
+
+    setAiPricing(true);
+    const next: Record<string, AiSuggestPriceResponse> = {};
+    try {
+      const detail = await getOwnedProductWithVariants(selectedProductId).catch(() => null);
+      const productImages = await loadProductImagesForAiFromId(selectedProductId);
+      const firstVid = [...selectedVariantIds][0];
+      const firstMeta = variants.find((v) => v.id === firstVid);
+      const firstDraft = priceByVariantId[firstVid] ?? emptyVariantDraft();
+      const facility = facilities.find((f) => f.id === selectedFacilityId);
+      const regionName = facility
+        ? [facility.address, facility.wardName, facility.provinceName].filter(Boolean).join(", ")
+        : undefined;
+      const listedDraftPrice =
+        listingType === "BUY"
+          ? Number(firstDraft.buyPrice.replace(/\D/g, "")) || undefined
+          : Number(firstDraft.rentPrice.replace(/\D/g, "")) || undefined;
+
+      const result = await suggestAiPrice(
+        buildSuggestPriceRequest({
+          productName,
+          productDescription: detail?.description,
+          listingTitle: title.trim() || productName,
+          listingDescription: description.trim() || undefined,
+          listingType,
+          variantLabel: firstMeta?.label?.trim() || firstMeta?.sku?.trim() || undefined,
+          subCategoryNames: detail?.primarySubCategory?.name?.trim()
+            ? [detail.primarySubCategory.name.trim()]
+            : undefined,
+          manufactureYear: detail?.manufactureYear ?? undefined,
+          rentUnit: listingType === "RENT" ? firstDraft.rentUnit : undefined,
+          regionName,
+          currentListedPriceVnd: listedDraftPrice,
+          images: productImages.length > 0 ? productImages : undefined,
+        }),
+      );
+      for (const vid of selectedVariantIds) {
+        next[vid] = result;
+      }
+      setAiPriceByVariantId(next);
+      const first = Object.values(next).find((r) => r.suggestedPriceVnd);
+      if (!first?.suggestedPriceVnd) {
+        toast({
+          title: "Chưa ước tính được giá",
+          description: first?.reasoningBrief ?? "Thử bổ sung thông tin sản phẩm hoặc thử lại.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Không thể gợi ý giá AI",
+        description: "Vui lòng thử lại sau.",
+        variant: "destructive",
+      });
+    } finally {
+      setAiPricing(false);
+    }
+  };
+
+  const applyAiPrice = (vid: string) => {
+    const suggestion = aiPriceByVariantId[vid];
+    if (!suggestion?.suggestedPriceVnd) return;
+    const value = String(suggestion.suggestedPriceVnd);
+    if (listingType === "BUY") {
+      setVariantField(vid, "buyPrice", value);
+    } else {
+      setVariantField(vid, "rentPrice", value);
+    }
   };
 
   const handleGenerateDescription = async () => {
@@ -700,20 +797,52 @@ export function CreateListingPage({
 
               {selectedVariantIds.size > 0 && (
                 <div className="rounded-2xl border border-emerald-100 bg-white/90 dark:border-emerald-900/45 dark:bg-card/95 backdrop-blur p-4 sm:p-5 space-y-4">
-                  <label className="text-sm font-semibold block">
-                    {listingType === "BUY" ? "Giá bán theo loại (₫)" : "Giá thuê theo loại (₫)"}
-                  </label>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="text-sm font-semibold block">
+                      {listingType === "BUY" ? "Giá bán theo loại (₫)" : "Giá thuê theo loại (₫)"}
+                    </label>
+                    <button
+                      type="button"
+                      disabled={aiPricing || selectedVariantIds.size === 0}
+                      onClick={() => void handleSuggestPrices()}
+                      title="Ước tính giá thị trường đồ cũ bằng AI"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-background px-3 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50 disabled:pointer-events-none disabled:opacity-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
+                    >
+                      {aiPricing ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5" />
+                      )}
+                      {aiPricing ? "Đang ước tính…" : "Gợi ý giá AI"}
+                    </button>
+                  </div>
                   <div className="space-y-4">
                     {[...selectedVariantIds].map((vid) => {
                       const meta = variants.find((x) => x.id === vid);
                       const name = meta?.label?.trim() || meta?.sku?.trim() || vid.slice(0, 8);
                       const draft = priceByVariantId[vid] ?? emptyVariantDraft();
+                      const aiHint = aiPriceByVariantId[vid];
                       return (
                         <div
                           key={vid}
                           className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 shadow-sm dark:border-emerald-900/45 dark:bg-emerald-950/30"
                         >
                           <p className="text-sm font-semibold leading-snug text-emerald-900 dark:text-emerald-100">{name}</p>
+
+                          {aiHint?.suggestedPriceVnd ? (
+                            <AiPriceSuggestionPanel
+                              suggestion={aiHint}
+                              listingType={listingType}
+                              rentUnit={draft.rentUnit}
+                              currentListedPriceVnd={
+                                listingType === "BUY"
+                                  ? Number(draft.buyPrice.replace(/\D/g, "")) || undefined
+                                  : Number(draft.rentPrice.replace(/\D/g, "")) || undefined
+                              }
+                              onApply={() => applyAiPrice(vid)}
+                              compact
+                            />
+                          ) : null}
 
                           {listingType === "BUY" ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">

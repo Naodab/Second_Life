@@ -236,6 +236,8 @@ export type ListingCreateResponse = {
   title: string;
   description?: string | null;
   listingType: ListingType;
+  aiSuggestedBuyPrice?: number | null;
+  aiSuggestedRentPrice?: number | null;
 };
 
 export type ListingVariantResponse = {
@@ -244,6 +246,8 @@ export type ListingVariantResponse = {
   quantity: number;
   buyPrice?: number | null;
   rentPrice?: number | null;
+  aiSuggestedBuyPrice?: number | null;
+  aiSuggestedRentPrice?: number | null;
   rentUnit?: RentUnit | null;
   isActive?: boolean | null;
 };
@@ -257,6 +261,8 @@ export type ListingResponseDetailed = {
   listingStatus: ListingStatus;
   minPrice?: number | null;
   maxPrice?: number | null;
+  aiSuggestedBuyPrice?: number | null;
+  aiSuggestedRentPrice?: number | null;
   variants: ListingVariantResponse[];
 };
 
@@ -311,6 +317,7 @@ export type ListingProductBundleDto = {
   name: string;
   description?: string | null;
   thumbnailUrl?: string | null;
+  manufactureYear?: number | null;
   ownerId?: string | null;
   primarySubCategory?: CategoryRefDto | null;
   medias?: ProductMediaDto[] | null;

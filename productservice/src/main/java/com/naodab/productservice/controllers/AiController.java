@@ -3,8 +3,10 @@ package com.naodab.productservice.controllers;
 import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.productservice.dto.request.AiAnalyzeRequest;
 import com.naodab.productservice.dto.request.AiDescriptionRequest;
+import com.naodab.productservice.dto.request.AiSuggestPriceRequest;
 import com.naodab.productservice.dto.response.AiAnalyzeResponse;
 import com.naodab.productservice.dto.response.AiDescriptionResponse;
+import com.naodab.productservice.dto.response.AiSuggestPriceResponse;
 import com.naodab.productservice.services.AiService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -34,6 +36,14 @@ public class AiController {
             @Valid @RequestBody AiAnalyzeRequest request) {
         return ResponseEntity.ok(ApiResponse.<AiAnalyzeResponse>builder()
                 .data(aiService.analyzeProductImages(request))
+                .build());
+    }
+
+    @PostMapping("/suggest-price")
+    public ResponseEntity<ApiResponse<AiSuggestPriceResponse>> suggestPrice(
+            @Valid @RequestBody AiSuggestPriceRequest request) {
+        return ResponseEntity.ok(ApiResponse.<AiSuggestPriceResponse>builder()
+                .data(aiService.suggestPrice(request))
                 .build());
     }
 }
