@@ -11,21 +11,29 @@ import com.naodab.locationservice.models.GisWard;
 public interface GisWardRepository extends JpaRepository<GisWard, Integer> {
 
 	@Query(value = """
-			SELECT * FROM gis_wards
-			WHERE ST_Contains(geom, ST_GeomFromText(CONCAT('POINT(', :lon, ' ', :lat, ')'), 4326))
-			ORDER BY ST_Distance_Sphere(ST_Centroid(geom), ST_GeomFromText(CONCAT('POINT(', :lon, ' ', :lat, ')'), 4326))
+			SELECT gw.ward_code FROM gis_wards gw
+			WHERE ST_Contains(gw.geom, ST_GeomFromText(CONCAT('POINT(', :lat, ' ', :lon, ')'), 4326))
 			""", nativeQuery = true)
-	List<GisWard> findByLonAndLat(@Param("lon") Float lon, @Param("lat") Float lat);
+	List<String> findWardCodesByLonAndLat(@Param("lon") Float lon, @Param("lat") Float lat);
 
 	@Query(value = """
-			SELECT * FROM gis_wards
+			SELECT gw.ward_code FROM gis_wards gw
 			WHERE ST_Distance_Sphere(
-			    ST_Centroid(geom),
-			    ST_GeomFromText(CONCAT('POINT(', :lon, ' ', :lat, ')'), 4326)
+			    ST_GeomFromText(CONCAT('POINT(', :lat, ' ', :lon, ')'), 4326),
+			    ST_GeomFromText(CONCAT('POINT(',
+			        (ST_XMin(gw.bbox) + ST_XMax(gw.bbox)) / 2, ' ',
+			        (ST_YMin(gw.bbox) + ST_YMax(gw.bbox)) / 2
+			    , ')'), 4326)
 			) <= :radiusMeters
-			ORDER BY ST_Distance_Sphere(ST_Centroid(geom), ST_GeomFromText(CONCAT('POINT(', :lon, ' ', :lat, ')'), 4326))
+			ORDER BY ST_Distance_Sphere(
+			    ST_GeomFromText(CONCAT('POINT(', :lat, ' ', :lon, ')'), 4326),
+			    ST_GeomFromText(CONCAT('POINT(',
+			        (ST_XMin(gw.bbox) + ST_XMax(gw.bbox)) / 2, ' ',
+			        (ST_YMin(gw.bbox) + ST_YMax(gw.bbox)) / 2
+			    , ')'), 4326)
+			)
 			""", nativeQuery = true)
-	List<GisWard> findWithinRadius(
+	List<String> findWardCodesWithinRadius(
 			@Param("lon") Float lon,
 			@Param("lat") Float lat,
 			@Param("radiusMeters") Float radiusMeters);
@@ -38,7 +46,7 @@ public interface GisWardRepository extends JpaRepository<GisWard, Integer> {
 			    AND w.province_code = :provinceCode
 			    AND ST_Contains(
 			        gw.geom,
-			        ST_GeomFromText(CONCAT('POINT(', :lon, ' ', :lat, ')'), 4326)
+			        ST_GeomFromText(CONCAT('POINT(', :lat, ' ', :lon, ')'), 4326)
 			    )
 			""", nativeQuery = true)
 	long countWardContainingPoint(

@@ -12,6 +12,7 @@ import org.opensearch.client.opensearch._types.DistanceUnit;
 import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch._types.SortOptions;
 import org.opensearch.client.opensearch._types.SortOrder;
+import org.opensearch.client.opensearch._types.query_dsl.Operator;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch._types.query_dsl.TextQueryType;
 import org.opensearch.data.client.osc.NativeQuery;
@@ -82,6 +83,31 @@ public final class OpenSearchNativeQueryHelper {
             .query(trimmed)
             .type(type)
             .fields(Arrays.asList(searchFields)))));
+  }
+
+  public static void addKeywordSearchMust(List<Query> mustQueries, String keyword, String... searchFields) {
+    if (!StringUtils.hasText(keyword) || searchFields == null || searchFields.length == 0) {
+      return;
+    }
+    String trimmed = keyword.trim();
+    List<String> fields = Arrays.asList(searchFields);
+    if (trimmed.indexOf(' ') >= 0) {
+      mustQueries.add(Query.of(root -> root.bool(b -> {
+        b.must(Query.of(q -> q.multiMatch(mm -> mm
+            .query(trimmed)
+            .type(TextQueryType.CrossFields)
+            .operator(Operator.And)
+            .fields(fields))));
+        b.should(Query.of(q -> q.multiMatch(mm -> mm
+            .query(trimmed)
+            .type(TextQueryType.Phrase)
+            .fields(fields)
+            .boost(2.0f))));
+        return b;
+      })));
+      return;
+    }
+    addKeywordMultiMatchMust(mustQueries, trimmed, TextQueryType.BestFields, searchFields);
   }
 
   public static void addTermIfTextPresent(List<Query> filterQueries, String fieldName, String value) {
@@ -271,11 +297,6 @@ public final class OpenSearchNativeQueryHelper {
 
     if (sortBy == OpenSearchSortBy.CREATED_AT_DESC) {
       queryBuilder.withSort(fieldSort("createdAt", SortOrder.Desc));
-      return;
-    }
-
-    if (sortBy == OpenSearchSortBy.NAME_ASC) {
-      queryBuilder.withSort(fieldSort("name", SortOrder.Asc));
     }
   }
 
@@ -294,15 +315,22 @@ public final class OpenSearchNativeQueryHelper {
   }
 
   public static String[] productKeywordSearchFields() {
-    return new String[] { "name^3", "description", "attributeValues", "variantSkus" };
+    return new String[] {
+        "name^3",
+        "description",
+        "primarySubCategoryName^2",
+        "attributeValues",
+        "variantSkus",
+    };
   }
 
   public static String[] listingKeywordSearchFields() {
     return new String[] {
-        "title",
+        "title^3",
+        "name^3",
         "listingDescription",
-        "name",
         "description",
+        "primarySubCategoryName^2",
         "attributeValues",
         "variantSkus",
     };

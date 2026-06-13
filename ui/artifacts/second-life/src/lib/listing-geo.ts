@@ -26,3 +26,11 @@ export function hasVisitorGeo(location: VisitorLocationPayload | null | undefine
     Number.isFinite(location.longitude)
   );
 }
+
+export function listingGeoParamsForDistanceSort(
+  sortBy: string | null | undefined,
+  location: VisitorLocationPayload | null | undefined,
+): Partial<ListingGeoParams> {
+  if (sortBy !== "DISTANCE" || !hasVisitorGeo(location)) return {};
+  return listingGeoParamsFromVisitor(location);
+}

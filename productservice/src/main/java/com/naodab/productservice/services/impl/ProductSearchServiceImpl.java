@@ -18,7 +18,6 @@ import org.opensearch.client.opensearch._types.aggregations.Buckets;
 import org.opensearch.client.opensearch._types.aggregations.StringTermsAggregate;
 import org.opensearch.client.opensearch._types.aggregations.StringTermsBucket;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
-import org.opensearch.client.opensearch._types.query_dsl.TextQueryType;
 import org.opensearch.data.client.osc.NativeQuery;
 import org.opensearch.data.client.osc.OpenSearchAggregation;
 import org.opensearch.data.client.osc.OpenSearchAggregations;
@@ -186,10 +185,9 @@ public class ProductSearchServiceImpl implements ProductSearchService {
         false,
         null,
         null,
-        must -> OpenSearchNativeQueryHelper.addKeywordMultiMatchMust(
+        must -> OpenSearchNativeQueryHelper.addKeywordSearchMust(
             must,
             request.getKeyword(),
-            TextQueryType.PhrasePrefix,
             OpenSearchNativeQueryHelper.productKeywordSearchFields()),
         filter -> {
           OpenSearchNativeQueryHelper.addTermIfTextPresent(filter, "ownerId", request.getOwnerId());

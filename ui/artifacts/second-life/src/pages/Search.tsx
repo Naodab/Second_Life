@@ -23,66 +23,39 @@ import {
 import { LocationPickerCombobox } from "@/components/LocationPickerCombobox";
 import { useCategories } from "@/hooks/use-categories";
 import type { CategoryResponse } from "@/api/categories";
-import { buildFreshSearchPath, searchPathsQueryEqual } from "@/lib/search-url";
-import { pathStubForSearchQueryCompare, rawQueryFromBrowserSearch } from "@/lib/wouter-location";
+import {
+  buildSearchFiltersPath,
+  DEFAULT_SEARCH_SORT,
+  filtersFromSidebarState,
+  parseCommaNumber,
+  parseSearchFilters,
+  priceInputFromFilter,
+  searchFiltersEqual,
+  searchQueryMatchesPath,
+  type SearchListingTypeFilter,
+} from "@/lib/search-filters";
 import { ListingPaginationBar } from "@/components/ListingPaginationBar";
 import { useAuth } from "@/context/AuthContext";
 import { useVisitorLocation } from "@/context/VisitorLocationContext";
 import {
   hasVisitorGeo,
   LISTING_GEO_RADIUS_METERS,
-  listingGeoParamsFromVisitor,
+  listingGeoParamsForDistanceSort,
 } from "@/lib/listing-geo";
 import { mapApiError } from "@/lib/api-error";
 
-const DEFAULT_SORT: ListingSearchSort = "UPDATED_AT_DESC";
+const DEFAULT_SORT = DEFAULT_SEARCH_SORT;
 
 const SEARCH_LISTING_PAGE_SIZE = 12;
 
 const SORT_VALUES_IN_SELECT = new Set<ListingSearchSort>([
   "UPDATED_AT_DESC",
   "CREATED_AT_DESC",
-  "NAME_ASC",
   "RELEVANCE",
   "DISTANCE",
 ]);
 
 const EMPTY_WARD_LIST: WardResponse[] = [];
-
-function trimParam(raw: string | null | undefined): string | undefined {
-  const t = raw?.trim();
-  return t ? t : undefined;
-}
-
-function provinceKnown(code: string | undefined, provinces: ProvinceResponse[]): boolean {
-  if (!code?.trim()) return false;
-  const n = code.trim();
-  return provinces.some((x) => String(x.code ?? "").trim() === n);
-}
-
-function wardMatchesList(raw: string, wards: WardResponse[]): boolean {
-  const n = raw.trim();
-  if (!n) return false;
-  return wards.some((w) => {
-    const c = String(w.code ?? "").trim();
-    const id = String(w.id ?? "").trim();
-    return (c.length > 0 && c === n) || (id.length > 0 && id === n);
-  });
-}
-
-function readFirstSearchParam(searchParams: URLSearchParams, baseKey: string): string | undefined {
-  const values = [...searchParams.getAll(`${baseKey}[]`), ...searchParams.getAll(baseKey)].filter(Boolean);
-  for (const v of values) {
-    const t = String(v).trim();
-    if (t) return t;
-  }
-  const legacyKey = baseKey.endsWith("Ids") ? `${baseKey.slice(0, -3)}Id` : null;
-  if (legacyKey) {
-    const legacy = searchParams.get(legacyKey)?.trim();
-    if (legacy) return legacy;
-  }
-  return undefined;
-}
 
 function normalizeKnownCategoryId(
   raw: string | undefined,
@@ -104,41 +77,65 @@ function normalizeKnownSubCategoryId(
   return known.has(id) ? id : undefined;
 }
 
-function listingTypeFromSearchParams(searchParams: URLSearchParams): "all" | "buy" | "rent" {
-  const raw = searchParams.get("listingType") ?? searchParams.get("type");
-  if (!raw) return "all";
-  const t = raw.trim().toLowerCase();
-  if (t === "buy" || t === "rent") return t;
-  const u = raw.trim().toUpperCase();
-  if (u === "BUY") return "buy";
-  if (u === "RENT") return "rent";
-  return "all";
+function provinceKnown(code: string | undefined, provinces: ProvinceResponse[]): boolean {
+  if (!code?.trim()) return false;
+  const n = code.trim();
+  return provinces.some((x) => String(x.code ?? "").trim() === n);
 }
 
-function parseSortParam(raw: string | null): ListingSearchSort {
-  const allowed = new Set<ListingSearchSort>([
-    "UPDATED_AT_DESC",
-    "CREATED_AT_DESC",
-    "RELEVANCE",
-    "NAME_ASC",
-    "DISTANCE",
-  ]);
-  if (raw && allowed.has(raw as ListingSearchSort)) return raw as ListingSearchSort;
-  return DEFAULT_SORT;
+function wardMatchesList(raw: string, wards: WardResponse[]): boolean {
+  const n = raw.trim();
+  if (!n) return false;
+  return wards.some((w) => {
+    const c = String(w.code ?? "").trim();
+    const id = String(w.id ?? "").trim();
+    return (c.length > 0 && c === n) || (id.length > 0 && id === n);
+  });
 }
 
-function parseCommaNumber(raw: string): number | undefined {
-  const t = raw.trim().replace(/\s/g, "").replace(",", ".");
-  if (!t) return undefined;
-  const n = Number(t);
-  return Number.isFinite(n) ? n : undefined;
+function sanitizeFiltersForReferenceData(
+  filters: ReturnType<typeof parseSearchFilters>,
+  categories: CategoryResponse[],
+  provinces: ProvinceResponse[],
+  wards: WardResponse[],
+  wardsLoading: boolean,
+): ReturnType<typeof parseSearchFilters> {
+  let next = filters;
+
+  if (categories.length > 0) {
+    const categoryId = normalizeKnownCategoryId(next.categoryId, categories);
+    const subCategoryId = normalizeKnownSubCategoryId(next.subCategoryId, categories);
+    if (categoryId !== next.categoryId || subCategoryId !== next.subCategoryId) {
+      next = { ...next, categoryId, subCategoryId };
+    }
+  }
+
+  if (provinces.length > 0 && next.provinceCode && !provinceKnown(next.provinceCode, provinces)) {
+    next = { ...next, provinceCode: undefined, wardCode: undefined };
+  }
+
+  if (
+    next.provinceCode &&
+    next.wardCode &&
+    !wardsLoading &&
+    wards.length > 0 &&
+    !wardMatchesList(next.wardCode, wards)
+  ) {
+    next = { ...next, wardCode: undefined };
+  }
+
+  if (next.subCategoryId && next.categoryId) {
+    next = { ...next, categoryId: undefined };
+  }
+
+  return next;
 }
 
 export default function Search() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const { user } = useAuth();
-  const { location: visitorLocation } = useVisitorLocation();
+  const { location: visitorLocation, locationResolveDone } = useVisitorLocation();
   const visitorGeoReady = hasVisitorGeo(visitorLocation);
   const searchProfileId = user?.id?.trim() ? user.id : undefined;
   const [hoverCategoryId, setHoverCategoryId] = useState<string | null>(null);
@@ -190,66 +187,95 @@ export default function Search() {
     }, 180);
   };
 
-  const parsedFilters = useMemo(() => {
-    const searchParams = new URLSearchParams(rawQueryFromBrowserSearch(search) || "");
-    const subCategoryId = readFirstSearchParam(searchParams, "subCategoryIds");
-    const categoryId = subCategoryId
-      ? undefined
-      : readFirstSearchParam(searchParams, "categoryIds");
-    return {
-      listingType: listingTypeFromSearchParams(searchParams),
-      categoryId,
-      subCategoryId,
-      provinceCode:
-        trimParam(searchParams.get("provinceCode")) ??
-        trimParam(searchParams.get("province")),
-      wardCode:
-        trimParam(searchParams.get("WardCode")) ??
-        trimParam(searchParams.get("wardCode")) ??
-        trimParam(searchParams.get("ward")),
-      keyword: (searchParams.get("keyword") || searchParams.get("q") || "").trim(),
-      sortBy: parseSortParam(searchParams.get("sortBy")),
-      priceMin: parseCommaNumber(searchParams.get("priceMin") ?? "") ?? undefined,
-      priceMax: parseCommaNumber(searchParams.get("priceMax") ?? "") ?? undefined,
-    };
-  }, [search]);
+  const parsedFilters = useMemo(() => parseSearchFilters(search), [search]);
 
-  const [typeFilter, setTypeFilter] = useState<"all" | "buy" | "rent">(parsedFilters.listingType);
+  const [typeFilter, setTypeFilter] = useState<SearchListingTypeFilter>(parsedFilters.listingType);
   const [categoryId, setCategoryId] = useState<string | undefined>(parsedFilters.categoryId);
   const [subCategoryId, setSubCategoryId] = useState<string | undefined>(parsedFilters.subCategoryId);
   const [provinceCode, setProvinceCode] = useState<string | undefined>(parsedFilters.provinceCode);
   const [wardCode, setWardCode] = useState<string | undefined>(parsedFilters.wardCode);
   const [keyword, setKeyword] = useState(parsedFilters.keyword);
   const [sortBy, setSortBy] = useState<ListingSearchSort>(parsedFilters.sortBy);
-  const [priceMinInput, setPriceMinInput] = useState(
-    parsedFilters.priceMin != null ? String(parsedFilters.priceMin) : "",
-  );
-  const [priceMaxInput, setPriceMaxInput] = useState(
-    parsedFilters.priceMax != null ? String(parsedFilters.priceMax) : "",
+  const [priceMinInput, setPriceMinInput] = useState(priceInputFromFilter(parsedFilters.priceMin));
+  const [priceMaxInput, setPriceMaxInput] = useState(priceInputFromFilter(parsedFilters.priceMax));
+
+  const sidebarFilters = useMemo(
+    () =>
+      filtersFromSidebarState({
+        typeFilter,
+        categoryId,
+        subCategoryId,
+        provinceCode,
+        wardCode,
+        keyword,
+        sortBy,
+        priceMinNum: parseCommaNumber(priceMinInput),
+        priceMaxNum: parseCommaNumber(priceMaxInput),
+      }),
+    [
+      typeFilter,
+      categoryId,
+      subCategoryId,
+      provinceCode,
+      wardCode,
+      keyword,
+      sortBy,
+      priceMinInput,
+      priceMaxInput,
+    ],
   );
 
-  useLayoutEffect(() => {
+  const lastAppliedSearchRef = useRef(search);
+  const pendingUrlPushRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (pendingUrlPushRef.current != null) {
+      if (searchQueryMatchesPath(search, pendingUrlPushRef.current)) {
+        pendingUrlPushRef.current = null;
+        lastAppliedSearchRef.current = search;
+      }
+      return;
+    }
+
+    if (lastAppliedSearchRef.current === search) return;
+    lastAppliedSearchRef.current = search;
+
     const p = parsedFilters;
-    setTypeFilter((prev) => (prev === p.listingType ? prev : p.listingType));
-    setCategoryId((prev) => (prev === p.categoryId ? prev : p.categoryId));
-    setSubCategoryId((prev) => (prev === p.subCategoryId ? prev : p.subCategoryId));
-    setProvinceCode((prev) => (prev === p.provinceCode ? prev : p.provinceCode));
-    setWardCode((prev) => (prev === p.wardCode ? prev : p.wardCode));
-    setKeyword((prev) => (prev === p.keyword ? prev : p.keyword));
-    setSortBy((prev) => (prev === p.sortBy ? prev : p.sortBy));
-    const nextMin = p.priceMin != null ? String(p.priceMin) : "";
-    const nextMax = p.priceMax != null ? String(p.priceMax) : "";
-    setPriceMinInput((prev) => (prev === nextMin ? prev : nextMin));
-    setPriceMaxInput((prev) => (prev === nextMax ? prev : nextMax));
-  }, [parsedFilters]);
+    if (searchFiltersEqual(sidebarFilters, p)) return;
+
+    setTypeFilter(p.listingType);
+    setCategoryId(p.categoryId);
+    setSubCategoryId(p.subCategoryId);
+    setProvinceCode(p.provinceCode);
+    setWardCode(p.wardCode);
+    setKeyword(p.keyword);
+    setSortBy(p.sortBy);
+    setPriceMinInput(priceInputFromFilter(p.priceMin));
+    setPriceMaxInput(priceInputFromFilter(p.priceMax));
+  }, [search, parsedFilters, sidebarFilters]); // sidebarFilters: compare against latest sidebar when URL changes
 
   useEffect(() => {
     if (!refsReady) return;
-    if (categories.length > 0) {
-      setCategoryId((prev) => normalizeKnownCategoryId(prev, categories));
-      setSubCategoryId((prev) => normalizeKnownSubCategoryId(prev, categories));
-    }
-  }, [refsReady, categories]);
+
+    const sanitized = sanitizeFiltersForReferenceData(
+      sidebarFilters,
+      categories,
+      provinces,
+      wards,
+      wardsLoading,
+    );
+    if (searchFiltersEqual(sanitized, sidebarFilters)) return;
+
+    setTypeFilter(sanitized.listingType);
+    setCategoryId(sanitized.categoryId);
+    setSubCategoryId(sanitized.subCategoryId);
+    setProvinceCode(sanitized.provinceCode);
+    setWardCode(sanitized.wardCode);
+    setKeyword(sanitized.keyword);
+    setSortBy(sanitized.sortBy);
+    setPriceMinInput(priceInputFromFilter(sanitized.priceMin));
+    setPriceMaxInput(priceInputFromFilter(sanitized.priceMax));
+  }, [refsReady, sidebarFilters, categories, provinces, wards, wardsLoading]);
 
   useEffect(() => {
     let cancelled = false;
@@ -293,94 +319,59 @@ export default function Search() {
   }, [provinceCode]);
 
   useEffect(() => {
-    if (!refsReady) return;
-    if (provinces.length > 0) {
-      setProvinceCode((prev) => (provinceKnown(prev, provinces) ? prev : undefined));
-    }
-  }, [refsReady, provinces]);
-
-  useEffect(() => {
     if (!provinceCode) {
-      setWardCode((prev) => (prev === undefined ? prev : undefined));
+      setWardCode(undefined);
     }
   }, [provinceCode]);
 
   useEffect(() => {
-    if (!provinceCode) return;
-    if (wardsLoading) return;
-    if (wards.length === 0) return;
-    setWardCode((prev) => {
-      if (!prev?.trim()) return prev;
-      return wardMatchesList(prev, wards) ? prev : undefined;
-    });
-  }, [provinceCode, wards, wardsLoading]);
-
-  useEffect(() => {
-    if (!subCategoryId) return;
-    setCategoryId(undefined);
-  }, [subCategoryId]);
-
-  useEffect(() => {
-    if (visitorGeoReady || sortBy !== "DISTANCE") return;
+    if (!locationResolveDone || visitorGeoReady || sortBy !== "DISTANCE") return;
     setSortBy(DEFAULT_SORT);
-  }, [visitorGeoReady, sortBy]);
+  }, [locationResolveDone, visitorGeoReady, sortBy]);
 
   const priceMinNum = useMemo(() => parseCommaNumber(priceMinInput), [priceMinInput]);
   const priceMaxNum = useMemo(() => parseCommaNumber(priceMaxInput), [priceMaxInput]);
 
   const desiredSearchPath = useMemo(() => {
     if (!refsReady) return null;
-    const fromState = keyword.trim();
-    const fromUrl = parsedFilters.keyword.trim();
-    const keywordForPath = fromState === fromUrl ? fromState : fromUrl;
 
-    return buildFreshSearchPath({
-      keyword: keywordForPath ? keywordForPath : null,
-      q: null,
-      sortBy: sortBy !== DEFAULT_SORT ? sortBy : null,
-      listingType: typeFilter === "all" ? null : typeFilter,
-      type: null,
-      categoryId: categoryId ?? null,
-      subCategoryId: subCategoryId ?? null,
-      provinceCode: provinceCode ?? null,
-      wardCode: wardCode ?? null,
-      priceMin: priceMinNum != null ? String(priceMinNum) : null,
-      priceMax: priceMaxNum != null ? String(priceMaxNum) : null,
-    });
+    const sanitized = sanitizeFiltersForReferenceData(
+      sidebarFilters,
+      categories,
+      provinces,
+      wards,
+      wardsLoading,
+    );
+
+    return buildSearchFiltersPath(sanitized);
   }, [
     refsReady,
-    keyword,
-    parsedFilters.keyword,
-    sortBy,
-    typeFilter,
-    categoryId,
-    subCategoryId,
-    provinceCode,
-    wardCode,
-    priceMinNum,
-    priceMaxNum,
+    sidebarFilters,
+    categories,
+    provinces,
+    wards,
+    wardsLoading,
   ]);
 
-  const lastUrlSyncPathRef = useRef<string | null>(null);
   useEffect(() => {
     if (!desiredSearchPath) return;
-    const currentStub = pathStubForSearchQueryCompare(search);
-    if (searchPathsQueryEqual(desiredSearchPath, currentStub)) {
-      lastUrlSyncPathRef.current = null;
-      return;
-    }
-    if (lastUrlSyncPathRef.current === desiredSearchPath) {
-      return;
-    }
-    lastUrlSyncPathRef.current = desiredSearchPath;
+    if (searchQueryMatchesPath(search, desiredSearchPath)) return;
+
+    pendingUrlPushRef.current = desiredSearchPath;
     setLocation(desiredSearchPath);
-  }, [desiredSearchPath, search, setLocation]);
+  }, [desiredSearchPath, setLocation]);
 
   const [debouncedKeyword, setDebouncedKeyword] = useState(keyword);
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedKeyword(keyword), 350);
     return () => clearTimeout(t);
   }, [keyword]);
+
+  const distanceSortActive = sortBy === "DISTANCE" && visitorGeoReady;
+  const distanceGeoParams = useMemo(
+    () => listingGeoParamsForDistanceSort(sortBy, visitorLocation),
+    [sortBy, visitorLocation],
+  );
 
   const searchFilterDepsKey = useMemo(
     () =>
@@ -394,8 +385,8 @@ export default function Search() {
         String(priceMinNum ?? ""),
         String(priceMaxNum ?? ""),
         sortBy,
-        visitorLocation?.latitude ?? "",
-        visitorLocation?.longitude ?? "",
+        distanceSortActive ? visitorLocation?.latitude ?? "" : "",
+        distanceSortActive ? visitorLocation?.longitude ?? "" : "",
       ].join("|"),
     [
       debouncedKeyword,
@@ -407,6 +398,7 @@ export default function Search() {
       priceMinNum,
       priceMaxNum,
       sortBy,
+      distanceSortActive,
       visitorLocation?.latitude,
       visitorLocation?.longitude,
     ],
@@ -434,7 +426,11 @@ export default function Search() {
       setFetchError(null);
       try {
         const effectiveSortBy =
-          sortBy === "DISTANCE" && !visitorGeoReady ? DEFAULT_SORT : sortBy;
+          sortBy === "DISTANCE" && !visitorGeoReady
+            ? DEFAULT_SORT
+            : debouncedKeyword.trim() && sortBy === DEFAULT_SORT
+              ? "RELEVANCE"
+              : sortBy;
         const data = await searchListings(
           {
             keyword: debouncedKeyword.trim() || undefined,
@@ -448,7 +444,7 @@ export default function Search() {
             sortBy: effectiveSortBy,
             page: searchPage,
             pageSize: SEARCH_LISTING_PAGE_SIZE,
-            ...listingGeoParamsFromVisitor(visitorLocation),
+            ...distanceGeoParams,
           },
           { profileId: searchProfileId },
         );
@@ -488,8 +484,7 @@ export default function Search() {
     searchPage,
     searchProfileId,
     visitorGeoReady,
-    visitorLocation?.latitude,
-    visitorLocation?.longitude,
+    distanceGeoParams,
   ]);
 
   const searchListingPageCount = Math.max(1, Math.ceil(searchTotalCount / SEARCH_LISTING_PAGE_SIZE));
@@ -759,7 +754,6 @@ export default function Search() {
                   <SelectContent>
                     <SelectItem value="UPDATED_AT_DESC">Cập nhật mới nhất</SelectItem>
                     <SelectItem value="CREATED_AT_DESC">Đăng mới nhất</SelectItem>
-                    <SelectItem value="NAME_ASC">Tên A → Z</SelectItem>
                     <SelectItem value="RELEVANCE">Liên quan từ khóa</SelectItem>
                     <SelectItem value="DISTANCE" disabled={!visitorGeoReady}>
                       Gần nhất (khoảng cách)
@@ -775,10 +769,22 @@ export default function Search() {
               </p>
             )}
 
-            {!visitorGeoReady && (
+            {!locationResolveDone && (
               <p className="mb-4 text-xs text-muted-foreground leading-snug">
-                Bật định vị để dùng «Gần nhất» và lọc tin trong bán kính{" "}
-                {Math.round(LISTING_GEO_RADIUS_METERS / 1000)} km quanh bạn.
+                Đang xác định vị trí gần đúng từ IP để dùng «Gần nhất»…
+              </p>
+            )}
+
+            {locationResolveDone && !visitorGeoReady && (
+              <p className="mb-4 text-xs text-muted-foreground leading-snug">
+                Không xác định được vị trí — «Gần nhất» tạm không khả dụng.
+              </p>
+            )}
+
+            {distanceSortActive && (
+              <p className="mb-4 text-xs text-muted-foreground leading-snug">
+                Đang lọc tin trong bán kính {Math.round(LISTING_GEO_RADIUS_METERS / 1000)} km quanh bạn và
+                sắp xếp theo khoảng cách.
               </p>
             )}
 

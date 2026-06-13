@@ -274,7 +274,12 @@ export function Header() {
     const nextKeyword = item.title.trim();
     setHeaderSearchDraft(nextKeyword);
     setSuggestOpen(false);
-    setLocation(buildFreshSearchPath({ keyword: nextKeyword || null, q: null }));
+    if (isSearchPage) {
+      const qs = rawQueryFromBrowserSearch(search);
+      setLocation(buildSearchPath({ keyword: nextKeyword || null, q: null }, qs));
+    } else {
+      setLocation(buildFreshSearchPath({ keyword: nextKeyword || null, q: null }));
+    }
   };
 
   const showSuggestPanel = suggestOpen && debouncedDraft.length >= 2;

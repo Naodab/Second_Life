@@ -2,6 +2,9 @@ import { getWardsByLonLat } from "@/api/location";
 import { approximateCoordsFromIp } from "@/lib/ip-geolocation";
 
 const STORAGE_KEY = "secondlife.visitorLocation";
+const IP_ATTEMPT_SESSION_KEY = "secondlife.visitorLocation.ipAttempted";
+
+let ipResolveInFlight: Promise<VisitorLocationPayload | null> | null = null;
 
 export type VisitorLocationPayload = {
   provinceCode: string | null;
@@ -39,6 +42,22 @@ export function persistVisitorLocation(payload: VisitorLocationPayload): void {
   }
 }
 
+function markIpResolveAttempted(): void {
+  try {
+    sessionStorage.setItem(IP_ATTEMPT_SESSION_KEY, "1");
+  } catch {
+    /* ignore private mode */
+  }
+}
+
+function hasIpResolveBeenAttempted(): boolean {
+  try {
+    return sessionStorage.getItem(IP_ATTEMPT_SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 /** Resolves approximate visitor location from IP and persists it. Returns true when stored. */
 export async function resolveVisitorLocationFromIp(): Promise<boolean> {
   const coords = await approximateCoordsFromIp();
@@ -57,4 +76,27 @@ export async function resolveVisitorLocationFromIp(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Loads cached visitor location or resolves from IP at most once per browser session.
+ * Concurrent callers share the same in-flight request.
+ */
+export async function ensureVisitorLocationFromIp(): Promise<VisitorLocationPayload | null> {
+  const cached = loadVisitorLocation();
+  if (cached) return cached;
+  if (hasIpResolveBeenAttempted()) return null;
+  if (ipResolveInFlight) return ipResolveInFlight;
+
+  ipResolveInFlight = (async () => {
+    try {
+      await resolveVisitorLocationFromIp();
+      return loadVisitorLocation();
+    } finally {
+      markIpResolveAttempted();
+      ipResolveInFlight = null;
+    }
+  })();
+
+  return ipResolveInFlight;
 }

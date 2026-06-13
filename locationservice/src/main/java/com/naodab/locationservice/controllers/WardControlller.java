@@ -6,8 +6,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.commonservice.response.ApiResponse;
 import com.naodab.locationservice.dto.request.WardSearchRequest;
+import com.naodab.locationservice.dto.response.CoordinateResolveResponse;
 import com.naodab.locationservice.dto.response.WardResponse;
 import com.naodab.locationservice.services.WardService;
+import com.naodab.locationservice.util.CoordinateNormalizer;
 
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -25,6 +27,25 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class WardControlller {
   WardService wardService;
+
+  @GetMapping("/resolve-coordinates")
+  public ResponseEntity<ApiResponse<CoordinateResolveResponse>> resolveCoordinates(
+      @RequestParam(required = false) Float latitude,
+      @RequestParam(required = false) Float longitude) {
+    if (latitude == null || longitude == null) {
+      return ResponseEntity.badRequest().body(
+          ApiResponse.<CoordinateResolveResponse>builder()
+              .message("latitude and longitude are required")
+              .code(ErrorCode.INVALID_INPUT.getCode())
+              .build());
+    }
+
+    CoordinateNormalizer.LonLat coords = CoordinateNormalizer.fromHttpParams(latitude, longitude);
+    return ResponseEntity.ok(
+        ApiResponse.<CoordinateResolveResponse>builder()
+            .data(wardService.resolveCoordinates(coords.longitude(), coords.latitude()))
+            .build());
+  }
 
   @GetMapping("/{code}")
   public ResponseEntity<ApiResponse<WardResponse>> getWard(@PathVariable String code) {

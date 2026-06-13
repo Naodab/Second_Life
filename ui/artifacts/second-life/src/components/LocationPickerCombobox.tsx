@@ -49,7 +49,7 @@ export function LocationPickerCombobox({
   className,
 }: LocationPickerComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const triggerRef = React.useRef<HTMLButtonElement | null>(null)
+  const triggerWrapRef = React.useRef<HTMLDivElement | null>(null)
   const [contentWidth, setContentWidth] = React.useState<number>()
 
   const valueKey = value?.trim() ?? ""
@@ -67,7 +67,7 @@ export function LocationPickerCombobox({
     setOpen(next)
     if (next) {
       requestAnimationFrame(() => {
-        const w = triggerRef.current?.offsetWidth
+        const w = triggerWrapRef.current?.offsetWidth
         if (w) setContentWidth(w)
       })
     }
@@ -75,28 +75,33 @@ export function LocationPickerCombobox({
 
   return (
     <Popover open={disabled ? false : open} onOpenChange={handleOpenChange} modal={false}>
-      <PopoverTrigger
-        ref={triggerRef}
-        type="button"
-        disabled={disabled}
-        role="combobox"
-        aria-expanded={open}
-        className={cn(
-          buttonVariants({ variant: "outline", size: "default" }),
-          "w-full justify-between gap-2 border-transparent bg-muted/60 font-normal text-foreground hover:bg-muted/80 dark:bg-card dark:hover:bg-muted/50",
-          className,
-        )}
-      >
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate text-left",
-            !value && "text-muted-foreground",
-          )}
+      <div ref={triggerWrapRef} className={cn("w-full", className)}>
+        <PopoverTrigger
+          asChild
+          disabled={disabled}
         >
-          {value ? (selected?.fullName ?? value) : allLabel}
-        </span>
-        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-      </PopoverTrigger>
+          <button
+            type="button"
+            disabled={disabled}
+            role="combobox"
+            aria-expanded={open}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "default" }),
+              "w-full justify-between gap-2 border-transparent bg-muted/60 font-normal text-foreground hover:bg-muted/80 dark:bg-card dark:hover:bg-muted/50",
+            )}
+          >
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-left",
+                !value && "text-muted-foreground",
+              )}
+            >
+              {value ? (selected?.fullName ?? value) : allLabel}
+            </span>
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          </button>
+        </PopoverTrigger>
+      </div>
       <PopoverContent
         className="p-0 border-border bg-popover text-popover-foreground"
         align="start"

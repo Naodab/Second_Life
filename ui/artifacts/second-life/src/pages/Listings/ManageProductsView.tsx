@@ -58,7 +58,6 @@ function parentCategoryIdsForSubSelections(
 const PRODUCT_SORT_OPTIONS: { value: FacilityProductSort; label: string }[] = [
   { value: "UPDATED_AT_DESC", label: "Cập nhật mới nhất" },
   { value: "CREATED_AT_DESC", label: "Tạo mới nhất" },
-  { value: "NAME_ASC", label: "Tên A → Z" },
   { value: "RELEVANCE", label: "Liên quan từ khóa" },
 ];
 
