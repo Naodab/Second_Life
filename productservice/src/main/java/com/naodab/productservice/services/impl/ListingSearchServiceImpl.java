@@ -191,7 +191,7 @@ public class ListingSearchServiceImpl implements ListingSearchService {
         geoRadiusFilterEnabled,
         request.getLatitude(),
         request.getLongitude(),
-        must -> OpenSearchNativeQueryHelper.addKeywordMultiMatchMust(
+        must -> OpenSearchNativeQueryHelper.addKeywordSearchMust(
             must,
             request.getKeyword(),
             OpenSearchNativeQueryHelper.listingKeywordSearchFields()),

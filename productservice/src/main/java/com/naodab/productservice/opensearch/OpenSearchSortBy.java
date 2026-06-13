@@ -5,5 +5,4 @@ public enum OpenSearchSortBy {
   DISTANCE,
   UPDATED_AT_DESC,
   CREATED_AT_DESC,
-  NAME_ASC,
 }

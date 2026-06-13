@@ -8,7 +8,6 @@ import { fetchListingRecommendations, searchListings, type ListingItemResponse }
 import { useAuth } from "@/context/AuthContext";
 import { useVisitorLocation } from "@/context/VisitorLocationContext";
 import { listingGeoParamsFromVisitor } from "@/lib/listing-geo";
-import { loadVisitorLocation, resolveVisitorLocationFromIp } from "@/lib/visitor-location";
 import { useCategories } from "@/hooks/use-categories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CornerAngleQuickFilter } from "@/components/CornerAngleQuickFilter";
@@ -23,28 +22,12 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const [listings, setListings] = useState<ListingItemResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { location, reload } = useVisitorLocation();
+  const { location, locationResolveDone } = useVisitorLocation();
   const { user, isLoggedIn, isAdmin, sellerHubProfileComplete } = useAuth();
   const profileId = user?.id?.trim() ? user.id : undefined;
-  const [geoReady, setGeoReady] = useState(() => loadVisitorLocation() != null);
 
   useEffect(() => {
-    if (geoReady) return;
-    let cancelled = false;
-    (async () => {
-      await resolveVisitorLocationFromIp();
-      if (!cancelled) {
-        reload();
-        setGeoReady(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [geoReady, reload]);
-
-  useEffect(() => {
-    if (!geoReady) return;
+    if (!locationResolveDone) return;
     let cancelled = false;
     (async () => {
       setIsLoading(true);
@@ -80,7 +63,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [geoReady, location, profileId]);
+  }, [locationResolveDone, location, profileId]);
   const {
     data: categories,
     isLoading: categoriesLoading,

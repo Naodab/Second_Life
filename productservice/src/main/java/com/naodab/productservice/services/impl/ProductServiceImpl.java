@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -24,6 +25,7 @@ import com.naodab.productservice.dto.response.ProductResponse;
 import com.naodab.productservice.dto.response.ProductVariantSummaryResponse;
 import com.naodab.productservice.mapper.ProductMapper;
 import com.naodab.productservice.mapper.ProductVariantMapper;
+import com.naodab.productservice.util.SkuNormalizer;
 import com.naodab.productservice.models.Attribute;
 import com.naodab.productservice.models.AttributeValue;
 import com.naodab.productservice.models.Product;
@@ -354,32 +356,29 @@ public class ProductServiceImpl implements ProductService {
 
   private String generateSku(Product product, List<AttributeValue> attributeValues, int sequence) {
     SubCategory primarySubCategory = product.getPrimarySubCategory();
-    String categoryCode = safeSkuPart(
+    String categoryCode = SkuNormalizer.normalizePart(
         primarySubCategory.getCategory() == null ? null : primarySubCategory.getCategory().getCode(),
         primarySubCategory.getCategory() == null ? "CAT" : primarySubCategory.getCategory().getId());
-    String subCategoryCode = safeSkuPart(primarySubCategory.getCode(), primarySubCategory.getId());
+    String subCategoryCode = SkuNormalizer.normalizePart(primarySubCategory.getCode(), primarySubCategory.getId());
     String primarySku = categoryCode + subCategoryCode;
-    String productPart = safeSkuPart(product.getName(), "PRODUCT");
+    String productPart = SkuNormalizer.normalizePart(product.getName(), "PRODUCT");
     String attributePart = attributeValues.isEmpty()
         ? "NA"
         : attributeValues.stream()
-            .map(attributeValue -> safeSkuPart(attributeValue.getCode(), attributeValue.getId()))
+            .map(attributeValue -> SkuNormalizer.normalizePart(
+                firstNonBlank(attributeValue.getCode(), attributeValue.getValue()),
+                attributeValue.getId()))
             .collect(Collectors.joining("-"));
     String suffix = String.format("%03d%s", sequence,
-        UUID.randomUUID().toString().replace("-", "").substring(0, 4).toUpperCase());
+        UUID.randomUUID().toString().replace("-", "").substring(0, 4).toUpperCase(Locale.ROOT));
     return String.join("-", primarySku, productPart, attributePart, suffix);
   }
 
-  private String safeSkuPart(String preferred, String fallback) {
-    String source = preferred == null || preferred.isBlank() ? fallback : preferred;
-    if (source == null) {
-      return "NA";
+  private static String firstNonBlank(String first, String second) {
+    if (StringUtils.hasText(first)) {
+      return first;
     }
-    String normalized = source.trim()
-        .toUpperCase()
-        .replaceAll("[^A-Z0-9]+", "-")
-        .replaceAll("(^-)|(-$)", "");
-    return normalized.isBlank() ? "NA" : normalized;
+    return second;
   }
 
   @Override

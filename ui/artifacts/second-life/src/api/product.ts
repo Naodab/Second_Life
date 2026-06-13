@@ -20,7 +20,7 @@ export type PrimarySubcategorySummary = {
   productCount: number;
 };
 
-export type FacilityProductSort = "UPDATED_AT_DESC" | "CREATED_AT_DESC" | "RELEVANCE" | "NAME_ASC";
+export type FacilityProductSort = "UPDATED_AT_DESC" | "CREATED_AT_DESC" | "RELEVANCE";
 
 export type GetFacilityProductPageParams = {
   page?: number;

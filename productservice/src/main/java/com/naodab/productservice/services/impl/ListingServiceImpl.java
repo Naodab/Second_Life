@@ -16,13 +16,11 @@ import com.naodab.productservice.config.CacheConfig;
 
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
-import com.naodab.productservice.dto.request.AiSuggestPriceRequest;
 import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequestNormalizer;
 import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
-import com.naodab.productservice.dto.response.AiSuggestPriceResponse;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingVariantContextResponse;
 import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
@@ -40,10 +38,8 @@ import com.naodab.productservice.models.ListingVariant;
 import com.naodab.productservice.opensearch.OpenSearchSortBy;
 import com.naodab.productservice.models.Product;
 import com.naodab.productservice.models.Product.ProductStatus;
-import com.naodab.productservice.models.ProductMedia;
 import com.naodab.productservice.models.ListingVariant.RentUnit;
 import com.naodab.productservice.models.ProductVariant;
-import com.naodab.productservice.models.SubCategory;
 import com.naodab.productservice.repositories.ListingRepository;
 import com.naodab.productservice.repositories.FacilityRepository;
 import com.naodab.productservice.repositories.ListingVariantRepository;
@@ -51,7 +47,6 @@ import com.naodab.productservice.repositories.ProductRepository;
 import com.naodab.productservice.repositories.ProductVariantRepository;
 import com.naodab.productservice.opensearch.OpenSearchNativeQueryHelper;
 import com.naodab.productservice.kafka.CreateInventoryItemsEventProducer;
-import com.naodab.productservice.services.AiService;
 import com.naodab.productservice.services.FacilityService;
 import com.naodab.productservice.services.ListingSearchService;
 import com.naodab.productservice.services.ListingService;
@@ -86,7 +81,6 @@ public class ListingServiceImpl implements ListingService {
   FacilityMapper facilityMapper;
   FacilityService facilityService;
   CreateInventoryItemsEventProducer createInventoryItemsEventProducer;
-  AiService aiService;
 
   @Override
   @Transactional(readOnly = true)
@@ -374,14 +368,6 @@ public class ListingServiceImpl implements ListingService {
     ListingPriceAggregate priceAggregate = ListingPriceAggregate.fromVariantRequests(request.getVariants(),
         listingType);
 
-    RentUnit defaultRentUnit = RentUnit.DAY;
-    if (request.getVariants() != null && !request.getVariants().isEmpty()
-        && request.getVariants().get(0).getRentUnit() != null) {
-      defaultRentUnit = request.getVariants().get(0).getRentUnit();
-    }
-    AiPriceHints listingAiHints = resolveListingAiPriceHints(
-        product, listingType, defaultRentUnit, request.getTitle(), request.getDescription());
-
     Listing listing = Listing.builder()
         .product(product)
         .facility(facility)
@@ -391,8 +377,6 @@ public class ListingServiceImpl implements ListingService {
         .listingStatus(Listing.ListingStatus.PENDING)
         .minPrice(priceAggregate.minPrice())
         .maxPrice(priceAggregate.maxPrice())
-        .aiSuggestedBuyPrice(listingAiHints.buyPrice())
-        .aiSuggestedRentPrice(listingAiHints.rentPrice())
         .build();
 
     Listing saved = listingRepository.save(listing);
@@ -413,8 +397,6 @@ public class ListingServiceImpl implements ListingService {
             .buyPrice(variantReq.getBuyPrice())
             .rentPrice(variantReq.getRentPrice())
             .rentUnit(rentUnit)
-            .aiSuggestedBuyPrice(listingAiHints.buyPrice())
-            .aiSuggestedRentPrice(listingAiHints.rentPrice())
             .isActive(variantReq.getIsActive() != null ? variantReq.getIsActive() : Boolean.TRUE)
             .build());
         persistedVariants.add(persisted);
@@ -478,70 +460,6 @@ public class ListingServiceImpl implements ListingService {
 
     List<ListingVariant> variantEntities = listingVariantRepository.findByListing_Id(saved.getId());
     return listingMapper.toListingResponse(indexed, variantEntities);
-  }
-
-  private record AiPriceHints(Double buyPrice, Double rentPrice) {
-  }
-
-  /**
-   * Best-effort AI price snapshot at listing creation (listing + variants). Never
-   * blocks listing if AI fails.
-   */
-  private AiPriceHints resolveListingAiPriceHints(
-      Product product,
-      Listing.ListingType listingType,
-      RentUnit rentUnit,
-      String listingTitle,
-      String listingDescription) {
-    try {
-      Hibernate.initialize(product.getMedias());
-      AiSuggestPriceRequest req = new AiSuggestPriceRequest();
-      req.setProductName(product.getName());
-      req.setProductDescription(product.getDescription());
-      req.setListingTitle(listingTitle);
-      req.setListingDescription(listingDescription);
-      req.setListingType(listingType.name());
-      req.setRentUnit(rentUnit != null ? rentUnit.name() : null);
-      req.setManufactureYear(product.getManufactureYear());
-      req.setImageUrls(collectProductImageUrls(product, 2));
-
-      SubCategory primary = product.getPrimarySubCategory();
-      if (primary != null && StringUtils.hasText(primary.getName())) {
-        req.setSubCategoryNames(List.of(primary.getName().trim()));
-      }
-
-      AiSuggestPriceResponse suggestion = aiService.suggestPrice(req);
-      if (suggestion.getSuggestedPriceVnd() == null || suggestion.getSuggestedPriceVnd() <= 0) {
-        return new AiPriceHints(null, null);
-      }
-      double price = suggestion.getSuggestedPriceVnd().doubleValue();
-      if (listingType == Listing.ListingType.RENT) {
-        return new AiPriceHints(null, price);
-      }
-      return new AiPriceHints(price, null);
-    } catch (Exception ex) {
-      log.warn("AI price suggestion skipped for product {}: {}", product.getId(), ex.getMessage());
-      return new AiPriceHints(null, null);
-    }
-  }
-
-  private static List<String> collectProductImageUrls(Product product, int limit) {
-    if (product == null || product.getMedias() == null || product.getMedias().isEmpty()) {
-      return List.of();
-    }
-    List<String> urls = new ArrayList<>();
-    product.getMedias().stream()
-        .filter(m -> m.getMediaType() == ProductMedia.MediaType.IMAGE)
-        .sorted((a, b) -> Boolean.compare(
-            Boolean.TRUE.equals(b.getIsThumbnail()),
-            Boolean.TRUE.equals(a.getIsThumbnail())))
-        .map(ProductMedia::getMediaUrl)
-        .filter(StringUtils::hasText)
-        .map(String::trim)
-        .distinct()
-        .limit(limit)
-        .forEach(urls::add);
-    return urls;
   }
 
   private record ListingPriceAggregate(Double minPrice, Double maxPrice) {

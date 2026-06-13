@@ -28,7 +28,6 @@ import com.naodab.productservice.dto.request.ListingCreateRequest;
 import com.naodab.productservice.dto.request.ListingSearchRequest;
 import com.naodab.productservice.dto.request.ListingUpdateRequest;
 import com.naodab.productservice.dto.request.ListingVariantCreateRequest;
-import com.naodab.productservice.dto.response.AiSuggestPriceResponse;
 import com.naodab.productservice.dto.response.FacilityResponse;
 import com.naodab.productservice.dto.response.ListingItemResponse;
 import com.naodab.productservice.dto.response.ListingPublicDetailResponse;
@@ -51,7 +50,6 @@ import com.naodab.productservice.repositories.ProductRepository;
 import com.naodab.productservice.repositories.ProductVariantRepository;
 import com.naodab.productservice.opensearch.OpenSearchSortBy;
 import com.naodab.productservice.kafka.CreateInventoryItemsEventProducer;
-import com.naodab.productservice.services.AiService;
 import com.naodab.productservice.services.ListingSearchService;
 
 @ExtendWith(MockitoExtension.class)
@@ -89,9 +87,6 @@ class ListingServiceImplTest {
 
   @Mock
   com.naodab.productservice.services.FacilityService facilityService;
-
-  @Mock
-  AiService aiService;
 
   @InjectMocks
   ListingServiceImpl listingService;
@@ -278,8 +273,6 @@ class ListingServiceImplTest {
               return lv;
             });
     when(listingMapper.toListingResponse(savedListing, List.of())).thenReturn(mappedResponse);
-    when(aiService.suggestPrice(any()))
-        .thenReturn(AiSuggestPriceResponse.builder().suggestedPriceVnd(300_000L).build());
 
     ListingResponse out = listingService.createListing("me", req);
 
@@ -296,7 +289,7 @@ class ListingServiceImplTest {
   }
 
   @Test
-  void createListing_persistsAiSuggestedBuyPriceOnListingAndVariants() {
+  void createListing_leavesAiSuggestedPricesNull() {
     ListingVariantCreateRequest variantReq = ListingVariantCreateRequest.builder()
         .productVariantId("pv-1")
         .quantity(1L)
@@ -339,77 +332,18 @@ class ListingServiceImplTest {
               return lv;
             });
     when(listingMapper.toListingResponse(savedListing, List.of())).thenReturn(mappedResponse);
-    when(aiService.suggestPrice(any()))
-        .thenReturn(AiSuggestPriceResponse.builder().suggestedPriceVnd(3_200_000L).build());
 
     listingService.createListing("me", req);
 
     ArgumentCaptor<Listing> listingCaptor = ArgumentCaptor.forClass(Listing.class);
     verify(listingRepository).save(listingCaptor.capture());
-    assertThat(listingCaptor.getValue().getAiSuggestedBuyPrice()).isEqualTo(3_200_000d);
+    assertThat(listingCaptor.getValue().getAiSuggestedBuyPrice()).isNull();
     assertThat(listingCaptor.getValue().getAiSuggestedRentPrice()).isNull();
 
     ArgumentCaptor<ListingVariant> variantCaptor = ArgumentCaptor.forClass(ListingVariant.class);
     verify(listingVariantRepository).save(variantCaptor.capture());
-    assertThat(variantCaptor.getValue().getAiSuggestedBuyPrice()).isEqualTo(3_200_000d);
+    assertThat(variantCaptor.getValue().getAiSuggestedBuyPrice()).isNull();
     assertThat(variantCaptor.getValue().getAiSuggestedRentPrice()).isNull();
-  }
-
-  @Test
-  void createListing_whenAiFails_stillCreatesListingWithoutAiPrices() {
-    ListingVariantCreateRequest variantReq = ListingVariantCreateRequest.builder()
-        .productVariantId("pv-1")
-        .quantity(1L)
-        .buyPrice(250_000d)
-        .build();
-    ListingCreateRequest req = ListingCreateRequest.builder()
-        .productId("prod")
-        .facilityId("fac")
-        .title("Listing")
-        .listingType(Listing.ListingType.BUY)
-        .variants(List.of(variantReq))
-        .build();
-
-    Product mine = minimalProduct("me", ProductStatus.PUBLISHED);
-    mine.setId("prod");
-    Facility fac = Facility.builder().id("fac").build();
-    Listing savedListing = Listing.builder()
-        .id("listing-1")
-        .product(mine)
-        .facility(fac)
-        .title("Listing")
-        .listingType(Listing.ListingType.BUY)
-        .listingStatus(Listing.ListingStatus.PENDING)
-        .build();
-    ProductVariant productVariant = ProductVariant.builder().id("pv-1").product(mine).sku("SKU-1").build();
-    ListingResponse mappedResponse = ListingResponse.builder().id("listing-1").variants(List.of()).build();
-
-    when(productRepository.findByIdAndDeletedAtIsNull("prod")).thenReturn(Optional.of(mine));
-    when(facilityRepository.findByOwnerIdAndIdAndDeletedAtIsNull("me", "fac")).thenReturn(Optional.of(fac));
-    when(productVariantRepository.findByIdAndProduct_IdAndDeletedAtIsNull("pv-1", "prod"))
-        .thenReturn(Optional.of(productVariant));
-    when(listingRepository.save(any(Listing.class))).thenReturn(savedListing);
-    when(listingRepository.findWithProductGraphById("listing-1")).thenReturn(Optional.of(savedListing));
-    when(listingVariantRepository.findByListing_Id("listing-1")).thenReturn(List.of());
-    when(listingVariantRepository.save(any(ListingVariant.class)))
-        .thenAnswer(
-            invocation -> {
-              ListingVariant lv = invocation.getArgument(0);
-              lv.setId("lv-created-1");
-              return lv;
-            });
-    when(listingMapper.toListingResponse(savedListing, List.of())).thenReturn(mappedResponse);
-    when(aiService.suggestPrice(any())).thenThrow(new RuntimeException("Gemini down"));
-
-    ListingResponse out = listingService.createListing("me", req);
-
-    ArgumentCaptor<Listing> listingCaptor = ArgumentCaptor.forClass(Listing.class);
-    verify(listingRepository).save(listingCaptor.capture());
-    assertThat(listingCaptor.getValue().getAiSuggestedBuyPrice()).isNull();
-    assertThat(listingCaptor.getValue().getAiSuggestedRentPrice()).isNull();
-    assertThat(out).isSameAs(mappedResponse);
-    verify(createInventoryItemsEventProducer)
-        .publishForNewListing(eq("listing-1"), eq(Listing.ListingType.BUY), anyList());
   }
 
   @Test

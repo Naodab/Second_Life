@@ -13,8 +13,8 @@ public interface GisProvinceRepository extends JpaRepository<GisProvince, Intege
 
   @Query(value = """
       SELECT * FROM gis_provinces
-      WHERE ST_Contains(geom, ST_GeomFromText('POINT(:lon :lat)', 4326))
-      ORDER BY ST_Distance_Sphere(ST_Centroid(geom), ST_GeomFromText('POINT(:lon :lat)', 4326))
+      WHERE ST_Contains(geom, ST_GeomFromText(CONCAT('POINT(', :lat, ' ', :lon, ')'), 4326))
+      ORDER BY ST_Distance_Sphere(ST_Centroid(geom), ST_GeomFromText(CONCAT('POINT(', :lat, ' ', :lon, ')'), 4326))
       """, nativeQuery = true)
   List<GisProvince> findByLonAndLat(@Param("lon") Float lon, @Param("lat") Float lat);
 
@@ -22,9 +22,9 @@ public interface GisProvinceRepository extends JpaRepository<GisProvince, Intege
       SELECT * FROM gis_provinces
       WHERE ST_Distance_Sphere(
           ST_Centroid(geom),
-          ST_GeomFromText('POINT(:lon :lat)', 4326)
+          ST_GeomFromText(CONCAT('POINT(', :lat, ' ', :lon, ')'), 4326)
       ) <= :radiusMeters
-      ORDER BY ST_Distance_Sphere(ST_Centroid(geom), ST_GeomFromText('POINT(:lon :lat)', 4326))
+      ORDER BY ST_Distance_Sphere(ST_Centroid(geom), ST_GeomFromText(CONCAT('POINT(', :lat, ' ', :lon, ')'), 4326))
       """, nativeQuery = true)
   List<GisProvince> findWithinRadius(
       @Param("lat") Float lat,

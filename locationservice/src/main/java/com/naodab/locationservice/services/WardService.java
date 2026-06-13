@@ -3,6 +3,7 @@ package com.naodab.locationservice.services;
 import java.util.List;
 
 import com.naodab.locationservice.dto.request.WardSearchRequest;
+import com.naodab.locationservice.dto.response.CoordinateResolveResponse;
 import com.naodab.locationservice.dto.response.WardResponse;
 
 public interface WardService {
@@ -15,6 +16,8 @@ public interface WardService {
   List<WardResponse> getWardsByLonAndLat(Float lon, Float lat, int page, int pageSize);
 
   List<WardResponse> getWardsByLonAndLatWithoutPagination(Float lon, Float lat);
+
+  CoordinateResolveResponse resolveCoordinates(Float lon, Float lat);
 
   List<WardResponse> getAllWithoutPagination(WardSearchRequest request);
 

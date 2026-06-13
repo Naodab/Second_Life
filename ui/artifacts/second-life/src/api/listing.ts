@@ -49,7 +49,6 @@ export type ListingSearchSort =
   | "UPDATED_AT_DESC"
   | "CREATED_AT_DESC"
   | "RELEVANCE"
-  | "NAME_ASC"
   | "DISTANCE";
 
 export type ListingSuggestionResponse = {

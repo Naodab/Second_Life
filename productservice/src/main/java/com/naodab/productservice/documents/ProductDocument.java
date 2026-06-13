@@ -74,7 +74,7 @@ public class ProductDocument {
   @Field(type = FieldType.Keyword)
   String primarySubCategoryId;
 
-  @Field(type = FieldType.Keyword)
+  @Field(type = FieldType.Text, analyzer = "standard")
   String primarySubCategoryName;
 
   @Field(type = FieldType.Keyword)
