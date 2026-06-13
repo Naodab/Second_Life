@@ -1,5 +1,6 @@
 package com.naodab.productservice.opensearch;
 
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -7,7 +8,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import jakarta.json.stream.JsonGenerator;
 import org.opensearch.client.json.JsonData;
+import org.opensearch.client.json.JsonpSerializable;
+import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch._types.DistanceUnit;
 import org.opensearch.client.opensearch._types.FieldValue;
 import org.opensearch.client.opensearch._types.SortOptions;
@@ -36,7 +40,17 @@ public final class OpenSearchNativeQueryHelper {
       "listingType",
       "listingStatus");
 
+  private static final JacksonJsonpMapper JSON_MAPPER = new JacksonJsonpMapper();
+
   private OpenSearchNativeQueryHelper() {
+  }
+
+  private static String serializeToJson(JsonpSerializable value) {
+    StringWriter writer = new StringWriter();
+    JsonGenerator generator = JSON_MAPPER.jsonProvider().createGenerator(writer);
+    value.serialize(generator, JSON_MAPPER);
+    generator.close();
+    return writer.toString();
   }
 
   public static Set<String> keywordScalarFilterFieldNames() {
@@ -256,7 +270,15 @@ public final class OpenSearchNativeQueryHelper {
         .withPageable(pageable);
     appendSort.accept(builder);
     var query = builder.build();
-    log.info("Native query: {}", query.getQuery());
+    if (log.isInfoEnabled()) {
+      log.info("OpenSearch query DSL: {}", query.getQuery().toJsonString());
+      if (!query.getSortOptions().isEmpty()) {
+        log.info(
+            "OpenSearch sort: {}",
+            query.getSortOptions().stream().map(OpenSearchNativeQueryHelper::serializeToJson).toList());
+      }
+      log.info("OpenSearch page: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
+    }
     return query;
   }
 
