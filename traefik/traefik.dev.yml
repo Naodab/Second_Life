@@ -11,12 +11,11 @@ accessLog: {}
 entryPoints:
   web:
     address: :80
-  traefik:
-    address: :8080
 
 api:
   dashboard: true
-  insecure: true
+  insecure: false
+  basePath: /traefik
 
 providers:
   file:

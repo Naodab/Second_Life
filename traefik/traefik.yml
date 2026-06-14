@@ -4,7 +4,8 @@ entryPoints:
 
 api:
   dashboard: true
-  insecure: true
+  insecure: false
+  basePath: /traefik
 
 providers:
   file:
