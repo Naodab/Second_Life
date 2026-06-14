@@ -10,6 +10,10 @@ http:
           - "role"
         authRequestHeaders:
           - "Authorization"
+    traefik-dashboard-strip:
+      stripPrefix:
+        prefixes:
+          - "/traefik"
 
   routers:
     auth-api-options:
@@ -145,10 +149,19 @@ http:
         - gateway-jwt
       priority: 50
 
+    traefik-dashboard:
+      rule: "PathPrefix(`/traefik`)"
+      service: api@internal
+      entryPoints:
+        - web
+      middlewares:
+        - traefik-dashboard-strip
+      priority: 100
+
     # Dev SPA — proxy to Vite on the host (npm run dev). Never catch /api/* (Traefik auto-priority
     # for PathPrefix(`/`) can beat auth-api@priority 1).
     ui-spa:
-      rule: "PathPrefix(`/`) && !PathPrefix(`/api`)"
+      rule: "PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/traefik`)"
       service: vite-dev
       entryPoints:
         - web

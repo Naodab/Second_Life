@@ -9,6 +9,7 @@ services:
     volumes:
       - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic.prod.yml:/etc/traefik/dynamic.yml:ro
+      - ./traefik/dashboard.htpasswd:/etc/traefik/dashboard.htpasswd:ro
       - traefik-letsencrypt:/letsencrypt
     env_file:
       - .env
@@ -92,7 +93,7 @@ services:
       JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
 
   kafka:
-    ports: []
+    ports: !override []
     restart: unless-stopped
     # Small VPS: cap heap so broker+controller heartbeats stay stable under many Spring containers.
     environment:
