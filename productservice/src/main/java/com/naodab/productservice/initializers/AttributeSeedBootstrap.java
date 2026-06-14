@@ -4,6 +4,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
@@ -49,22 +51,96 @@ public class AttributeSeedBootstrap {
       }
 
       int added = 0;
+      int updated = 0;
       for (AttributeSeed seed : seeds) {
-        if (seed.getId() == null || attributeRepository.existsById(seed.getId())) {
+        if (seed.getId() == null) {
           continue;
         }
-        attributeRepository.save(seed.toAttribute());
-        added++;
+        Optional<Attribute> existing = attributeRepository.findById(seed.getId());
+        if (existing.isEmpty()) {
+          attributeRepository.save(seed.toAttribute());
+          added++;
+          continue;
+        }
+        if (syncFromSeed(existing.get(), seed)) {
+          attributeRepository.save(existing.get());
+          updated++;
+        }
       }
-      if (added > 0) {
-        log.info("Added {} missing attribute seed(s)", added);
+      if (added > 0 || updated > 0) {
+        log.info("Attribute seed sync: {} added, {} updated", added, updated);
       } else {
-        log.info("Attributes already initialized");
+        log.info("Attributes already up to date with seed");
       }
     } catch (Exception e) {
       log.error("Error initializing attributes", e);
       throw new IllegalStateException("Attribute seed failed", e);
     }
+  }
+
+  static boolean syncFromSeed(Attribute attribute, AttributeSeed seed) {
+    boolean changed = false;
+
+    if (syncSubCategoryIds(attribute, seed.getSubCategoryIds())) {
+      changed = true;
+    }
+
+    if (seed.getAttributeValues() != null) {
+      for (AttributeValueSeed valueSeed : seed.getAttributeValues()) {
+        if (valueSeed.getId() == null) {
+          continue;
+        }
+        Optional<AttributeValue> existingValue = attribute.getAttributeValues().stream()
+            .filter(value -> valueSeed.getId().equals(value.getId()))
+            .findFirst();
+        if (existingValue.isEmpty()) {
+          attribute.addAttributeValue(toAttributeValue(valueSeed));
+          changed = true;
+          continue;
+        }
+        if (syncAttributeValue(existingValue.get(), valueSeed)) {
+          changed = true;
+        }
+      }
+    }
+
+    return changed;
+  }
+
+  private static boolean syncSubCategoryIds(Attribute attribute, List<String> seedSubCategoryIds) {
+    List<String> desired = seedSubCategoryIds == null ? List.of() : List.copyOf(seedSubCategoryIds);
+    List<String> current = attribute.getSubCategoryIds() == null ? List.of() : attribute.getSubCategoryIds();
+    if (current.equals(desired)) {
+      return false;
+    }
+    if (attribute.getSubCategoryIds() == null) {
+      attribute.setSubCategoryIds(new ArrayList<>(desired));
+    } else {
+      attribute.getSubCategoryIds().clear();
+      attribute.getSubCategoryIds().addAll(desired);
+    }
+    return true;
+  }
+
+  private static boolean syncAttributeValue(AttributeValue existing, AttributeValueSeed seed) {
+    boolean changed = false;
+    if (seed.getValue() != null && !Objects.equals(seed.getValue(), existing.getValue())) {
+      existing.setValue(seed.getValue());
+      changed = true;
+    }
+    if (seed.getCode() != null && !Objects.equals(seed.getCode(), existing.getCode())) {
+      existing.setCode(seed.getCode());
+      changed = true;
+    }
+    return changed;
+  }
+
+  private static AttributeValue toAttributeValue(AttributeValueSeed seed) {
+    return AttributeValue.builder()
+        .id(seed.id)
+        .value(seed.value)
+        .code(seed.code)
+        .build();
   }
 
   private List<AttributeSeed> loadSeeds() throws java.io.IOException {
@@ -99,12 +175,7 @@ public class AttributeSeedBootstrap {
 
       if (attributeValues != null) {
         for (AttributeValueSeed seed : attributeValues) {
-          AttributeValue attributeValue = AttributeValue.builder()
-              .id(seed.id)
-              .value(seed.value)
-              .code(seed.code)
-              .build();
-          attribute.addAttributeValue(attributeValue);
+          attribute.addAttributeValue(toAttributeValue(seed));
         }
       }
 

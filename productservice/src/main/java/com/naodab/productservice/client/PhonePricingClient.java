@@ -34,7 +34,6 @@ public class PhonePricingClient {
     this.suggestPhonePath = suggestPhonePath;
   }
 
-  /** Visible for unit tests. */
   public PhonePricingClient(RestClient restClient, String aiServiceUrl) {
     this(restClient, aiServiceUrl, "/api/v1/ai/suggest-price/phone");
   }
