@@ -69,7 +69,7 @@ public class CategorySeedBootstrap {
       log.info("Categories initialized successfully");
     } catch (Exception e) {
       log.error("Error initializing categories", e);
-      throw new RuntimeException("Category seed failed", e);
+      throw new IllegalStateException("Category seed failed", e);
     }
   }
 

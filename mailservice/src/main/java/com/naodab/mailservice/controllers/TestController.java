@@ -23,6 +23,6 @@ public class TestController {
         .toEmail("nguyenhobadoan@gmail.com")
         .verificationToken("test-token")
         .build());
-    return new String();
+    return "";
   }
 }

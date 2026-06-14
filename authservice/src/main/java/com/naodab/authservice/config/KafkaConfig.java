@@ -43,7 +43,7 @@ public class KafkaConfig {
     return objectMapper;
   }
 
-  private <T> ProducerFactory<String, T> producerFactory(Class<T> type) {
+  private <T> ProducerFactory<String, T> producerFactory() {
     Map<String, Object> config = new HashMap<>();
     config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -57,23 +57,23 @@ public class KafkaConfig {
         serializer);
   }
 
-  private <T> KafkaTemplate<String, T> kafkaTemplate(Class<T> type) {
-    return new KafkaTemplate<>(producerFactory(type));
+  private <T> KafkaTemplate<String, T> kafkaTemplate() {
+    return new KafkaTemplate<>(producerFactory());
   }
 
   @Bean
   public KafkaTemplate<String, EmailVerificationEvent> emailVerificationKafkaTemplate() {
-    return kafkaTemplate(EmailVerificationEvent.class);
+    return kafkaTemplate();
   }
 
   @Bean
   public KafkaTemplate<String, ForgotPasswordEvent> forgotPasswordKafkaTemplate() {
-    return kafkaTemplate(ForgotPasswordEvent.class);
+    return kafkaTemplate();
   }
 
   @Bean
   public KafkaTemplate<String, CreateProfileEvent> createProfileKafkaTemplate() {
-    return kafkaTemplate(CreateProfileEvent.class);
+    return kafkaTemplate();
   }
 
   public <T> ConsumerFactory<String, T> consumerFactory(Class<T> type, String groupId) {

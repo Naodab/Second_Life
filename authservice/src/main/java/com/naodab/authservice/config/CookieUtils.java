@@ -36,7 +36,7 @@ public final class CookieUtils {
   public static <T> T deserialize(Cookie cookie, Class<T> clazz) {
     byte[] decoded = Base64.getUrlDecoder().decode(cookie.getValue());
     try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(decoded))) {
-      return (T) ois.readObject();
+      return (T) clazz.cast(ois.readObject());
     } catch (Exception e) {
       throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
     }
@@ -54,7 +54,7 @@ public final class CookieUtils {
     response.addCookie(cookie);
   }
 
-  public static void deleteCookie(HttpServletRequest request, HttpServletResponse response, String name) {
+  public static void deleteCookie(HttpServletResponse response, String name) {
     Cookie cookie = new Cookie(name, "");
     cookie.setPath("/");
     cookie.setHttpOnly(true);

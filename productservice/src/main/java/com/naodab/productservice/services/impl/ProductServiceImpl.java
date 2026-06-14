@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.naodab.commonjpa.util.AppDateTimes;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.dto.request.ProductCreateRequest;
@@ -481,7 +482,7 @@ public class ProductServiceImpl implements ProductService {
 
     Product product = productRepository.findByIdAndDeletedAtIsNull(id)
         .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
-    product.setDeletedAt(LocalDateTime.now());
+    product.setDeletedAt(AppDateTimes.now());
     productRepository.save(product);
     productSearchService.delete(id);
     listingSearchService.deleteListingsIndexByProductId(id);

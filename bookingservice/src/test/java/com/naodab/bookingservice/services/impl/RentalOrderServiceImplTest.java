@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,8 +51,8 @@ class RentalOrderServiceImplTest {
   private static final String CUSTOMER_ID = "customer-1";
   private static final String LISTING_VARIANT_ID = "variant-1";
   private static final String ORDER_ID = "order-1";
-  private static final LocalDateTime START_TIME = LocalDateTime.of(2026, 7, 1, 10, 0, 0);
-  private static final LocalDateTime END_TIME = LocalDateTime.of(2026, 7, 3, 10, 0, 0);
+  private static final LocalDateTime START_TIME = LocalDateTime.of(2026, Month.JULY, 1, 10, 0, 0);
+  private static final LocalDateTime END_TIME = LocalDateTime.of(2026, Month.JULY, 3, 10, 0, 0);
 
   @Mock
   RentalOrderRepository rentalOrderRepository;

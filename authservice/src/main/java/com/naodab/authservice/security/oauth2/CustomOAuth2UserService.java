@@ -33,6 +33,10 @@ import lombok.experimental.FieldDefaults;
 @RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
+
+  private static final String OAUTH_ENTRY_LOGIN = "login";
+  private static final String OAUTH_ENTRY_REGISTER = "register";
+
   AccountRepository accountRepository;
   CreateProfileProducer createProfileProducer;
 
@@ -65,15 +69,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
   private String resolveOauthEntry() {
     var attrs = RequestContextHolder.getRequestAttributes();
     if (!(attrs instanceof ServletRequestAttributes servletAttrs)) {
-      return "login";
+      return OAUTH_ENTRY_LOGIN;
     }
     HttpServletRequest request = servletAttrs.getRequest();
     return CookieUtils.getCookie(request, HttpCookieOAuth2AuthorizationRequestRepository.OAUTH_ENTRY_COOKIE_NAME)
         .map(Cookie::getValue)
         .map(String::trim)
         .map(String::toLowerCase)
-        .filter(v -> "login".equals(v) || "register".equals(v))
-        .orElse("login");
+        .filter(v -> OAUTH_ENTRY_LOGIN.equals(v) || OAUTH_ENTRY_REGISTER.equals(v))
+        .orElse(OAUTH_ENTRY_LOGIN);
   }
 
   private Account upsertAccount(OAuth2UserInfo userInfo, String providerKey, String oauthEntry) {

@@ -111,16 +111,51 @@ public class ProductMapper {
       return null;
     }
 
-    List<String> subCategoryIds = product.getProductSubCategories() == null
-        ? List.of()
-        : product.getProductSubCategories()
-            .stream()
-            .map(ProductSubCategory::getSubCategory)
-            .filter(subCategory -> subCategory != null && subCategory.getId() != null)
-            .map(subCategory -> subCategory.getId())
-            .toList();
+    List<String> subCategoryIds = extractSubCategoryIds(product);
+    CategoryIndex categoryIndex = extractCategoryIndex(product);
+    List<ProductVariant> variants = product.getVariants() == null ? List.of() : product.getVariants();
+    MediaIndex mediaIndex = extractMediaIndex(product);
+    VariantIndex variantIndex = extractVariantIndex(variants);
 
+    return ProductDocument.builder()
+        .id(product.getId())
+        .name(product.getName())
+        .description(product.getDescription())
+        .manufactureYear(product.getManufactureYear())
+        .thumbnailUrl(mediaIndex.thumbnailUrl())
+        .productMedias(mediaIndex.productMedias())
+        .ownerId(product.getOwnerId())
+        .primaryCategoryId(categoryIndex.primaryCategoryId())
+        .categoryIds(categoryIndex.categoryIds().isEmpty() ? List.of() : categoryIndex.categoryIds())
+        .subCategoryIds(subCategoryIds)
+        .primarySubCategoryId(
+            product.getPrimarySubCategory() == null ? null : product.getPrimarySubCategory().getId())
+        .primarySubCategoryName(
+            product.getPrimarySubCategory() == null ? null : product.getPrimarySubCategory().getName())
+        .attributeIds(variantIndex.attributeIds())
+        .attributeValues(variantIndex.attributeValues())
+        .variantSkus(variantIndex.variantSkus())
+        .variants(variantIndex.variantDocuments())
+        .status(product.getStatus())
+        .createdAt(product.getCreatedAt())
+        .updatedAt(product.getUpdatedAt())
+        .build();
+  }
+
+  private static List<String> extractSubCategoryIds(Product product) {
+    if (product.getProductSubCategories() == null) {
+      return List.of();
+    }
+    return product.getProductSubCategories().stream()
+        .map(ProductSubCategory::getSubCategory)
+        .filter(subCategory -> subCategory != null && subCategory.getId() != null)
+        .map(SubCategory::getId)
+        .toList();
+  }
+
+  private static CategoryIndex extractCategoryIndex(Product product) {
     Set<String> categoryIdSet = new LinkedHashSet<>();
+    String primaryCategoryId = null;
     if (product.getProductSubCategories() != null) {
       for (ProductSubCategory link : product.getProductSubCategories()) {
         SubCategory sub = link.getSubCategory();
@@ -130,28 +165,17 @@ public class ProductMapper {
         }
       }
     }
-    String primaryCategoryId = null;
     if (product.getPrimarySubCategory() != null) {
-      Category pc = product.getPrimarySubCategory().getCategory();
-      if (pc != null && StringUtils.hasText(pc.getId())) {
-        primaryCategoryId = pc.getId().trim();
+      Category primaryCategory = product.getPrimarySubCategory().getCategory();
+      if (primaryCategory != null && StringUtils.hasText(primaryCategory.getId())) {
+        primaryCategoryId = primaryCategory.getId().trim();
         categoryIdSet.add(primaryCategoryId);
       }
     }
-    List<String> categoryIds = List.copyOf(categoryIdSet);
+    return new CategoryIndex(primaryCategoryId, List.copyOf(categoryIdSet));
+  }
 
-    List<ProductVariant> variants = product.getVariants() == null ? List.of() : product.getVariants();
-    List<String> variantSkus = variants.stream()
-        .map(ProductVariant::getSku)
-        .filter(StringUtils::hasText)
-        .map(String::trim)
-        .distinct()
-        .toList();
-    List<ProductDocument.VariantDocument> variantDocuments = variants.stream()
-        .map(variant -> ProductDocument.VariantDocument.builder()
-            .sku(variant.getSku())
-            .build())
-        .toList();
+  private static MediaIndex extractMediaIndex(Product product) {
     List<ProductMedia> medias = product.getMedias() == null ? List.of() : product.getMedias();
     List<String> productMedias = medias.stream()
         .map(ProductMedia::getMediaUrl)
@@ -166,56 +190,54 @@ public class ProductMapper {
         .map(String::trim)
         .findFirst()
         .orElse(null);
+    return new MediaIndex(thumbnailUrl, productMedias);
+  }
 
+  private static VariantIndex extractVariantIndex(List<ProductVariant> variants) {
+    List<String> variantSkus = variants.stream()
+        .map(ProductVariant::getSku)
+        .filter(StringUtils::hasText)
+        .map(String::trim)
+        .distinct()
+        .toList();
+    List<ProductDocument.VariantDocument> variantDocuments = variants.stream()
+        .map(variant -> ProductDocument.VariantDocument.builder().sku(variant.getSku()).build())
+        .toList();
     List<String> attributeIds = variants.stream()
         .map(ProductVariant::getVariantAttributeValues)
         .filter(Objects::nonNull)
         .flatMap(List::stream)
         .map(ProductVariantAttributeValue::getAttributeValue)
         .filter(Objects::nonNull)
-        .map(attributeValue -> attributeValue.getAttribute())
+        .map(AttributeValue::getAttribute)
         .filter(Objects::nonNull)
-        .map(attribute -> attribute.getId())
+        .map(Attribute::getId)
         .filter(Objects::nonNull)
         .distinct()
         .toList();
-
     List<String> attributeValues = variants.stream()
         .map(ProductVariant::getVariantAttributeValues)
         .filter(Objects::nonNull)
         .flatMap(List::stream)
         .map(ProductVariantAttributeValue::getAttributeValue)
         .filter(Objects::nonNull)
-        .map(attributeValue -> attributeValue.getValue())
+        .map(AttributeValue::getValue)
         .filter(StringUtils::hasText)
         .map(String::trim)
         .distinct()
         .toList();
-
-    return ProductDocument.builder()
-        .id(product.getId())
-        .name(product.getName())
-        .description(product.getDescription())
-        .manufactureYear(product.getManufactureYear())
-        .thumbnailUrl(thumbnailUrl)
-        .productMedias(productMedias)
-        .ownerId(product.getOwnerId())
-        .primaryCategoryId(primaryCategoryId)
-        .categoryIds(categoryIds.isEmpty() ? List.of() : categoryIds)
-        .subCategoryIds(subCategoryIds)
-        .primarySubCategoryId(
-            product.getPrimarySubCategory() == null ? null : product.getPrimarySubCategory().getId())
-        .primarySubCategoryName(
-            product.getPrimarySubCategory() == null ? null : product.getPrimarySubCategory().getName())
-        .attributeIds(attributeIds)
-        .attributeValues(attributeValues)
-        .variantSkus(variantSkus)
-        .variants(variantDocuments)
-        .status(product.getStatus())
-        .createdAt(product.getCreatedAt())
-        .updatedAt(product.getUpdatedAt())
-        .build();
+    return new VariantIndex(variantSkus, variantDocuments, attributeIds, attributeValues);
   }
+
+  private record CategoryIndex(String primaryCategoryId, List<String> categoryIds) {}
+
+  private record MediaIndex(String thumbnailUrl, List<String> productMedias) {}
+
+  private record VariantIndex(
+      List<String> variantSkus,
+      List<ProductDocument.VariantDocument> variantDocuments,
+      List<String> attributeIds,
+      List<String> attributeValues) {}
 
   static GeoPoint toOpenSearchGeoPoint(Float lat, Float lon) {
     if (lat == null || lon == null) {

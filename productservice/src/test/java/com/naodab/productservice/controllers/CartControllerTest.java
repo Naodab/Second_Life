@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -56,7 +57,7 @@ class CartControllerTest {
         .quantity(1)
         .mode(CartMode.BUY)
         .listingType(ListingType.BUY)
-        .addedAt(LocalDateTime.of(2026, 6, 5, 10, 0))
+        .addedAt(LocalDateTime.of(2026, Month.JUNE, 5, 10, 0))
         .build();
     when(cartService.listCartItems("profile-1")).thenReturn(List.of(item));
 

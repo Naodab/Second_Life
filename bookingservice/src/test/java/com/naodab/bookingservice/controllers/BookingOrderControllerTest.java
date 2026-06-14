@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,7 @@ class BookingOrderControllerTest {
   private static final String ORDER_ID = "order-1";
   private static final String LISTING_VARIANT_ID = "variant-1";
   private static final String CUSTOMER_ID = "customer-1";
+  private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2030, Month.JUNE, 1, 12, 0, 0);
 
   @Mock
   BookingOrderService bookingOrderService;
@@ -149,7 +151,7 @@ class BookingOrderControllerTest {
         .customerId(CUSTOMER_ID)
         .listingVariantId(LISTING_VARIANT_ID)
         .quantity(1)
-        .pickupTime(LocalDateTime.now().plusDays(1))
+        .pickupTime(FIXED_NOW.plusDays(1))
         .status(BookingOrderStatus.PENDING)
         .build();
     when(bookingOrderService.listBookingOrders(PROFILE_ID)).thenReturn(List.of(response));
@@ -197,14 +199,14 @@ class BookingOrderControllerTest {
 
   @Test
   void listBookingOrders_trimsProfileHeader_andReturnsOrderFields() throws Exception {
-    LocalDateTime createdAt = LocalDateTime.of(2026, 5, 1, 9, 30, 0);
+    LocalDateTime createdAt = LocalDateTime.of(2026, Month.MAY, 1, 9, 30, 0);
     BookingOrderResponse response = BookingOrderResponse.builder()
         .id(ORDER_ID)
         .customerId(CUSTOMER_ID)
         .listingVariantId(LISTING_VARIANT_ID)
         .quantity(2)
         .price(150_000L)
-        .pickupTime(LocalDateTime.now().plusDays(3))
+        .pickupTime(FIXED_NOW.plusDays(3))
         .status(BookingOrderStatus.CONFIRMED)
         .createdAt(createdAt)
         .build();
@@ -253,7 +255,7 @@ class BookingOrderControllerTest {
         .customerId(CUSTOMER_ID)
         .listingVariantId(LISTING_VARIANT_ID)
         .quantity(1)
-        .pickupTime(LocalDateTime.now().plusDays(1))
+        .pickupTime(FIXED_NOW.plusDays(1))
         .status(BookingOrderStatus.PENDING)
         .build();
     when(bookingOrderService.listFacilityOrders(PROFILE_ID, "facility-1")).thenReturn(List.of(response));
@@ -273,7 +275,7 @@ class BookingOrderControllerTest {
         .customerId(CUSTOMER_ID)
         .listingVariantId(LISTING_VARIANT_ID)
         .quantity(1)
-        .pickupTime(LocalDateTime.now().plusDays(1))
+        .pickupTime(FIXED_NOW.plusDays(1))
         .status(BookingOrderStatus.CONFIRMED)
         .build();
     BookingOrderStatusUpdateRequest body = BookingOrderStatusUpdateRequest.builder()
@@ -333,7 +335,7 @@ class BookingOrderControllerTest {
     return BookingOrderCreateRequest.builder()
         .listingVariantId(LISTING_VARIANT_ID)
         .quantity(1)
-        .pickupTime(LocalDateTime.now().plusDays(1))
+        .pickupTime(FIXED_NOW.plusDays(1))
         .customerId(CUSTOMER_ID)
         .build();
   }

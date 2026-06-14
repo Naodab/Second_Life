@@ -51,6 +51,7 @@ public class AiServiceImpl implements AiService {
 
   private static final String GEMINI_BASE_URL =
       "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+  private static final String APPLICATION_JSON = MediaType.APPLICATION_JSON_VALUE;
 
   private static final String DESCRIPTION_PROMPT = """
       You are an expert copywriter for "Second Life" — a Vietnamese second-hand marketplace.
@@ -154,7 +155,7 @@ public class AiServiceImpl implements AiService {
         parts.add(Map.of("inlineData", Map.of("mimeType", "image/jpeg", "data", base64)));
       }
 
-      String json = callGemini(parts, 1024, 0.2, "application/json", null);
+      String json = callGemini(parts, 1024, 0.2, APPLICATION_JSON, null);
       GeminiAnalysis raw = parseGeminiAnalysis(json);
       return resolveToIds(raw, ctx);
     } catch (HttpClientErrorException.TooManyRequests e) {

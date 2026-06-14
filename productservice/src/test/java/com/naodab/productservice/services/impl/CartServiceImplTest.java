@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -75,7 +76,7 @@ class CartServiceImplTest {
     when(cartItemRepository.save(any(CartItem.class))).thenAnswer(inv -> {
       CartItem saved = inv.getArgument(0);
       saved.setId("cart-new");
-      saved.setCreatedAt(LocalDateTime.of(2026, 6, 5, 10, 0));
+      saved.setCreatedAt(LocalDateTime.of(2026, Month.JUNE, 5, 10, 0));
       return saved;
     });
     when(listingService.getListingVariantContext("variant-1")).thenReturn(sampleContext());

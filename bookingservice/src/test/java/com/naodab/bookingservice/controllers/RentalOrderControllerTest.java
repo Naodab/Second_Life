@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -45,8 +46,8 @@ class RentalOrderControllerTest {
   private static final String ORDER_ID = "order-1";
   private static final String LISTING_VARIANT_ID = "variant-1";
   private static final String CUSTOMER_ID = "customer-1";
-  private static final LocalDateTime START_TIME = LocalDateTime.of(2026, 7, 1, 10, 0, 0);
-  private static final LocalDateTime END_TIME = LocalDateTime.of(2026, 7, 3, 10, 0, 0);
+  private static final LocalDateTime START_TIME = LocalDateTime.of(2026, Month.JULY, 1, 10, 0, 0);
+  private static final LocalDateTime END_TIME = LocalDateTime.of(2026, Month.JULY, 3, 10, 0, 0);
 
   @Mock
   RentalOrderService rentalOrderService;
@@ -187,7 +188,7 @@ class RentalOrderControllerTest {
         .startTime(START_TIME)
         .endTime(END_TIME)
         .status(RentalOrderStatus.CONFIRMED)
-        .createdAt(LocalDateTime.of(2026, 5, 1, 9, 0, 0))
+        .createdAt(LocalDateTime.of(2026, Month.MAY, 1, 9, 0, 0))
         .build();
     when(rentalOrderService.listRentalOrders("profile-1")).thenReturn(List.of(response));
 

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.naodab.commonjpa.util.AppDateTimes;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.dto.request.FacilityCreateRequest;
@@ -119,7 +120,7 @@ public class FacilityServiceImpl implements FacilityService {
     Facility facility = facilityRepository.findByIdAndDeletedAtIsNull(id)
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
 
-    facility.setDeletedAt(LocalDateTime.now());
+    facility.setDeletedAt(AppDateTimes.now());
     facilityRepository.save(facility);
   }
 

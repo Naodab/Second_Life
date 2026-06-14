@@ -63,7 +63,7 @@ public class AttributeSeedBootstrap {
       }
     } catch (Exception e) {
       log.error("Error initializing attributes", e);
-      throw new RuntimeException("Attribute seed failed", e);
+      throw new IllegalStateException("Attribute seed failed", e);
     }
   }
 
