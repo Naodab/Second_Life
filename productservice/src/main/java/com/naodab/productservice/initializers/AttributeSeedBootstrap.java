@@ -34,34 +34,50 @@ public class AttributeSeedBootstrap {
 
   @Transactional
   public void seedIfEmpty() {
-    if (attributeRepository.count() > 0) {
-      log.info("Attributes already initialized");
-      return;
-    }
-
     try {
-      Resource resource = new ClassPathResource("data/attributes-seed.yml");
-      InputStream inputStream = resource.getInputStream();
-
-      List<AttributeSeed> attributes = YAML_MAPPER.readValue(inputStream,
-          new TypeReference<Map<String, List<AttributeSeed>>>() {
-          }).get("attributes");
-
-      if (attributes == null) {
-        log.warn("attributes-seed.yml has no 'attributes' list");
+      List<AttributeSeed> seeds = loadSeeds();
+      if (seeds.isEmpty()) {
         return;
       }
 
-      for (AttributeSeed seed : attributes) {
-        Attribute attribute = seed.toAttribute();
-        attributeRepository.save(attribute);
+      if (attributeRepository.count() == 0) {
+        for (AttributeSeed seed : seeds) {
+          attributeRepository.save(seed.toAttribute());
+        }
+        log.info("Attributes initialized successfully ({} items)", seeds.size());
+        return;
       }
 
-      log.info("Attributes initialized successfully");
+      int added = 0;
+      for (AttributeSeed seed : seeds) {
+        if (seed.getId() == null || attributeRepository.existsById(seed.getId())) {
+          continue;
+        }
+        attributeRepository.save(seed.toAttribute());
+        added++;
+      }
+      if (added > 0) {
+        log.info("Added {} missing attribute seed(s)", added);
+      } else {
+        log.info("Attributes already initialized");
+      }
     } catch (Exception e) {
       log.error("Error initializing attributes", e);
       throw new RuntimeException("Attribute seed failed", e);
     }
+  }
+
+  private List<AttributeSeed> loadSeeds() throws java.io.IOException {
+    Resource resource = new ClassPathResource("data/attributes-seed.yml");
+    InputStream inputStream = resource.getInputStream();
+    List<AttributeSeed> attributes = YAML_MAPPER.readValue(inputStream,
+        new TypeReference<Map<String, List<AttributeSeed>>>() {
+        }).get("attributes");
+    if (attributes == null) {
+      log.warn("attributes-seed.yml has no 'attributes' list");
+      return List.of();
+    }
+    return attributes;
   }
 
   @Getter
@@ -70,12 +86,14 @@ public class AttributeSeedBootstrap {
   public static class AttributeSeed {
     String id;
     String name;
+    List<String> subCategoryIds;
     List<AttributeValueSeed> attributeValues;
 
     public Attribute toAttribute() {
       Attribute attribute = Attribute.builder()
           .id(id)
           .name(name)
+          .subCategoryIds(subCategoryIds == null ? new ArrayList<>() : new ArrayList<>(subCategoryIds))
           .attributeValues(new ArrayList<>())
           .build();
 

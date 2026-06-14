@@ -78,6 +78,11 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+      AI_SERVICE_URL: http://ai-service:8090
+
+  ai-service:
+    ports: []
+    restart: unless-stopped
 
   inventory-service:
     ports: []

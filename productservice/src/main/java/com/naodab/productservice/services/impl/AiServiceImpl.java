@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.config.CacheConfig;
+import com.naodab.productservice.client.PhonePricingClient;
+import com.naodab.productservice.client.PhonePricingRequestMapper;
 import com.naodab.productservice.dto.request.AiAnalyzeRequest;
 import com.naodab.productservice.dto.request.AiDescriptionRequest;
 import com.naodab.productservice.dto.request.AiSuggestPriceRequest;
@@ -22,6 +24,7 @@ import com.naodab.productservice.repositories.CategoryRepository;
 import com.naodab.productservice.services.AiService;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,6 +49,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AiServiceImpl implements AiService {
 
   private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
@@ -147,14 +151,10 @@ public class AiServiceImpl implements AiService {
   @Value("${gemini.model:gemini-1.5-flash-8b}")
   private String geminiModel;
 
-  @Autowired
-  private ObjectMapper objectMapper;
-
-  @Autowired
-  private CategoryRepository categoryRepository;
-
-  @Autowired
-  private AttributeRepository attributeRepository;
+  private final ObjectMapper objectMapper;
+  private final CategoryRepository categoryRepository;
+  private final AttributeRepository attributeRepository;
+  private final PhonePricingClient phonePricingClient;
 
   @Autowired
   @Lazy
@@ -182,45 +182,36 @@ public class AiServiceImpl implements AiService {
 
   @Override
   public AiSuggestPriceResponse suggestPrice(AiSuggestPriceRequest request) {
-    if (!isConfigured(geminiApiKey)) {
+    String listingType = normalizeListingType(request.getListingType());
+    String rentUnit = normalizeRentUnit(request.getRentUnit(), listingType);
+
+    if (!PhonePricingRequestMapper.isPhoneSubCategory(request)) {
       return AiSuggestPriceResponse.builder()
-          .reasoningBrief("Tính năng AI chưa được cấu hình.")
-          .listingType(normalizeListingType(request.getListingType()))
+          .listingType(listingType)
+          .rentUnit("RENT".equals(listingType) ? rentUnit : null)
+          .confidence("LOW")
+          .reasoningBrief("Gợi ý giá AI hiện chỉ hỗ trợ điện thoại (mua).")
           .build();
     }
-    try {
-      String listingType = normalizeListingType(request.getListingType());
-      String rentUnit = normalizeRentUnit(request.getRentUnit(), listingType);
-      List<String> base64Images = resolvePriceSuggestionImages(request);
-      String userMessage = buildPriceSuggestionUserMessage(request, listingType, rentUnit, base64Images.size());
-      String prompt = PRICE_SUGGESTION_SYSTEM_PROMPT + "\n---\n" + userMessage;
-      List<Map<String, Object>> parts = buildPriceSuggestionParts(prompt, base64Images);
 
-      String json = callGemini(
-          parts,
-          PRICE_SUGGESTION_MAX_OUTPUT_TOKENS,
-          0.15,
-          "application/json",
-          PRICE_SUGGESTION_RESPONSE_SCHEMA);
-      GeminiPriceSuggestion raw = parseGeminiPriceSuggestion(json);
-      if (!hasSuggestedPrice(raw) && !base64Images.isEmpty()) {
-        log.warn("AI price JSON incomplete with {} image(s), retrying text-only", base64Images.size());
-        json = callGemini(
-            buildPriceSuggestionParts(prompt, List.of()),
-            PRICE_SUGGESTION_MAX_OUTPUT_TOKENS,
-            0.15,
-            "application/json",
-            PRICE_SUGGESTION_RESPONSE_SCHEMA);
-        raw = parseGeminiPriceSuggestion(json);
-      }
-      return toPriceResponse(raw, listingType, rentUnit);
-    } catch (HttpClientErrorException.TooManyRequests e) {
-      log.warn("Gemini rate limit (suggest-price)");
-      throw new AppException(ErrorCode.AI_SERVICE_BUSY);
-    } catch (Exception e) {
-      log.error("AI suggest-price failed", e);
-      throw new AppException(ErrorCode.AI_SERVICE_UNAVAILABLE);
+    if (!"BUY".equals(listingType)) {
+      return AiSuggestPriceResponse.builder()
+          .listingType(listingType)
+          .rentUnit(rentUnit)
+          .confidence("LOW")
+          .reasoningBrief("Mô hình định giá điện thoại chỉ hỗ trợ tin bán (BUY).")
+          .build();
     }
+
+    if (!phonePricingClient.isConfigured()) {
+      return AiSuggestPriceResponse.builder()
+          .listingType(listingType)
+          .confidence("LOW")
+          .reasoningBrief("Dịch vụ định giá điện thoại chưa được cấu hình.")
+          .build();
+    }
+
+    return phonePricingClient.suggestPhonePrice(PhonePricingRequestMapper.toPayload(request));
   }
 
   @Override

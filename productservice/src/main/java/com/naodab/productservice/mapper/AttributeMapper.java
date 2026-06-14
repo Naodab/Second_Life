@@ -2,6 +2,8 @@ package com.naodab.productservice.mapper;
 
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 import com.naodab.productservice.dto.request.AttributeCreateRequest;
 import com.naodab.productservice.dto.response.AttributeResponse;
 import com.naodab.productservice.models.Attribute;
@@ -19,6 +21,7 @@ public class AttributeMapper {
     return AttributeResponse.builder()
         .id(attribute.getId())
         .name(attribute.getName())
+        .subCategoryIds(attribute.getSubCategoryIds() == null ? List.of() : List.copyOf(attribute.getSubCategoryIds()))
         .attributeValues(
             attribute.getAttributeValues().stream().map(attributeValueMapper::toAttributeValueResponse).toList())
         .build();

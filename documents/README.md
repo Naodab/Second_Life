@@ -7,6 +7,7 @@ Technical documentation and diagrams for **Second Life**. The root README focuse
 | [use-cases.md](./use-cases.md) | GUEST / USER / ADMIN use case diagrams, UI route map |
 | [architecture.md](./architecture.md) | Microservices architecture, service catalog, Traefik, Kafka, end-to-end flows |
 | [activity-diagrams.md](./activity-diagrams.md) | Activity diagrams — search, buy/rent, auth, LOCAL register, chat, seller listing, admin approval |
+| [bao-cao-phone-price-v10.md](./bao-cao-phone-price-v10.md) | Báo cáo đồ án — hệ thống gợi ý giá điện thoại bằng học máy (3 chương, EDA, hình ảnh) |
 
 ## Per-service READMEs
 

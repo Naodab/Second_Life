@@ -56,6 +56,8 @@ export type BuildSuggestPriceInput = {
   listingType: ListingType;
   variantLabel?: string | null;
   subCategoryNames?: string[];
+  primarySubCategoryId?: string | null;
+  subCategoryIds?: string[];
   attributeLines?: string[];
   manufactureYear?: number | null;
   rentUnit?: RentUnit | null;
@@ -75,6 +77,8 @@ export function buildSuggestPriceRequest(input: BuildSuggestPriceInput): AiSugge
     listingType,
     variantLabel: input.variantLabel?.trim() || undefined,
     subCategoryNames: input.subCategoryNames?.length ? input.subCategoryNames : undefined,
+    primarySubCategoryId: input.primarySubCategoryId?.trim() || undefined,
+    subCategoryIds: input.subCategoryIds?.length ? input.subCategoryIds : undefined,
     attributeLines: input.attributeLines?.length ? input.attributeLines : undefined,
     manufactureYear: input.manufactureYear ?? undefined,
     rentUnit: listingType === "RENT" ? input.rentUnit ?? "DAY" : undefined,

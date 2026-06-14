@@ -26,6 +26,11 @@ public class AiSuggestPriceRequest {
 
   private List<String> subCategoryNames;
 
+  /** e.g. sub-phone — routes phone listings to ML pricing service */
+  private String primarySubCategoryId;
+
+  private List<String> subCategoryIds;
+
   private List<String> attributeLines;
 
   private Integer manufactureYear;

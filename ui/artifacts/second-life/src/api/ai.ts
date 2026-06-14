@@ -34,6 +34,8 @@ export type AiSuggestPriceRequest = {
   listingType: "BUY" | "RENT";
   variantLabel?: string;
   subCategoryNames?: string[];
+  primarySubCategoryId?: string;
+  subCategoryIds?: string[];
   attributeLines?: string[];
   manufactureYear?: number;
   rentUnit?: "HOUR" | "DAY" | "WEEK" | "MONTH";

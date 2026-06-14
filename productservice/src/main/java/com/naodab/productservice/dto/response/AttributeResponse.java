@@ -18,5 +18,6 @@ import lombok.experimental.FieldDefaults;
 public class AttributeResponse {
   String id;
   String name;
+  List<String> subCategoryIds;
   List<AttributeValueResponse> attributeValues;
 }

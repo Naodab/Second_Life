@@ -101,3 +101,8 @@ kafka-logs/
 !pnpm-workspace.yaml
 
 */.venv/**
+
+scripts/**
+scripts/*
+scripts/pricing/**
+scripts/import_real_data/**

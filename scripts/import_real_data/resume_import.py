@@ -18,21 +18,14 @@ import logging
 from pathlib import Path
 
 import requests
-import pymysql
-import pymysql.cursors
 
 from attribute_maps import ALL_ATTRIBUTE_IDS, build_variant
+from seed_api import load_existing_facilities
 
 GATEWAY = "http://localhost:80/api/v1"
 RAW_DATA_FILE = Path(__file__).parent / "data" / "raw_products.json"
 
-MYSQL_HOST = ""
-MYSQL_PORT = ""
-MYSQL_USER = ""
-MYSQL_PASSWORD = ""
-MYSQL_DB = "defaultdb"
-
-NUM_SELLERS = 8
+NUM_SELLERS = 3
 SELLER_PASSWORD = "Seller@123456"
 
 logging.basicConfig(
@@ -83,21 +76,8 @@ class APIClient:
     return c
 
 
-def db_connect():
-  return pymysql.connect(
-    host=MYSQL_HOST,
-    port=MYSQL_PORT,
-    user=MYSQL_USER,
-    password=MYSQL_PASSWORD,
-    database=MYSQL_DB,
-    ssl={"ssl_disabled": False},
-    cursorclass=pymysql.cursors.DictCursor,
-    connect_timeout=10,
-  )
-
-
 # ──────────────────────────────────────────────────────────────────────────────
-# Login (skip register + email verify)
+# Login
 # ──────────────────────────────────────────────────────────────────────────────
 def login_sellers(api: APIClient) -> list[dict]:
   """Login với sellers đã có sẵn, trả về list {email, token, profile_id}."""
@@ -126,41 +106,11 @@ def login_sellers(api: APIClient) -> list[dict]:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Load existing facilities from DB
+# Load existing facilities (API)
 # ──────────────────────────────────────────────────────────────────────────────
-def load_facilities(authenticated: list[dict]) -> list[dict]:
-  """Query MySQL lấy facilities đã insert từ lần chạy trước."""
-  profile_ids = [s["profile_id"] for s in authenticated]
-  if not profile_ids:
-    log.error("No profile_id available!")
-    return []
-
-  seller_by_profile = {s["profile_id"]: s for s in authenticated}
-  facilities = []
-
-  try:
-    conn = db_connect()
-    with conn:
-      with conn.cursor() as cur:
-        placeholders = ", ".join(["%s"] * len(profile_ids))
-        cur.execute(
-          f"SELECT id, owner_id FROM facilities "
-          f"WHERE owner_id IN ({placeholders}) AND deleted_at IS NULL",
-          profile_ids,
-        )
-        rows = cur.fetchall()
-        for row in rows:
-          owner = seller_by_profile.get(row["owner_id"])
-          if owner:
-            facilities.append({
-              "facility_id":  row["id"],
-              "seller_token": owner["token"],
-              "profile_id":   owner["profile_id"],
-            })
-  except Exception as exc:
-    log.error("DB error loading facilities: %s", exc)
-
-  log.info("Loaded %d facilities from DB", len(facilities))
+def load_facilities(authenticated: list[dict], api: APIClient) -> list[dict]:
+  facilities = load_existing_facilities(api, authenticated)
+  log.info("Loaded %d facilities via API", len(facilities))
   return facilities
 
 
@@ -353,8 +303,8 @@ def main():
   log.info("Logged-in sellers: %d", len(authenticated))
 
   # Load facilities từ DB
-  log.info("\n🏪 Load facilities from DB...")
-  facilities = load_facilities(authenticated)
+  log.info("\n🏪 Load facilities via API...")
+  facilities = load_facilities(authenticated, api)
   if not facilities:
     log.error("Could not load any facilities! Run seed_system.py first.")
     sys.exit(1)

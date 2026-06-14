@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.naodab.commonservice.constant.AppConstants;
@@ -56,10 +57,14 @@ public class AttributeController {
   }
 
   @GetMapping
-  public ResponseEntity<ApiResponse<List<AttributeResponse>>> getAllAttributes() {
+  public ResponseEntity<ApiResponse<List<AttributeResponse>>> getAllAttributes(
+      @RequestParam(required = false) String subCategoryId) {
+    List<AttributeResponse> data = subCategoryId != null && !subCategoryId.isBlank()
+        ? attributeService.getAttributesForSubCategory(subCategoryId)
+        : attributeService.getAllAttributes();
     return ResponseEntity.ok(
         ApiResponse.<List<AttributeResponse>>builder()
-            .data(attributeService.getAllAttributes())
+            .data(data)
             .build());
   }
 

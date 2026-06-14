@@ -444,6 +444,7 @@ export default function ListingDetail() {
               hideCommerceActions={!marketplaceActionsEnabled}
             />
 
+            {subId === "sub-phone" && listing.listingType === "BUY" ? (
             <ListingAiPriceSection
               productName={product.name}
               productDescription={product.description}
@@ -451,6 +452,7 @@ export default function ListingDetail() {
               listingDescription={listing.description}
               listingType={listing.listingType}
               rentUnit={rentUnit}
+              primarySubCategoryId={subId}
               subCategoryName={subName}
               specAttributes={specAttributes}
               manufactureYear={product.manufactureYear}
@@ -462,6 +464,7 @@ export default function ListingDetail() {
               cachedAiPriceVnd={cachedAiPriceVnd ?? undefined}
               imageUrls={detailImageUrls.length > 0 ? detailImageUrls.slice(0, 2) : undefined}
             />
+            ) : null}
           </div>
         </div>
 

@@ -19,6 +19,7 @@ type Props = {
   listingDescription?: string | null;
   listingType: ListingType;
   rentUnit?: RentUnit | null;
+  primarySubCategoryId?: string | null;
   subCategoryName?: string | null;
   specAttributes: AttributeDto[];
   manufactureYear?: number | null;
@@ -38,6 +39,7 @@ export function ListingAiPriceSection({
   listingDescription,
   listingType,
   rentUnit,
+  primarySubCategoryId,
   subCategoryName,
   specAttributes,
   manufactureYear,
@@ -66,6 +68,8 @@ export function ListingAiPriceSection({
           listingDescription,
           listingType,
           variantLabel,
+          primarySubCategoryId: primarySubCategoryId?.trim() || undefined,
+          subCategoryIds: primarySubCategoryId?.trim() ? [primarySubCategoryId.trim()] : undefined,
           subCategoryNames: subCategoryName?.trim() ? [subCategoryName.trim()] : undefined,
           attributeLines: attributeDtosToLines(specAttributes),
           manufactureYear,
@@ -103,7 +107,7 @@ export function ListingAiPriceSection({
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Giá thị trường AI</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Ước tính dựa trên thông tin sản phẩm và ảnh — tham khảo khi mua/bán.
+            Ước tính bằng mô hình ML v10 (dữ liệu Chợ Tốt) — tham khảo khi mua/bán điện thoại.
           </p>
         </div>
         <button
