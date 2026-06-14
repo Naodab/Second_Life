@@ -197,8 +197,8 @@ http:
       tls:
         certResolver: letsencrypt
       middlewares:
-        - traefik-dashboard-strip
         - traefik-dashboard-auth
+        - traefik-dashboard-strip
       priority: 150
     ui-spa:
       rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/`) && !PathPrefix(`/traefik`)"
