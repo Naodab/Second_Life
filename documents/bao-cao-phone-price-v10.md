@@ -1,511 +1,432 @@
-# BÁO CÁO ĐỒ ÁN
+# PHỤ LỤC BÁO CÁO ĐỒ ÁN — MODULE GỢI Ý GIÁ ĐIỆN THOẠI (AI)
 
-## Xây dựng hệ thống gợi ý giá điện thoại cũ bằng học máy trên nền tảng Second Life
+> **Hướng dẫn sử dụng:** Đây là nội dung bổ sung cho đồ án Second Life. Chèn **mục 1.4** vào Chương 1, **mục 2.5** vào Chương 2, **mục 3.4** vào Chương 3 — các mục khác của từng chương do sinh viên tự trình bày.
 
-**Đề tài:** Ứng dụng học máy trong định giá sản phẩm thị trường đồ cũ  
-**Dự án:** Second Life Marketplace  
-**Dữ liệu huấn luyện:** Tin đăng điện thoại từ Chợ Tốt  
-**Triển khai:** Microservice Python (Flask) tích hợp Spring Boot
-
----
-
-## Mục lục
-
-- [Chương 1. Cơ sở lý thuyết](#chương-1-cơ-sở-lý-thuyết)
-- [Chương 2. Phân tích và thiết kế hệ thống](#chương-2-phân-tích-và-thiết-kế-hệ-thống)
-- [Chương 3. Triển khai hệ thống và kết quả thực nghiệm](#chương-3-triển-khai-hệ-thống-và-kết-quả-thực-nghiệm)
-- [Kết luận](#kết-luận)
-- [Danh mục hình ảnh](#danh-mục-hình-ảnh)
+**Phạm vi:** Gợi ý giá điện thoại cũ bằng XGBoost, huấn luyện trên dữ liệu Chợ Tốt, triển khai qua `aiservice` (Flask) tích hợp `productservice` (Spring Boot).
 
 ---
 
 # Chương 1. Cơ sở lý thuyết
 
-## 1.1. Đặt vấn đề
+## 1.4. Giới thiệu thuật toán XGBoost
 
-Thị trường mua bán đồ cũ tại Việt Nam đang phát triển mạnh thông qua các nền tảng trực tuyến như Chợ Tốt, Facebook Marketplace và các sàn thương mại chuyên biệt. Trong bối cảnh đó, người bán thường gặp khó khăn trong việc xác định mức giá phù hợp: định giá cao hơn thị trường khiến sản phẩm khó tiêu thụ, trong khi định giá thấp gây thiệt hại về lợi ích kinh tế.
+### 1.4.1. Bối cảnh lựa chọn mô hình
 
-Đối với nhóm sản phẩm **điện thoại di động đã qua sử dụng**, giá bán phụ thuộc vào nhiều yếu tố như hãng sản xuất, model, cấu hình, tình trạng máy, tuổi đời sản phẩm, khu vực giao dịch và cả nội dung mô tả trong tin đăng. Do đó, bài toán định giá có thể được mô hình hóa dưới dạng **bài toán hồi quy**, trong đó mục tiêu là dự đoán giá bán (đơn vị VND) từ tập hợp các đặc trưng mô tả sản phẩm.
+Trong đồ án, bài toán gợi ý giá điện thoại cũ được mô hình hóa dưới dạng **hồi quy**: từ tập đặc trưng mô tả sản phẩm (thông số kỹ thuật, tình trạng, nội dung tin đăng, metadata…) dự đoán giá bán (VND). Dữ liệu đầu vào có dạng **bảng (tabular)** — hỗn hợp biến số, biến phân loại và đặc trưng kỹ thuật được trích xuất — với quan hệ phi tuyến giữa các yếu tố (ví dụ: cùng hãng nhưng khác model cho giá chênh lệch lớn).
 
-Trong khuôn khổ đồ án, hệ thống gợi ý giá được xây dựng nhằm hỗ trợ người bán trên nền tảng **Second Life** khi tạo tin đăng bán điện thoại, góp phần nâng cao trải nghiệm người dùng và tăng tính minh bạch của thị trường.
+Trong các họ thuật toán phổ biến cho dữ liệu dạng bảng, **XGBoost (eXtreme Gradient Boosting)** được lựa chọn làm mô hình chính vì: (i) khả năng học tương tác phi tuyến phức tạp mà không cần kỹ thuật đặc trưng thủ công quá nhiều; (ii) xử lý tốt giá trị thiếu; (iii) hiệu năng ổn định trên tập dữ liệu cỡ vài chục nghìn mẫu; (iv) hỗ trợ regularization giúp kiểm soát overfitting.
 
-## 1.2. Cơ sở lý thuyết về học máy cho bài toán định giá
+### 1.4.2. Nguyên lý Gradient Boosting
 
-### 1.2.1. Mô hình hồi quy và biến đổi biến mục tiêu
+Gradient Boosting là phương pháp **ensemble** xây dựng mô hình từ tập hợp các cây quyết định yếu (weak learner). Giả sử có \(K\) cây, dự đoán cuối cùng là tổng dự đoán của từng cây:
 
-Trong bài toán dự đoán giá, biến mục tiêu thường có phân phối **lệch phải**: phần lớn sản phẩm tập trung ở phân khúc giá thấp và trung bình, trong khi một số ít thuộc phân khúc cao cấp có giá trị lớn. Để giảm ảnh hưởng của phân phối lệch đến quá trình huấn luyện, hệ thống áp dụng phép biến đổi logarit:
+$$\hat{y}_i = \sum_{k=1}^{K} f_k(x_i)$$
 
-$$\text{log\_price} = \log(1 + \text{price\_vnd})$$
+Thuật toán hoạt động theo hướng **bổ sung (additive)**: tại mỗi bước, cây mới được huấn luyện để dự đoán **phần dư (residual)** — sai số còn lại — của các cây trước đó, tương đương với đi theo hướng **gradient âm** của hàm mất mát. Nhờ đó, mỗi cây sau tập trung sửa những mẫu mà mô hình hiện tại dự đoán kém nhất.
 
-Sau khi mô hình dự đoán giá trị logarit, kết quả được chuyển ngược về đơn vị VND bằng hàm `expm1`. Phương pháp này giúp phân phối mục tiêu tiệm cận chuẩn hơn, từ đó cải thiện khả năng học của mô hình trên dải giá từ 500.000 đến 80.000.000 VND.
+Đối với bài toán hồi quy, hàm mất mát thường dùng là **sai số bình phương trung bình (MSE)**. Trong đồ án, biến mục tiêu được biến đổi logarit `log(1 + price_vnd)` trước khi đưa vào mô hình nhằm giảm ảnh hưởng của phân phối giá lệch phải; sau dự đoán, kết quả được chuyển ngược về VND.
 
-### 1.2.2. Thuật toán Gradient Boosting
+### 1.4.3. Đặc điểm của XGBoost
 
-Trong nghiên cứu này, hai thuật toán học máy dạng cây được xem xét:
+XGBoost là triển khai tối ưu hóa của Gradient Boosting do Chen và Guestrin (2016) đề xuất, với các điểm khác biệt chính:
 
-- **XGBoost (Extreme Gradient Boosting):** xây dựng tập hợp các cây quyết định theo hướng bổ sung, trong đó mỗi cây sau hiệu chỉnh sai số của các cây trước. Thuật toán phù hợp với dữ liệu dạng bảng, có khả năng xử lý tốt giá trị thiếu và tương tác phi tuyến giữa các đặc trưng.
-- **LightGBM (Light Gradient Boosting Machine):** cùng nguyên lý với XGBoost nhưng tối ưu hóa tốc độ huấn luyện và mức sử dụng bộ nhớ, đặc biệt hiệu quả trên tập dữ liệu lớn.
+**Cấu trúc cây và tách nút.** XGBoost xây dựng cây theo chiều sâu (depth-wise), mỗi lần tách chọn đặc trưng và ngưỡng sao cho hàm mục tiêu (gain) tối đa. Thuật toán hỗ trợ xử lý trực tiếp giá trị thiếu bằng cách học hướng rẽ mặc định cho từng nút.
 
-Kết quả thực nghiệm cho thấy XGBoost đạt hiệu năng tốt hơn trên tập kiểm thử, vì vậy được lựa chọn làm mô hình chính thức của hệ thống.
+**Hàm mục tiêu có regularization.** XGBoost không chỉ tối thiểu hóa loss mà còn cộng thêm penalty vào độ phức tạp của mô hình (số lá, độ lớn trọng số lá), giúp giảm overfitting:
 
-### 1.2.3. Mã hóa biến phân loại bằng Target Encoding
+$$\mathcal{L} = \sum_{i} l(y_i, \hat{y}_i) + \sum_{k} \Omega(f_k)$$
 
-Biến **model** và **color** có số lượng giá trị rời rạc lớn, đóng vai trò quan trọng trong việc xác định giá. Phương pháp **Target Encoding** mã hóa các biến này bằng giá trị trung bình của biến mục tiêu tương ứng.
+trong đó \(\Omega\) kiểm soát độ sâu cây, số lá và trọng số — tương ứng các siêu tham số `max_depth`, `min_child_weight`, `gamma`, `reg_alpha`, `reg_lambda` trong quá trình huấn luyện.
 
-Tuy nhiên, nếu tính toán giá trị mã hóa trên toàn bộ tập huấn luyện trước khi chia cross-validation, thông tin của biến mục tiêu sẽ bị rò rỉ vào tập kiểm định, dẫn đến đánh giá lạc quan không phản ánh đúng khả năng tổng quát hóa. Để khắc phục, hệ thống sử dụng `TargetEncoder` của scikit-learn với cơ chế **cross-fit 5-fold** được nhúng trực tiếp trong pipeline huấn luyện, bảo đảm mỗi fold chỉ học từ dữ liệu huấn luyện của chính fold đó.
+**Xấp xỉ Newton và tối ưu hóa.** Tại mỗi bước, XGBoost sử dụng đạo hàm bậc nhất và bậc hai (xấp xỉ Newton) của hàm mất mát để xác định cấu trúc cây hiệu quả hơn so với boosting truyền thống chỉ dùng gradient bậc nhất.
 
-### 1.2.4. Đánh giá mô hình và tối ưu siêu tham số
+**Subsampling và column sampling.** Các tham số `subsample` (lấy mẫu theo hàng) và `colsample_bytree` (lấy mẫu theo cột) giúp tăng tính đa dạng giữa các cây, tương tự ý tưởng bagging, cải thiện khả năng tổng quát hóa.
 
-Quy trình đánh giá mô hình được thực hiện theo các bước sau:
+**Tốc độ tính toán.** XGBoost hỗ trợ huấn luyện song song, xử lý sparse data và cache-aware access, phù hợp huấn luyện trên Google Colab với tập ~10.000 mẫu và 26 đặc trưng.
 
-1. **Chia dữ liệu:** 80% huấn luyện, 20% kiểm thử, với `random_state` cố định để đảm bảo tái lập kết quả.
-2. **Cross-validation 5-fold:** đánh giá độ ổn định của mô hình trên tập huấn luyện.
-3. **Tối ưu siêu tham số bằng Optuna:** sử dụng bộ lấy mẫu TPE (Tree-structured Parzen Estimator) với 50 lần thử nghiệm cho mỗi thuật toán.
-4. **Đo lường bằng các chỉ số:**
-   - **R² (hệ số xác định):** mức độ giải thích phương sai của mô hình;
-   - **MAE (Mean Absolute Error):** sai số tuyệt đối trung bình, đơn vị VND;
-   - **MAPE (Mean Absolute Percentage Error):** sai số phần trăm trung bình;
-   - **Chênh lệch CV/Test:** phản ánh mức độ overfitting.
+### 1.4.4. XGBoost trong pipeline định giá điện thoại
 
-## 1.3. Kỹ thuật trích chọn đặc trưng
+Trong module gợi ý giá của đồ án, XGBoost được nhúng trong `Pipeline` scikit-learn với bước tiền xử lý phía trước (Target Encoding cho biến `model`, `color`). Mô hình cuối cùng là `XGBRegressor` với siêu tham số được tối ưu bằng Optuna (50 trials, tiêu chí CV R²).
 
-Hệ thống sử dụng 26 đặc trưng, được chia thành ba nhóm chính:
+Lý do XGBoost phù hợp cụ thể với bài toán định giá điện thoại cũ:
 
-**Nhóm đặc trưng cấu trúc:** RAM, dung lượng bộ nhớ, kích thước màn hình, điểm tình trạng máy, tuổi đời sản phẩm, thế hệ chip, nguồn gốc, bảo hành, khu vực, trạng thái khóa SIM, số lượng ảnh và video đính kèm.
+| Đặc điểm dữ liệu | Cách XGBoost xử lý |
+|---|---|
+| Biến phân loại cardinality cao (`model`) | Kết hợp Target Encoding trước, XGBoost học tương tác với các đặc trưng số còn lại |
+| Giá trị thiếu (`battery_pct`, `processor`) | XGBoost học hướng rẽ mặc định; không cần impute hoàn toàn |
+| Tương tác phi tuyến (tuổi máy × tình trạng) | Cây quyết định tự phát hiện qua các lần tách nút |
+| Nhiễu từ thị trường đồ cũ | Regularization + cross-validation giúp kiểm soát overfitting |
 
-**Nhóm đặc trưng văn bản:** trích xuất từ tiêu đề và mô tả tin đăng, bao gồm điểm từ khóa chất lượng, điểm từ khóa lỗi và phần trăm pin (nếu có).
-
-**Nhóm đặc trưng tổng hợp:** `spec_score` (tổ hợp RAM và bộ nhớ), `depreciation_score` (tổ hợp tuổi máy và tình trạng), `chip_x_age` (tương tác giữa thế hệ chip và tuổi máy).
-
-## 1.4. Kiến trúc tích hợp trong hệ sinh thái microservice
-
-Hệ thống gợi ý giá được triển khai theo mô hình microservice, tách biệt giữa tầng huấn luyện mô hình và tầng phục vụ suy luận:
-
-- **Giao diện người dùng (React):** người bán nhập thông tin sản phẩm tại Seller Hub.
-- **Product Service (Spring Boot):** tiếp nhận yêu cầu, chuẩn hóa dữ liệu đầu vào và chuyển tiếp đến dịch vụ AI.
-- **AI Service (Flask):** nạp mô hình đã huấn luyện, thực hiện suy luận và trả về kết quả định giá.
-- **API Gateway (Traefik):** định tuyến, xác thực và cân bằng tải.
-
-Kiến trúc này cho phép cập nhật mô hình độc lập mà không ảnh hưởng đến các dịch vụ nghiệp vụ khác.
-
-## 1.5. Công nghệ sử dụng
-
-| Tầng | Công nghệ |
-|------|-----------|
-| Huấn luyện mô hình | Python, scikit-learn, XGBoost, LightGBM, Optuna, SHAP |
-| Phục vụ suy luận | Flask, Gunicorn, joblib |
-| Tích hợp backend | Java 21, Spring Boot 3.5 |
-| Triển khai | Docker Compose |
-| Dữ liệu | CSV tin đăng Chợ Tốt |
+Kết quả thực nghiệm (mục 3.4) cho thấy XGBoost đạt Test R² = **0,8058**, MAE = **1,81 triệu VND** trên tập kiểm thử 2.479 mẫu — được lựa chọn triển khai chính thức thay cho LightGBM (Test R² = 0,8039) dù hai mô hình có CV R² tương đương.
 
 ---
 
 # Chương 2. Phân tích và thiết kế hệ thống
 
-## 2.1. Phân tích yêu cầu
+## 2.5. Phân tích và thiết kế module gợi ý giá điện thoại (AI)
 
-### 2.1.1. Yêu cầu chức năng
+### 2.5.1. Phân tích yêu cầu chức năng
 
-Hệ thống cần đáp ứng các yêu cầu chức năng sau:
+Module AI gợi ý giá được tích hợp vào luồng đăng tin bán hàng tại Seller Hub, với phạm vi hẹp: **chỉ điện thoại, chỉ tin bán (BUY)**. Khi người bán nhập thông tin sản phẩm và yêu cầu gợi ý giá, hệ thống cần:
 
-1. Nhận thông tin sản phẩm điện thoại từ người bán và trả về **giá gợi ý** bằng VND.
-2. Cung cấp **khoảng giá tối thiểu và tối đa** để hỗ trợ thương lượng.
-3. Đánh giá **mức độ tin cậy** của kết quả (HIGH, MEDIUM, LOW) dựa trên mức độ đầy đủ thông tin đầu vào.
-4. Trả về **lời giải thích ngắn** bằng tiếng Việt về cơ sở định giá.
-5. Chỉ hỗ trợ định giá cho tin đăng **bán** (`listingType = BUY`) thuộc danh mục **điện thoại** (`sub-phone`).
+1. Trả về **giá gợi ý** (`suggestedPriceVnd`) bằng VND.
+2. Cung cấp **khoảng giá** min/max hỗ trợ thương lượng.
+3. Đánh giá **mức tin cậy** (HIGH / MEDIUM / LOW) theo độ đầy đủ thông tin.
+4. Giải thích ngắn bằng tiếng Việt (`reasoningBrief`).
 
-### 2.1.2. Yêu cầu phi chức năng
+Các ràng buộc kỹ thuật: thời gian phản hồi dưới 1 giây; logic trích đặc trưng đồng nhất giữa notebook huấn luyện (`aiservice/train/`) và mã suy luận (`aiservice/app/features.py`); tách biệt tầng train (Colab) và tầng serve (Docker) qua artifacts export.
 
-- Thời gian phản hồi suy luận dưới 1 giây.
-- Mô hình được nạp sẵn khi khởi động dịch vụ; endpoint kiểm tra sức khỏe báo trạng thái sẵn sàng.
-- Tách biệt quy trình huấn luyện (Google Colab) và triển khai (Docker) thông qua cơ chế export artifacts.
-- Logic trích chọn đặc trưng đồng nhất giữa notebook huấn luyện và mã nguồn phục vụ.
+### 2.5.2. Phân tích dữ liệu huấn luyện
 
----
+#### Nguồn dữ liệu và quy mô
 
-## 2.2. Phân tích dữ liệu huấn luyện
+Dữ liệu thu thập từ tin đăng trên **Chợ Tốt**, tệp `phone_tablet_dataset_raw.csv`:
 
-### 2.2.1. Nguồn và đặc điểm tập dữ liệu
+| Chỉ số | Giá trị |
+|--------|---------|
+| Số bản ghi thô | 12.904 |
+| Số thuộc tính | 45 |
+| Phạm vi giá lọc | 500.000 – 80.000.000 VND |
+| Bản ghi sau làm sạch | **12.391** |
+| Tập train / test (80/20) | 9.912 / 2.479 |
 
-Dữ liệu huấn luyện được thu thập từ tin đăng điện thoại và máy tính bảng trên nền tảng Chợ Tốt, lưu trữ trong tệp `phone_tablet_dataset_raw.csv`. Tập dữ liệu thô gồm **12.904 bản ghi** với **45 thuộc tính**, bao gồm giá bán, hãng sản xuất, model, cấu hình phần cứng, tình trạng sản phẩm, khu vực, tiêu đề, mô tả, số ảnh đính kèm và các thông tin phụ trợ khác.
+Các trường quan trọng: `price_vnd`, `brand`, `model`, `ram_gb`, `storage_gb`, `screen_inches`, `sl_condition`, `region_name`, `title`, `description`, `num_images`, `origin_code`, `warranty_code`, `sim_lock`.
 
-Phạm vi giá được giới hạn trong khoảng **500.000 – 80.000.000 VND** nhằm loại bỏ các giá trị bất thường do nhập liệu sai hoặc tin đăng giá mồi.
+#### Quy trình tiền xử lý
 
-### 2.2.2. Quy trình tiền xử lý dữ liệu
+```
+12.904 (thô)
+  → Lọc giá [500k – 80M]         −168   → 12.736
+  → Lọc danh mục điện thoại                12.736
+  → Chuẩn hóa + trích tín hiệu text        12.736
+  → Dropna thuộc tính lõi                   12.736
+  → Lọc outlier toàn cục (P1–P99)  −229   → 12.507
+  → Lọc outlier theo model (MAD)   −116   → 12.391
+```
 
-Quy trình làm sạch dữ liệu được thực hiện theo trình tự sau:
+**Lọc ngoại lai MAD:** với mỗi model có ≥ 8 mẫu, loại tin có giá lệch quá \(4 \times 1{,}4826 \times \text{MAD}\) so với median của model. Mục đích: loại giá mồi, giá nhập sai trên thị trường Chợ Tốt vốn nhiễu.
 
-| Bước | Mô tả | Số bản ghi còn lại |
-|------|-------|-------------------|
-| 1 | Dữ liệu thô | 12.904 |
-| 2 | Lọc theo ngưỡng giá hợp lệ | 12.736 |
-| 3 | Lọc danh mục điện thoại | 12.736 |
-| 4 | Chuẩn hóa thuộc tính và trích tín hiệu văn bản | 12.736 |
-| 5 | Loại bỏ bản ghi thiếu thuộc tính lõi | 12.736 |
-| 6 | Lọc ngoại lai toàn cục (percentile 1%–99%) | 12.507 |
-| 7 | Lọc ngoại lai theo từng model (phương pháp MAD) | **12.391** |
-| 8 | Chia tập huấn luyện / kiểm thử (80/20) | 9.912 / 2.479 |
+#### Phân tích phân phối giá
 
-Các bước xử lý chi tiết gồm: chuẩn hóa dung lượng bộ nhớ và RAM theo các mức phổ biến trên thị trường; nhóm khu vực thành HCM, Hà Nội, Đà Nẵng và Khác; ánh xạ tình trạng máy sang thang điểm số; và áp dụng bộ lọc MAD (Median Absolute Deviation) để loại các tin có giá lệch quá 4 lần độ lệch tuyệt đối trung vị so với giá trung vị của cùng model.
+Phân phối giá thô **lệch phải mạnh** — đa số tin ở phân khúc bình dân và tầm trung, ít tin flagship giá cao. Biến đổi `log(1 + price)` làm phân phối tiệm cận chuẩn hơn, phù hợp hồi quy (Hình 2.5.1b).
 
-### 2.2.3. Phân tích phân phối giá
+Phân khúc sau làm sạch:
 
-Kết quả khảo sát cho thấy phân phối giá bán có đặc điểm **lệch phải rõ rệt**: đa số tin đăng tập trung ở phân khúc bình dân và tầm trung. Sau khi áp dụng biến đổi logarit, phân phối tiệm cận dạng chuẩn hơn, phù hợp cho mô hình hồi quy.
+| Phân khúc | Ngưỡng | Nhận xét |
+|-----------|--------|----------|
+| Bình dân | < 5 triệu | Máy cũ, giá rẻ; biến động tương đối cao |
+| Tầm trung | 5 – 15 triệu | Chiếm tỷ lệ lớn nhất; đa dạng model |
+| Cao cấp | > 15 triệu | Flagship, Like New; ít mẫu hơn |
 
-Theo phân loại phân khúc thị trường:
+![Hình 2.5.1 — Tổng quan tập dữ liệu](./images/phone-pricing/figS1.png)
 
-| Phân khúc | Ngưỡng giá | Đặc điểm |
-|-----------|------------|----------|
-| Bình dân | Dưới 5 triệu VND | Điện thoại giá rẻ, máy đời cũ |
-| Tầm trung | 5 – 15 triệu VND | Phổ biến nhất, đa dạng model |
-| Cao cấp | Trên 15 triệu VND | Flagship, máy tình trạng tốt |
+*Hình 2.5.1. (a) Phân phối giá, (b) phân phối log-price, (c) tỷ lệ phân khúc, (d) số tin theo hãng, (e) tỷ lệ thiếu dữ liệu.*
 
-Hình 2.1 trình bày tổng quan về phân phối giá, cơ cấu phân khúc, số lượng tin theo hãng và mức độ thiếu dữ liệu của các thuộc tính quan trọng.
+#### Phân tích theo hãng, tình trạng và khu vực
 
-![Hình 2.1 — Tổng quan tập dữ liệu huấn luyện](./images/phone-pricing/figS1.png)
+**Hãng sản xuất:** Apple, Samsung, Xiaomi, Oppo, Vivo, Realme chiếm đa số. Giá trung vị: Apple cao nhất → Samsung flagship → hãng Trung Quốc. Trong cùng hãng, độ phân tán giá lớn do khác model và tình trạng (Hình 2.5.2a).
 
-*Hình 2.1. Tổng quan tập dữ liệu: (a) phân phối giá, (b) phân phối log-price, (c) tỷ lệ phân khúc, (d) số lượng tin theo hãng, (e) tỷ lệ giá trị thiếu.*
+**Tình trạng:** Like New > Good > Fair theo giá trung vị. Nhóm Good chiếm tỷ lệ lớn nhất, dải giá rộng nhất (Hình 2.5.2b).
 
-### 2.2.4. Phân tích theo hãng sản xuất, tình trạng và khu vực
+**Khu vực:** HCM và Hà Nội có giá trung vị cao hơn Đà Nẵng và "Khác" ở mọi phân khúc — phản ánh sức mua và quy mô thị trường điện thoại cũ (Hình 2.5.2c).
 
-Về mặt hãng sản xuất, Apple, Samsung, Xiaomi, Oppo, Vivo và Realme chiếm phần lớn số lượng tin đăng. Giá trung vị theo hãng cho thấy Apple đứng đầu, tiếp theo là các dòng flagship của Samsung, trong khi các hãng Trung Quốc tập trung ở phân khúc giá thấp hơn. Độ phân tán giá trong cùng một hãng khá lớn, phản ánh sự đa dạng về model và tình trạng sản phẩm.
+![Hình 2.5.2 — Giá theo nhóm](./images/phone-pricing/figS2.png)
 
-Về tình trạng máy, nhóm Like New có giá trung vị cao nhất, nhóm Good chiếm tỷ lệ lớn nhất với dải giá rộng, còn nhóm Fair có giá thấp hơn đáng kể.
+*Hình 2.5.2. (a) Phân phối giá theo hãng, (b) theo tình trạng, (c) theo khu vực và phân khúc.*
 
-Về khu vực địa lý, TP. Hồ Chí Minh và Hà Nội ghi nhận giá trung vị cao hơn Đà Nẵng và các khu vực khác ở mọi phân khúc, phù hợp với đặc điểm thị trường điện thoại cũ tại hai thành phố lớn.
+#### Phân tích giá trị thiếu và chiến lược xử lý
 
-![Hình 2.2 — Phân tích giá theo nhóm](./images/phone-pricing/figS2.png)
+| Thuộc tính | Mức thiếu | Xử lý |
+|------------|-----------|-------|
+| `processor` | > 50% | Lookup `chip_gen` từ tên model; impute median theo hãng |
+| `manufacture_year` | Trung bình | Parse năm từ title/description; fallback median tuổi |
+| `screen_inches` | Trung bình | Impute median toàn tập |
+| `ram_gb`, `storage_gb` | Thấp–TB | Impute median |
+| `color` | Thấp | Gán `__NA__` |
 
-*Hình 2.2. Phân tích giá bán theo (a) hãng sản xuất, (b) tình trạng máy và (c) khu vực địa lý kết hợp phân khúc giá.*
+Tỷ lệ khớp chip trực tiếp: **30,3%**; phần còn lại dùng median theo hãng — **không dùng giá** để impute, tránh rò rỉ dữ liệu.
 
-### 2.2.5. Phân tích giá trị thiếu
+#### Phân tích tín hiệu văn bản
 
-Một số thuộc tính có tỷ lệ thiếu đáng kể, đòi hỏi chiến lược xử lý phù hợp:
+Từ `title` + `description`, trích ba nhóm tín hiệu:
 
-| Thuộc tính | Mức thiếu | Phương án xử lý |
-|------------|-----------|-----------------|
-| Processor | Cao (>50%) | Suy luận thế hệ chip từ tên model, bổ sung bằng median theo hãng |
-| Năm sản xuất | Trung bình | Trích từ văn bản tin đăng, thay thế bằng tuổi trung vị |
-| Kích thước màn hình | Trung bình | Điền bằng giá trị trung vị toàn tập |
-| RAM, bộ nhớ | Thấp–trung bình | Điền bằng giá trị trung vị |
-| Màu sắc | Thấp | Gán nhãn đặc biệt `__NA__` |
+| Tín hiệu | Tỷ lệ tin có | Ý nghĩa |
+|----------|-------------|---------|
+| `title_quality_score > 0` | 58,3% | Từ khóa tích cực: zin, fullbox, bảo hành… |
+| `title_defect_score > 0` | 25,5% | Từ khóa lỗi: trầy, nứt, chai pin… |
+| Có % pin | 11,1% | Regex "pin XX%" |
+| `is_age_known = 1` | 10,7% | Biết năm SX; median tuổi = 4,0 năm |
 
-Tỷ lệ khớp thế hệ chip trực tiếp từ tên processor/model đạt **30,3%**; phần còn lại được bổ sung bằng giá trị trung vị theo hãng, không sử dụng thông tin giá nhằm tránh rò rỉ dữ liệu.
+**Ảnh hưởng đến giá (Hình 2.5.3):**
+- `quality_score` tăng → giá trung vị tăng (mỗi từ khóa tích cực phản ánh máy zin, fullbox).
+- `defect_score` tăng → giá trung vị giảm.
+- Pin 95–100% cao hơn rõ rệt so với 50–79%.
 
-### 2.2.6. Phân tích tín hiệu văn bản
+Điều này cho thấy **ba mức condition (Like New / Good / Fair) không đủ** mô tả sắc thái thực tế — cần bổ sung tín hiệu văn bản vào mô hình.
 
-Từ tiêu đề và mô tả tin đăng, hệ thống trích xuất ba nhóm tín hiệu văn bản. Thống kê trên tập dữ liệu sau bước làm sạch ban đầu cho thấy:
+![Hình 2.5.3 — Tín hiệu văn bản](./images/phone-pricing/figS4.png)
 
-- **58,3%** tin đăng chứa ít nhất một từ khóa chất lượng (zin, fullbox, bảo hành…).
-- **25,5%** tin đăng chứa từ khóa mô tả lỗi hoặc hư hỏng (trầy, nứt, chai pin…).
-- **11,1%** tin đăng cung cấp thông tin phần trăm pin.
-- **10,7%** tin đăng xác định được năm sản xuất; tuổi máy trung vị trong nhóm này là **4,0 năm**.
+*Hình 2.5.3. Mối quan hệ từ khóa chất lượng, từ khóa lỗi và % pin với giá bán.*
 
-Phân tích cho thấy giá trung vị tăng theo số lượng từ khóa chất lượng và giảm theo số lượng từ khóa lỗi. Đối với thông tin pin, nhóm pin từ 95–100% có giá trung vị cao hơn rõ rệt so với nhóm pin 50–79%.
+#### Phân tích theo thông số kỹ thuật
 
-![Hình 2.3 — Tín hiệu văn bản và giá bán](./images/phone-pricing/figS4.png)
+| Thông số | Xu hướng | Giải thích |
+|----------|----------|------------|
+| RAM | Tăng 2→8 GB, sau đó plateau | Cấu hình cao hơn → giá cao hơn; flagship đã saturate |
+| Storage | Tăng mạnh 64→256 GB→1 TB | Apple/Samsung premium theo tier bộ nhớ |
+| Chip gen | Gen 4–5 > Gen 1–2 | Chip mới giữ giá tốt hơn |
+| Tuổi máy | Giảm đơn điệu | Khấu hao theo thời gian |
 
-*Hình 2.3. Mối quan hệ giữa tín hiệu văn bản và giá bán: (a) từ khóa chất lượng, (b) từ khóa lỗi, (c) sức khỏe pin.*
+![Hình 2.5.4 — Giá theo thông số kỹ thuật](./images/phone-pricing/figS5.png)
 
-### 2.2.7. Phân tích theo thông số kỹ thuật
+*Hình 2.5.4. Giá trung vị theo RAM, bộ nhớ, thế hệ chip và tuổi máy.*
 
-Quan hệ giữa thông số kỹ thuật và giá bán thể hiện các xu hướng sau:
+#### Ma trận tương quan
 
-- **RAM:** giá tăng dần từ 2 GB đến 8 GB trở lên, sau đó ổn định ở phân khúc cao cấp.
-- **Dung lượng bộ nhớ:** giá tăng mạnh từ 64 GB lên 256 GB và 1 TB.
-- **Thế hệ chip:** thế hệ 4–5 (chip mới) có giá cao hơn thế hệ 1–2.
-- **Tuổi máy:** giá giảm đơn điệu theo thời gian sử dụng.
+Hình 2.5.5 trình bày hệ số tương quan Pearson:
 
-![Hình 2.4 — Giá bán theo thông số kỹ thuật](./images/phone-pricing/figS5.png)
+- **Dương mạnh với giá:** `storage_gb`, `chip_gen`, `condition_score`, `spec_score`, `title_quality_score`
+- **Âm với giá:** `age_years`, `depreciation_score`, `title_defect_score`
+- `ram_gb` và `storage_gb` tương quan cao → XGBoost xử lý đa cộng tuyến tốt hơn hồi quy tuyến tính
 
-*Hình 2.4. Giá trung vị và trung bình theo (a) RAM, (b) dung lượng bộ nhớ, (c) thế hệ chip và (d) tuổi máy.*
+![Hình 2.5.5 — Ma trận tương quan](./images/phone-pricing/figS3.png)
 
-### 2.2.8. Ma trận tương quan
+*Hình 2.5.5. Ma trận tương quan giữa các đặc trưng số và biến mục tiêu.*
 
-Ma trận tương quan Pearson (Hình 2.5) cho thấy các mối liên hệ đáng chú ý với giá bán:
+#### Kết luận phân tích dữ liệu
 
-- Tương quan **dương mạnh:** dung lượng bộ nhớ, thế hệ chip, điểm tình trạng, điểm cấu hình, từ khóa chất lượng.
-- Tương quan **âm:** tuổi máy, điểm khấu hao, từ khóa lỗi.
+1. Tập 12.391 mẫu **đủ quy mô**, đa hãng, đa phân khúc — phù hợp huấn luyện mô hình định giá.
+2. Dữ liệu **nhiễu**, cần lọc MAD và impute thông minh.
+3. **Tín hiệu văn bản** (keyword, pin) có giá trị dự đoán độc lập, bổ sung cho condition 3 mức.
+4. Biến `model` là yếu tố quyết định giá mạnh nhất — cần mã hóa bằng Target Encoding **cross-fit** để tránh leakage.
+5. Biến đổi log-price **cần thiết** do phân phối lệch.
 
-Biến RAM và dung lượng bộ nhớ có tương quan cao với nhau; mô hình dạng cây (XGBoost) có khả năng xử lý đa cộng tuyến tốt hơn so với mô hình hồi quy tuyến tính.
+![Hình 2.5.6 — Khảo sát sơ bộ](./images/phone-pricing/eda_v10.png)
 
-![Hình 2.5 — Ma trận tương quan](./images/phone-pricing/figS3.png)
+*Hình 2.5.6. Khảo sát sơ bộ: log-price, giá median theo hãng, giá theo defect score.*
 
-*Hình 2.5. Ma trận tương quan Pearson giữa các đặc trưng số và biến mục tiêu giá bán.*
+### 2.5.3. Thiết kế pipeline học máy
 
-### 2.2.9. Kết luận giai đoạn phân tích dữ liệu
+#### Kiến trúc pipeline
 
-Qua quá trình khảo sát và phân tích, có thể rút ra các nhận định sau:
+```
+Dữ liệu Chợ Tốt → Tiền xử lý → Feature Engineering (26 đặc trưng)
+    → TargetEncoder(model, color) [cross-fit 5-fold]
+    → XGBRegressor → Optuna tuning → Export artifacts → Flask API
+```
 
-1. Tập dữ liệu sau làm sạch gồm **12.391 bản ghi**, đủ quy mô và đa dạng cho bài toán định giá điện thoại cũ.
-2. Dữ liệu thực tế mang tính **nhiễu và không đồng nhất**, đòi hỏi quy trình tiền xử lý và lọc ngoại lai chặt chẽ.
-3. Tín hiệu văn bản và metadata tin đăng có **giá trị dự đoán** đáng kể, cần được đưa vào mô hình.
-4. Biến đổi logarit trên biến mục tiêu là **cần thiết** do đặc điểm phân phối giá.
-5. Biến model là yếu tố quan trọng nhất, cần được mã hóa theo phương pháp **không gây rò rỉ dữ liệu**.
+![Hình 2.5.7 — Kiến trúc pipeline](./images/phone-pricing/figS6.png)
 
-![Hình 2.6 — Khảo sát sơ bộ dữ liệu](./images/phone-pricing/eda_v10.png)
+*Hình 2.5.7. Sơ đồ pipeline từ dữ liệu thô đến mô hình triển khai.*
 
-*Hình 2.6. Khảo sát sơ bộ: phân phối log-price, giá trung vị theo hãng và mối liên hệ giữa từ khóa lỗi với giá bán.*
+#### Bộ đặc trưng (26 features)
 
----
+| Nhóm | Đặc trưng | Số lượng |
+|------|-----------|----------|
+| Target-encoded | `model`, `color` | 2 |
+| Mã hóa nhãn | `brand_enc`, `sl_condition_enc`, `region_group_enc`, `sim_lock_enc` | 4 |
+| Thông số phần cứng | `ram_gb`, `storage_gb`, `screen_inches`, `chip_gen`, `chip_x_age` | 5 |
+| Tình trạng & tuổi | `condition_score`, `age_years`, `is_age_known` | 3 |
+| Nguồn gốc & bảo hành | `origin_code`, `is_official`, `warranty_code`, `has_warranty` | 4 |
+| Tổng hợp | `spec_score`, `depreciation_score` | 2 |
+| Metadata tin | `num_images`, `has_video` | 2 |
+| Văn bản | `title_quality_score`, `title_defect_score`, `has_battery_info`, `battery_pct` | 4 |
 
-## 2.3. Thiết kế pipeline học máy
+Công thức đặc trưng tổng hợp:
+- `spec_score = ram_gb × log(1 + storage_gb)`
+- `depreciation_score = age_years × (1 − condition_score/3)`
+- `chip_x_age = chip_gen / (age_years + 1)`
 
-### 2.3.1. Kiến trúc pipeline
+#### Thiết kế mã hóa biến phân loại
 
-Pipeline huấn luyện được thiết kế theo luồng xử lý tuần tự: thu thập dữ liệu → tiền xử lý → trích chọn đặc trưng → mã hóa biến phân loại → huấn luyện mô hình → tối ưu siêu tham số → xuất artifacts → triển khai suy luận.
+Biến `model` có cardinality cao (hàng trăm giá trị) và là tín hiệu mạnh nhất. Sử dụng `TargetEncoder` của scikit-learn với `cv=5`, `target_type='continuous'`, nhúng trong `Pipeline` — đảm bảo mỗi fold cross-validation chỉ học encoding từ dữ liệu train của fold đó, **không rò rỉ** thông tin giá sang tập validation.
 
-![Hình 2.7 — Kiến trúc pipeline định giá](./images/phone-pricing/figS6.png)
+### 2.5.4. Thiết kế tích hợp vào Second Life
 
-*Hình 2.7. Sơ đồ kiến trúc pipeline dự đoán giá điện thoại cũ: từ dữ liệu thô đến mô hình cuối cùng.*
+Module AI không hoạt động độc lập mà nằm trong luồng microservice:
 
-### 2.3.2. Bộ đặc trưng đầu vào
+```
+Seller Hub → Product Service → AI Service (Flask) → XGBoost model
+```
 
-Hệ thống sử dụng **26 đặc trưng**, trong đó hai biến `model` và `color` được mã hóa bằng Target Encoding, còn 24 đặc trưng còn lại bao gồm các thuộc tính số, thuộc tính đã mã hóa nhãn và các đặc trưng tổng hợp như đã trình bày ở mục 1.3.
+**Luồng xử lý:**
+1. `POST /ai/suggest-price` (Product Service) — kiểm tra `sub-phone` + `BUY`
+2. `PhonePricingRequestMapper` — chuyển `attributeLines`, `productName`, `listingTitle`… sang payload ML
+3. `POST /api/v1/ai/suggest-price/phone` (AI Service) — suy luận
+4. Trả `suggestedPriceVnd`, `priceMinVnd`, `priceMaxVnd`, `confidence`, `reasoningBrief`
 
-### 2.3.3. Cấu trúc pipeline scikit-learn
+**Cơ chế tin cậy và khoảng giá:**
 
-Pipeline huấn luyện được xây dựng bằng scikit-learn, kết hợp bước tiền xử lý và mô hình hồi quy trong một luồng thống nhất. Bước tiền xử lý sử dụng `ColumnTransformer` với `TargetEncoder` (cross-fit 5-fold) cho biến model và color; các đặc trưng còn lại được giữ nguyên dạng số. Mô hình cuối cùng là `XGBRegressor` với bộ siêu tham số tối ưu từ Optuna.
-
----
-
-## 2.4. Thiết kế tích hợp hệ thống Second Life
-
-### 2.4.1. Kiến trúc tổng thể
-
-Hệ thống Second Life vận hành theo kiến trúc microservice. Chức năng gợi ý giá được tích hợp vào Product Service và giao tiếp với AI Service thông qua REST API nội bộ.
-
-![Hình 2.8 — Kiến trúc hệ thống Second Life](../diagrams/system_architecture/SystemArchitecture.jpg)
-
-*Hình 2.8. Kiến trúc tổng thể hệ thống Second Life với các microservice và API Gateway.*
-
-### 2.4.2. Luồng xử lý gợi ý giá
-
-Khi người bán yêu cầu gợi ý giá tại Seller Hub, luồng xử lý diễn ra như sau:
-
-1. Giao diện gửi yêu cầu đến Product Service qua endpoint `POST /ai/suggest-price`.
-2. Product Service kiểm tra danh mục sản phẩm (điện thoại) và loại tin đăng (bán).
-3. Lớp `PhonePricingRequestMapper` chuyển đổi dữ liệu từ định dạng nghiệp vụ sang payload phù hợp với mô hình.
-4. `PhonePricingClient` gọi AI Service tại endpoint `POST /api/v1/ai/suggest-price/phone`.
-5. AI Service trích chọn đặc trưng, thực hiện suy luận và trả về giá gợi ý cùng khoảng giá và mức tin cậy.
-
-### 2.4.3. Thiết kế giao diện lập trình ứng dụng
-
-**Đầu vào** gồm: tên sản phẩm, tiêu đề và mô tả tin đăng, danh sách thuộc tính (hãng, dung lượng, tình trạng…), năm sản xuất, khu vực và số lượng ảnh đính kèm.
-
-**Đầu ra** gồm: giá gợi ý (`suggestedPriceVnd`), giá tối thiểu và tối đa, mức tin cậy, lời giải thích ngắn bằng tiếng Việt.
-
-### 2.4.4. Cơ chế đánh giá mức tin cậy
-
-| Mức tin cậy | Điều kiện | Biên độ khoảng giá |
-|-------------|-----------|-------------------|
-| HIGH | Đầy đủ thông số, model và tuổi máy | ±18% |
-| MEDIUM | Có thông số và model, hoặc có mô tả văn bản | ±22% |
+| Confidence | Điều kiện | Biên độ |
+|------------|-----------|---------|
+| HIGH | Đủ specs + model + tuổi máy | ±18% |
+| MEDIUM | Có specs + model, hoặc có text | ±22% |
 | LOW | Thiếu thông tin quan trọng | ±28% |
 
 ---
 
 # Chương 3. Triển khai hệ thống và kết quả thực nghiệm
 
-## 3.1. Triển khai quy trình huấn luyện
+## 3.4. Triển khai và kết quả module gợi ý giá điện thoại (AI)
 
-### 3.1.1. Môi trường thực nghiệm
+### 3.4.1. Quy trình huấn luyện mô hình
 
-Quá trình huấn luyện được thực hiện trên Google Colab với các thư viện scikit-learn 1.6.1, XGBoost, LightGBM và Optuna. Các tham số cố định: `RANDOM_SEED = 42`, tỷ lệ chia tập kiểm thử 20%, số lần thử nghiệm Optuna 50.
+Huấn luyện thực hiện trên Google Colab, notebook `aiservice/train/phone_price_pipeline_vnd_v10.ipynb`:
 
-### 3.1.2. Tối ưu siêu tham số
+| Tham số | Giá trị |
+|---------|---------|
+| scikit-learn | 1.6.1 |
+| `RANDOM_SEED` | 42 |
+| Tỷ lệ test | 20% |
+| Optuna trials | 50 (TPE Sampler) |
+| Cross-validation | 5-fold |
 
-Thuật toán Optuna với bộ lấy mẫu TPE được sử dụng để tìm kiếm bộ siêu tham số tối ưu cho cả XGBoost và LightGBM. Tiêu chí tối ưu là hệ số xác định R² trung bình trên 5-fold cross-validation.
+Hai mô hình được so sánh: XGBoost và LightGBM. Siêu tham số tối ưu gồm `n_estimators`, `learning_rate`, `max_depth`, `subsample`, `colsample_bytree`, `reg_alpha`, `reg_lambda`, `min_child_weight`, `gamma`.
 
-Kết quả tối ưu đạt CV R² = **0,8301** cho XGBoost và **0,8302** cho LightGBM. Hình 3.1 minh họa quá trình hội tụ của các lần thử nghiệm.
+![Hình 3.4.1 — Tối ưu siêu tham số Optuna](./images/phone-pricing/figS7.png)
 
-![Hình 3.1 — Quá trình tối ưu siêu tham số](./images/phone-pricing/figS7.png)
+*Hình 3.4.1. CV R² qua từng trial của Optuna cho XGBoost và LightGBM.*
 
-*Hình 3.1. Lịch sử tối ưu siêu tham số bằng Optuna: CV R² qua từng lần thử nghiệm của XGBoost và LightGBM.*
+### 3.4.2. Kết quả đánh giá mô hình
 
-### 3.1.3. Kết quả đánh giá mô hình
+**Bảng 3.4.1. So sánh mô hình trên tập kiểm thử (2.479 mẫu)**
 
-Bảng 3.1 trình bày kết quả so sánh hai thuật toán trên tập kiểm thử:
-
-**Bảng 3.1. Kết quả đánh giá mô hình trên tập kiểm thử**
-
-| Mô hình | CV R² (TB ± ĐLC) | Test R² | Chênh lệch CV/Test | MAE (VND) | MAPE (%) |
-|---------|------------------|---------|-------------------|-----------|----------|
-| XGBoost | 0,8301 ± 0,0135 | **0,8058** | 0,0244 | **1.810.294** | **29,4** |
+| Mô hình | CV R² (TB ± ĐLC) | Test R² | Gap CV/Test | MAE (VND) | MAPE (%) |
+|---------|------------------|---------|-------------|-----------|----------|
+| **XGBoost** | 0,8301 ± 0,0135 | **0,8058** | 0,0244 | **1.810.294** | **29,4** |
 | LightGBM | 0,8302 ± 0,0125 | 0,8039 | 0,0263 | 1.822.059 | 30,1 |
 
-Mô hình **XGBoost** được lựa chọn triển khai chính thức với Test R² = **0,8058**, tức mô hình giải thích khoảng **80,6%** phương sai giá bán trên tập kiểm thử. Chênh lệch giữa CV R² và Test R² chỉ **0,0244**, cho thấy mô hình không bị overfitting đáng kể.
+**Nhận xét:**
+- XGBoost giải thích **80,6%** phương sai giá trên tập test.
+- Gap CV/Test = 0,024 → mô hình **không overfit** đáng kể.
+- MAE ≈ 1,81 triệu VND: với điện thoại tầm trung 5–15 triệu, sai số tuyệt đối ở mức chấp nhận được.
+- MAPE 29,4%: phân khúc bình dân có MAPE cao hơn do giá nhỏ và biến động lớn.
 
-Hình 3.2 thể hiện kết quả cross-validation chi tiết theo từng fold.
+![Hình 3.4.2 — Cross-validation chi tiết](./images/phone-pricing/figS8.png)
 
-![Hình 3.2 — Kết quả cross-validation](./images/phone-pricing/figS8.png)
+*Hình 3.4.2. R² và MAE trên từng fold của 5-fold CV.*
 
-*Hình 3.2. Hệ số R² và MAE trên từng fold trong quá trình đánh giá 5-fold cross-validation.*
+### 3.4.3. Phân tích chất lượng dự đoán
 
-### 3.1.4. Phân tích chất lượng dự đoán
+**Thực tế vs dự đoán:** Điểm phân tán sát đường chéo lý tưởng, đặc biệt phân khúc 5–15 triệu (Hình 3.4.3).
 
-**Mối tương quan thực tế – dự đoán:** Hình 3.3 cho thấy điểm dự đoán phân bố sát đường chéo lý tưởng, đặc biệt ở phân khúc tầm trung.
+![Hình 3.4.3 — Actual vs Predicted](./images/phone-pricing/fig3.png)
 
-![Hình 3.3 — Giá thực tế và giá dự đoán](./images/phone-pricing/fig3.png)
+*Hình 3.4.3. Biểu đồ phân tán giá thực tế và giá dự đoán.*
 
-*Hình 3.3. Biểu đồ phân tán giữa giá thực tế và giá dự đoán trên tập kiểm thử.*
+**Phân phối sai số:** APE tập trung quanh 20–25%, một số outlier ở phân khúc giá thấp (Hình 3.4.4).
 
-**Phân phối sai số:** Sai số tuyệt đối phần trăm (APE) có trung vị khoảng 20–25%, với phần lớn dự đoán nằm trong ngưỡng chấp nhận được cho thị trường đồ cũ (Hình 3.4).
+![Hình 3.4.4 — Phân phối sai số](./images/phone-pricing/fig4.png)
 
-![Hình 3.4 — Phân phối sai số](./images/phone-pricing/fig4.png)
+*Hình 3.4.4. Phân phối sai số tuyệt đối phần trăm (APE).*
 
-*Hình 3.4. Phân phối sai số tuyệt đối phần trăm (APE) trên tập kiểm thử.*
+**Sai số theo nhóm:** Tầm trung ổn định nhất; bình dân biến động cao; flagship sai số tuyệt đối lớn nhưng % hợp lý (Hình 3.4.5).
 
-**Sai số theo nhóm:** Phân khúc tầm trung cho kết quả ổn định nhất; phân khúc bình dân có sai số tương đối cao hơn do biến động giá lớn ở phân khúc giá thấp (Hình 3.5).
+![Hình 3.4.5 — Sai số theo phân khúc](./images/phone-pricing/fig5.png)
 
-![Hình 3.5 — Sai số theo phân khúc và hãng](./images/phone-pricing/fig5.png)
+*Hình 3.4.5. Sai số theo phân khúc giá và hãng sản xuất.*
 
-*Hình 3.5. Sai số dự đoán theo phân khúc giá và theo hãng sản xuất.*
+**Feature importance:** Top đặc trưng — `model` (qua Target Encoding), `storage_gb`, `condition_score`, `age_years`, `title_quality_score`, `chip_gen` (Hình 3.4.6).
 
-**Mức độ quan trọng đặc trưng:** Các đặc trưng đóng góp nhiều nhất gồm model (qua Target Encoding), dung lượng bộ nhớ, điểm tình trạng, tuổi máy, từ khóa chất lượng/lỗi và thế hệ chip (Hình 3.6).
+![Hình 3.4.6 — Feature importance](./images/phone-pricing/fig6.png)
 
-![Hình 3.6 — Mức độ quan trọng đặc trưng](./images/phone-pricing/fig6.png)
+*Hình 3.4.6. 15 đặc trưng quan trọng nhất theo XGBoost.*
 
-*Hình 3.6. Mức độ quan trọng của 15 đặc trưng hàng đầu theo mô hình XGBoost.*
+**Đường cong học:** R² validation ổn định từ ~60% dữ liệu trở lên, xác nhận tập 9.912 mẫu đủ cho mô hình (Hình 3.4.7).
 
-**Đường cong học:** Hình 3.7 cho thấy R² trên tập kiểm định tiến dần đến ổn định khi tăng kích thước tập huấn luyện, xác nhận tập dữ liệu hiện tại đủ để mô hình học hiệu quả.
+![Hình 3.4.7 — Learning curve](./images/phone-pricing/fig7.png)
 
-![Hình 3.7 — Đường cong học](./images/phone-pricing/fig7.png)
+*Hình 3.4.7. R² theo kích thước tập huấn luyện.*
 
-*Hình 3.7. Đường cong học: R² theo kích thước tập huấn luyện.*
+**Phân tích SHAP:** Tuổi máy và tình trạng tương tác ảnh hưởng giá; pin thấp và từ khóa lỗi làm giảm dự đoán — phù hợp trực giác thị trường (Hình 3.4.8, 3.4.9).
 
-**Phân tích SHAP:** Kết quả phân tích SHAP (Hình 3.8, 3.9) xác nhận tuổi máy và tình trạng có tương tác ảnh hưởng đến giá; thông tin pin và từ khóa lỗi làm giảm giá dự đoán, phù hợp với trực giác thị trường.
+![Hình 3.4.8 — SHAP summary](./images/phone-pricing/hinh_shap_summary.png)
 
-![Hình 3.8 — Phân tích SHAP tổng hợp](./images/phone-pricing/hinh_shap_summary.png)
+*Hình 3.4.8. SHAP summary plot.*
 
-*Hình 3.8. Biểu đồ SHAP summary: ảnh hưởng của từng đặc trưng đến giá dự đoán.*
+![Hình 3.4.9 — SHAP importance](./images/phone-pricing/hinh_shap_bar.png)
 
-![Hình 3.9 — Độ quan trọng đặc trưng theo SHAP](./images/phone-pricing/hinh_shap_bar.png)
+*Hình 3.4.9. Xếp hạng |SHAP| trung bình.*
 
-*Hình 3.9. Xếp hạng độ quan trọng đặc trưng theo giá trị trung bình |SHAP|.*
+![Hình 3.4.10 — Đánh giá tổng hợp](./images/phone-pricing/hinh_danh_gia_tong_hop.png)
 
-![Hình 3.10 — Đánh giá tổng hợp mô hình](./images/phone-pricing/hinh_danh_gia_tong_hop.png)
+*Hình 3.4.10. Tổng hợp: chỉ số, scatter, residual, feature importance.*
 
-*Hình 3.10. Bảng tổng hợp kết quả đánh giá: scatter plot, phân tích residual, so sánh chỉ số và feature importance.*
+### 3.4.4. Triển khai dịch vụ suy luận
 
-## 3.2. Triển khai dịch vụ suy luận
+Sau huấn luyện, artifacts được export (`xgb_model.json`, `preprocessor.pkl`, `label_encoders.pkl`, `artifacts.json`) vào `aiservice/models/v10/`:
 
-### 3.2.1. Cấu trúc mã nguồn AI Service
+```
+aiservice/
+├── app/
+│   ├── features.py     # Trích đặc trưng (đồng bộ notebook)
+│   ├── predictor.py    # Nạp model + suy luận
+│   └── routes.py       # /health, /api/v1/ai/suggest-price/phone
+├── models/v10/         # Artifacts (mount vào Docker)
+└── Dockerfile          # Gunicorn, port 8090
+```
 
-Dịch vụ suy luận được triển khai tại thư mục `aiservice/`, gồm các thành phần:
+**Luồng suy luận:** validate input → `build_feature_row()` (26 features) → `preprocessor.transform()` → `XGBoost.predict(log_price)` → `expm1` → VND → tính confidence + khoảng giá → JSON response.
 
-- `features.py`: tái tạo logic trích chọn đặc trưng đồng nhất với notebook huấn luyện.
-- `predictor.py`: nạp artifacts, thực hiện suy luận và tính khoảng giá.
-- `routes.py`: cung cấp endpoint REST API.
-- `scripts/colab_export_v10.py`: xuất mô hình sau huấn luyện.
+### 3.4.5. Tích hợp Product Service
 
-Sau khi huấn luyện trên Colab, các tệp `xgb_model.json`, `preprocessor.pkl`, `label_encoders.pkl` và `artifacts.json` được sao chép vào `aiservice/models/` và mount vào container Docker.
+| Thành phần | Vai trò |
+|------------|---------|
+| `AiController` | Endpoint `/ai/suggest-price` |
+| `AiServiceImpl` | Kiểm tra `sub-phone` + `BUY`, routing |
+| `PhonePricingRequestMapper` | Map Java DTO → Python payload |
+| `PhonePricingClient` | HTTP call đến AI Service |
 
-### 3.2.2. Quy trình suy luận
+Cấu hình: `external.ai-service.url=http://ai-service:8090` trong `docker-compose.yml`.
 
-Khi nhận yêu cầu định giá, dịch vụ thực hiện: kiểm tra tính hợp lệ đầu vào → trích chọn 26 đặc trưng → biến đổi qua preprocessor → dự đoán trên thang log → chuyển về VND → tính khoảng giá và mức tin cậy → trả kết quả JSON.
+### 3.4.6. Đánh giá module
 
-### 3.2.3. Triển khai container
+**Ưu điểm:**
+- Test R² = 0,806, MAE ≈ 1,81 triệu trên thị trường đồ cũ nhiễu
+- Khai thác đồng thời specs, văn bản, metadata tin đăng
+- Tích hợp production qua microservice, tách train/serve
+- Target Encoding cross-fit — đánh giá trung thực
 
-AI Service được đóng gói bằng Docker, chạy Gunicorn với 2 worker, cổng 8090. Healthcheck endpoint `/health` báo trạng thái nạp mô hình. Cấu hình trong `docker-compose.yml` mount thư mục models ở chế độ read-only.
+**Hạn chế:**
 
-## 3.3. Tích hợp với Product Service
-
-Product Service đóng vai trò trung gian giữa giao diện người dùng và AI Service:
-
-- `AiController` tiếp nhận yêu cầu tại `/ai/suggest-price`.
-- `AiServiceImpl` kiểm tra điều kiện danh mục và loại tin đăng.
-- `PhonePricingRequestMapper` chuyển đổi dữ liệu nghiệp vụ sang định dạng mô hình.
-- `PhonePricingClient` gọi AI Service và ánh xạ kết quả trả về.
-
-Hệ thống xử lý các trường hợp lỗi: thiếu thông tin đầu vào (HTTP 400), mô hình chưa sẵn sàng (HTTP 503), dịch vụ AI không khả dụng (mã lỗi nghiệp vụ).
-
-## 3.4. Tổng hợp kết quả
-
-**Bảng 3.2. Tổng hợp chỉ số hệ thống**
-
-| Chỉ số | Giá trị |
-|--------|---------|
-| Hệ số xác định (Test R²) | 0,8058 |
-| Hệ số xác định (CV R²) | 0,8301 |
-| Sai số tuyệt đối trung bình (MAE) | 1,81 triệu VND |
-| Sai số phần trăm trung bình (MAPE) | 29,4% |
-| Số đặc trưng đầu vào | 26 |
-| Tập huấn luyện | 9.912 mẫu |
-| Tập kiểm thử | 2.479 mẫu |
-
-## 3.5. Đánh giá và hạn chế
-
-### 3.5.1. Ưu điểm
-
-Hệ thống đạt được các ưu điểm sau:
-
-1. Sử dụng phương pháp mã hóa biến phân loại trung thực, tránh đánh giá lạc quan.
-2. Khai thác đồng thời đặc trưng cấu trúc, văn bản và metadata tin đăng.
-3. Tích hợp thực tế vào nền tảng Second Life theo kiến trúc microservice.
-4. Đồng bộ logic huấn luyện và suy luận, giảm sai lệch khi triển khai.
-5. Đạt Test R² = 0,806 với MAE khoảng 1,81 triệu VND trên thị trường đồ cũ nhiễu.
-
-### 3.5.2. Hạn chế
-
-| Hạn chế | Hướng khắc phục |
-|---------|-----------------|
-| Chỉ hỗ trợ điện thoại, tin bán | Mở rộng sang danh mục và loại hình cho thuê |
-| Dữ liệu huấn luyện từ Chợ Tốt | Thu thập phản hồi từ Second Life, huấn luyện lại định kỳ |
-| MAPE ~29% | Bổ sung phân tích hình ảnh sản phẩm |
-| Model mới chưa có trong tập huấn luyện | Cơ chế cold-start hoặc embedding |
-| Quy trình export phụ thuộc Colab | Tự động hóa pipeline huấn luyện (CI/CD) |
-
-### 3.5.3. Hướng phát triển
-
-- Tích hợp mô hình đa phương thức (ảnh + bảng đặc trưng).
-- Cập nhật mô hình từ dữ liệu giao dịch thực trên Second Life.
-- Mở rộng sang laptop, máy ảnh và thiết bị điện tử khác.
-- Cung cấp giải thích dự đoán theo thời gian thực (SHAP) trong phản hồi API.
+| Hạn chế | Hướng phát triển |
+|---------|------------------|
+| Chỉ điện thoại BUY | Mở rộng danh mục, hỗ trợ thuê |
+| Dữ liệu Chợ Tốt | Retrain từ giao dịch Second Life |
+| MAPE ~29% | Bổ sung phân tích ảnh (multi-modal) |
+| Model mới (cold-start) | Embedding hoặc heuristic fallback |
 
 ---
 
-# Kết luận
+## Danh mục hình ảnh (module AI)
 
-Đồ án đã xây dựng thành công hệ thống gợi ý giá điện thoại cũ dựa trên học máy, huấn luyện trên tập dữ liệu 12.391 tin đăng từ Chợ Tốt và tích hợp vào nền tảng Second Life. Mô hình XGBoost đạt hệ số xác định R² = 0,806 trên tập kiểm thử, với sai số tuyệt đối trung bình khoảng 1,81 triệu VND.
-
-Quá trình phân tích dữ liệu cho thấy giá bán phụ thuộc mạnh vào model, cấu hình phần cứng, tình trạng máy, tuổi đời sản phẩm và nội dung mô tả tin đăng. Việc áp dụng Target Encoding với cross-fit, kết hợp trích xuất tín hiệu văn bản, góp phần nâng cao đáng kể chất lượng dự đoán so với các phương pháp mã hóa đơn giản.
-
-Hệ thống được triển khai dưới dạng microservice độc lập, đảm bảo khả năng mở rộng và bảo trì. Kết quả thực nghiệm khẳng định tính khả thi của việc ứng dụng học máy trong hỗ trợ định giá sản phẩm trên sàn thương mại điện tử đồ cũ tại Việt Nam.
-
----
-
-# Danh mục hình ảnh
-
-| Ký hiệu | Tên hình | Tệp |
+| Ký hiệu | Nội dung | Tệp |
 |---------|----------|-----|
-| Hình 2.1 | Tổng quan tập dữ liệu huấn luyện | `images/phone-pricing/figS1.png` |
-| Hình 2.2 | Phân tích giá theo hãng, tình trạng, khu vực | `images/phone-pricing/figS2.png` |
-| Hình 2.3 | Tín hiệu văn bản và giá bán | `images/phone-pricing/figS4.png` |
-| Hình 2.4 | Giá bán theo thông số kỹ thuật | `images/phone-pricing/figS5.png` |
-| Hình 2.5 | Ma trận tương quan đặc trưng | `images/phone-pricing/figS3.png` |
-| Hình 2.6 | Khảo sát sơ bộ dữ liệu | `images/phone-pricing/eda_v10.png` |
-| Hình 2.7 | Kiến trúc pipeline định giá | `images/phone-pricing/figS6.png` |
-| Hình 2.8 | Kiến trúc hệ thống Second Life | `../diagrams/system_architecture/SystemArchitecture.jpg` |
-| Hình 3.1 | Quá trình tối ưu siêu tham số Optuna | `images/phone-pricing/figS7.png` |
-| Hình 3.2 | Kết quả 5-fold cross-validation | `images/phone-pricing/figS8.png` |
-| Hình 3.3 | Giá thực tế và giá dự đoán | `images/phone-pricing/fig3.png` |
-| Hình 3.4 | Phân phối sai số | `images/phone-pricing/fig4.png` |
-| Hình 3.5 | Sai số theo phân khúc và hãng | `images/phone-pricing/fig5.png` |
-| Hình 3.6 | Mức độ quan trọng đặc trưng | `images/phone-pricing/fig6.png` |
-| Hình 3.7 | Đường cong học | `images/phone-pricing/fig7.png` |
-| Hình 3.8 | Phân tích SHAP tổng hợp | `images/phone-pricing/hinh_shap_summary.png` |
-| Hình 3.9 | Độ quan trọng đặc trưng theo SHAP | `images/phone-pricing/hinh_shap_bar.png` |
-| Hình 3.10 | Đánh giá tổng hợp mô hình | `images/phone-pricing/hinh_danh_gia_tong_hop.png` |
+| Hình 2.5.1 | Tổng quan tập dữ liệu | `images/phone-pricing/figS1.png` |
+| Hình 2.5.2 | Giá theo hãng, tình trạng, khu vực | `images/phone-pricing/figS2.png` |
+| Hình 2.5.3 | Tín hiệu văn bản | `images/phone-pricing/figS4.png` |
+| Hình 2.5.4 | Giá theo thông số kỹ thuật | `images/phone-pricing/figS5.png` |
+| Hình 2.5.5 | Ma trận tương quan | `images/phone-pricing/figS3.png` |
+| Hình 2.5.6 | Khảo sát sơ bộ | `images/phone-pricing/eda_v10.png` |
+| Hình 2.5.7 | Kiến trúc pipeline | `images/phone-pricing/figS6.png` |
+| Hình 3.4.1 | Optuna tuning | `images/phone-pricing/figS7.png` |
+| Hình 3.4.2 | CV fold detail | `images/phone-pricing/figS8.png` |
+| Hình 3.4.3 | Actual vs Predicted | `images/phone-pricing/fig3.png` |
+| Hình 3.4.4 | Phân phối sai số | `images/phone-pricing/fig4.png` |
+| Hình 3.4.5 | Sai số theo nhóm | `images/phone-pricing/fig5.png` |
+| Hình 3.4.6 | Feature importance | `images/phone-pricing/fig6.png` |
+| Hình 3.4.7 | Learning curve | `images/phone-pricing/fig7.png` |
+| Hình 3.4.8 | SHAP summary | `images/phone-pricing/hinh_shap_summary.png` |
+| Hình 3.4.9 | SHAP bar | `images/phone-pricing/hinh_shap_bar.png` |
+| Hình 3.4.10 | Đánh giá tổng hợp | `images/phone-pricing/hinh_danh_gia_tong_hop.png` |
 
 ---
 
 ## Tài liệu tham khảo kỹ thuật
 
-| Nội dung | Đường dẫn trong dự án |
-|----------|----------------------|
+| Nội dung | Đường dẫn |
+|----------|-----------|
 | Notebook huấn luyện | `aiservice/train/phone_price_pipeline_vnd_v10.ipynb` |
-| Mã nguồn AI Service | `aiservice/app/` |
-| Tích hợp Product Service | `productservice/.../PhonePricingRequestMapper.java` |
-| Cấu hình triển khai | `docker-compose.yml` |
-| Kiến trúc hệ thống | [architecture.md](./architecture.md) |
+| AI Service | `aiservice/app/` |
+| Tích hợp Java | `productservice/.../PhonePricingRequestMapper.java`, `AiServiceImpl.java` |
+| Docker Compose | `docker-compose.yml` |
