@@ -3,7 +3,9 @@ package com.naodab.productservice.services.impl;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +48,11 @@ public class FacilityServiceImpl implements FacilityService {
   LocationClient locationClient;
 
   @NonFinal
+  @Autowired
+  @Lazy
+  FacilityService self;
+
+  @NonFinal
   @Value("${sort.facilities.default:created_at}")
   String defaultSort;
 
@@ -64,11 +71,10 @@ public class FacilityServiceImpl implements FacilityService {
   }
 
   @Override
-  @Transactional
   public FacilityResponse getFacilityById(String id) {
     Facility facility = facilityRepository.findByIdAndDeletedAtIsNull(id)
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
-    recordView(facility.getId());
+    self.recordView(facility.getId());
     facility.setViewCount(nextCount(facility.getViewCount()));
     return facilityMapper.toFacilityResponse(facility);
   }

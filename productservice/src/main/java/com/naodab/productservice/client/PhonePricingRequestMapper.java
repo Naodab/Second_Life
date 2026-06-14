@@ -259,11 +259,23 @@ public final class PhonePricingRequestMapper {
     if (!StringUtils.hasText(productName)) {
       return null;
     }
-    Matcher matcher = Pattern.compile("(\\d+)\\s*gb", Pattern.CASE_INSENSITIVE).matcher(productName);
-    if (matcher.find()) {
-      return Double.parseDouble(matcher.group(1));
+    String lower = productName.toLowerCase(Locale.ROOT);
+    int gbIndex = lower.indexOf("gb");
+    if (gbIndex < 0) {
+      return null;
     }
-    return null;
+    int digitEnd = gbIndex;
+    while (digitEnd > 0 && Character.isWhitespace(lower.charAt(digitEnd - 1))) {
+      digitEnd--;
+    }
+    int digitStart = digitEnd;
+    while (digitStart > 0 && Character.isDigit(lower.charAt(digitStart - 1))) {
+      digitStart--;
+    }
+    if (digitStart == digitEnd) {
+      return null;
+    }
+    return Double.parseDouble(lower.substring(digitStart, digitEnd));
   }
 
   private static String inferBrandFromName(String productName) {
