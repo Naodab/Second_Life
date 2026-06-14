@@ -1,9 +1,60 @@
 <mxfile host="app.diagrams.net">
-  <diagram name="Page-1" id="hc_B2x414RlJggajmKa6">
-    <mxGraphModel dx="984" dy="572" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+  <diagram name="Pipeline AI" id="hc_B2x414RlJggajmKa6">
+    <mxGraphModel dx="1406" dy="817" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;fontSize=13;fontStyle=1" value="Dữ liệu Chợ Tốt" vertex="1">
+          <mxGeometry height="70" width="160" x="40" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;fontSize=13;fontStyle=1" value="Tiền xử lý dữ liệu" vertex="1">
+          <mxGeometry height="60" width="190" x="25" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;fontSize=13;fontStyle=1" value="Feature Engineering" vertex="1">
+          <mxGeometry height="70" width="220" x="10" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;fontSize=13;fontStyle=1" value="Target Encoder&#xa;• model&#xa;• color&#xa;• Cross-Fit 5 Fold" vertex="1">
+          <mxGeometry height="90" width="190" x="25" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;fontSize=13;fontStyle=1" value="Huấn luyện&#xa;XGBoost / LightGBM" vertex="1">
+          <mxGeometry height="70" width="180" x="30" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4d6;fontSize=13;fontStyle=1" value="Optuna Tuning&#xa;50 Trials" vertex="1">
+          <mxGeometry height="70" width="160" x="40" y="690" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d9ead3;fontSize=13;fontStyle=1" value="Đánh giá mô hình&#xa;CV R² = 0.830&#xa;Test R² = 0.806&#xa;MAPE = 29.4%" vertex="1">
+          <mxGeometry height="90" width="210" x="15" y="790" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cfe2f3;fontSize=13;fontStyle=1" value="Lưu Model (.pkl)" vertex="1">
+          <mxGeometry height="70" width="160" x="40" y="910" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ead1dc;fontSize=13;fontStyle=1" value="FastAPI Inference&#xa;REST API" vertex="1">
+          <mxGeometry height="70" width="160" x="40" y="1010" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-10" edge="1" parent="1" source="g2crD6YtWb0dtUfNBNNS-1" style="fontSize=13;fontStyle=1" target="g2crD6YtWb0dtUfNBNNS-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-11" edge="1" parent="1" source="g2crD6YtWb0dtUfNBNNS-2" style="fontSize=13;fontStyle=1" target="g2crD6YtWb0dtUfNBNNS-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-12" edge="1" parent="1" source="g2crD6YtWb0dtUfNBNNS-3" style="fontSize=13;fontStyle=1" target="g2crD6YtWb0dtUfNBNNS-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-13" edge="1" parent="1" source="g2crD6YtWb0dtUfNBNNS-4" style="fontSize=13;fontStyle=1" target="g2crD6YtWb0dtUfNBNNS-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-14" edge="1" parent="1" source="g2crD6YtWb0dtUfNBNNS-5" style="fontSize=13;fontStyle=1" target="g2crD6YtWb0dtUfNBNNS-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-15" edge="1" parent="1" source="g2crD6YtWb0dtUfNBNNS-6" style="fontSize=13;fontStyle=1" target="g2crD6YtWb0dtUfNBNNS-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-16" edge="1" parent="1" source="g2crD6YtWb0dtUfNBNNS-7" style="fontSize=13;fontStyle=1" target="g2crD6YtWb0dtUfNBNNS-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="g2crD6YtWb0dtUfNBNNS-17" edge="1" parent="1" source="g2crD6YtWb0dtUfNBNNS-8" style="fontSize=13;fontStyle=1" target="g2crD6YtWb0dtUfNBNNS-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
