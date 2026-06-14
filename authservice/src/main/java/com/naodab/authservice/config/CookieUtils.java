@@ -1,23 +1,16 @@
 package com.naodab.authservice.config;
 
-import java.io.ByteArrayInputStream;
-import java.io.ObjectInputStream;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Optional;
 
-import org.springframework.util.SerializationUtils;
-
-import com.naodab.commonservice.exception.AppException;
-import com.naodab.commonservice.exception.ErrorCode;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public final class CookieUtils {
-
-  private static final int COOKIE_MAX_AGE_DELETE = 0;
 
   private CookieUtils() {
   }
@@ -32,33 +25,30 @@ public final class CookieUtils {
         .findFirst();
   }
 
-  @SuppressWarnings("unchecked")
-  public static <T> T deserialize(Cookie cookie, Class<T> clazz) {
-    byte[] decoded = Base64.getUrlDecoder().decode(cookie.getValue());
-    try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(decoded))) {
-      return (T) clazz.cast(ois.readObject());
-    } catch (Exception e) {
-      throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
-    }
+  public static void addCookie(
+      HttpServletResponse response,
+      HttpServletRequest request,
+      String name,
+      String value,
+      int maxAgeSeconds) {
+    ResponseCookie cookie = ResponseCookie.from(name, value)
+        .path("/")
+        .httpOnly(true)
+        .secure(request.isSecure())
+        .sameSite("Lax")
+        .maxAge(maxAgeSeconds)
+        .build();
+    response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
   }
 
-  public static String serialize(Object object) {
-    return Base64.getUrlEncoder().encodeToString(SerializationUtils.serialize(object));
-  }
-
-  public static void addCookie(HttpServletResponse response, String name, String value, int maxAgeSeconds) {
-    Cookie cookie = new Cookie(name, value);
-    cookie.setPath("/");
-    cookie.setHttpOnly(true);
-    cookie.setMaxAge(maxAgeSeconds);
-    response.addCookie(cookie);
-  }
-
-  public static void deleteCookie(HttpServletResponse response, String name) {
-    Cookie cookie = new Cookie(name, "");
-    cookie.setPath("/");
-    cookie.setHttpOnly(true);
-    cookie.setMaxAge(COOKIE_MAX_AGE_DELETE);
-    response.addCookie(cookie);
+  public static void deleteCookie(HttpServletResponse response, HttpServletRequest request, String name) {
+    ResponseCookie cookie = ResponseCookie.from(name, "")
+        .path("/")
+        .httpOnly(true)
+        .secure(request.isSecure())
+        .sameSite("Lax")
+        .maxAge(0)
+        .build();
+    response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
   }
 }
