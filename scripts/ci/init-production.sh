@@ -28,7 +28,7 @@ fi
 
 chmod +x scripts/ci/*.sh 2>/dev/null || true
 
-echo "=== [1/4] Infrastructure: kafka, redis ==="
+echo "=== [1/5] Infrastructure: kafka, redis ==="
 "${COMPOSE[@]}" up -d kafka redis
 
 echo "=== Đợi Kafka healthy ==="
@@ -46,7 +46,25 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
-echo "=== [2/4] Build & start backend + UI ==="
+echo "=== [2/5] Build & start ai-service ==="
+"${COMPOSE[@]}" up -d --build ai-service
+
+echo "=== Đợi ai-service healthy ==="
+for i in $(seq 1 36); do
+  health="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{end}}' ai-service 2>/dev/null || true)"
+  if [[ "$health" == "healthy" ]]; then
+    echo "ai-service ready."
+    break
+  fi
+  if [[ "$i" -eq 36 ]]; then
+    echo "ai-service chưa healthy sau 36 lần thử." >&2
+    "${COMPOSE[@]}" logs --tail=50 ai-service >&2 || true
+    exit 1
+  fi
+  sleep 5
+done
+
+echo "=== [3/5] Build & start backend + UI ==="
 "${COMPOSE[@]}" up -d --build \
   auth-service \
   mail-service \
@@ -57,7 +75,7 @@ echo "=== [2/4] Build & start backend + UI ==="
   booking-service \
   second-life-ui
 
-echo "=== [3/4] Đợi backend healthy (tối đa ~10 phút) ==="
+echo "=== [4/5] Đợi backend healthy (tối đa ~10 phút) ==="
 BACKEND=(
   auth-service:8081
   mail-service:8083
@@ -87,7 +105,7 @@ for entry in "${BACKEND[@]}"; do
   done
 done
 
-echo "=== [4/4] Traefik (HTTPS gateway) ==="
+echo "=== [5/5] Traefik (HTTPS gateway) ==="
 "${COMPOSE[@]}" up -d traefik
 
 date -u +"%Y-%m-%dT%H:%M:%SZ" >"$MARKER"

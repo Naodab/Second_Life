@@ -23,9 +23,7 @@ import com.naodab.productservice.repositories.CategoryRepository;
 import com.naodab.productservice.services.AiService;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
@@ -46,7 +44,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AiServiceImpl implements AiService {
 
   private static final String GEMINI_BASE_URL =
@@ -95,12 +92,22 @@ public class AiServiceImpl implements AiService {
   private final CategoryRepository categoryRepository;
   private final AttributeRepository attributeRepository;
   private final PhonePricingClient phonePricingClient;
-
-  @Autowired
-  @Lazy
-  private AiServiceImpl self;
+  private final AiServiceImpl self;
 
   private final RestClient restClient = RestClient.create();
+
+  public AiServiceImpl(
+      ObjectMapper objectMapper,
+      CategoryRepository categoryRepository,
+      AttributeRepository attributeRepository,
+      PhonePricingClient phonePricingClient,
+      @Lazy AiServiceImpl self) {
+    this.objectMapper = objectMapper;
+    this.categoryRepository = categoryRepository;
+    this.attributeRepository = attributeRepository;
+    this.phonePricingClient = phonePricingClient;
+    this.self = self;
+  }
 
   @Override
   public AiDescriptionResponse generateProductDescription(AiDescriptionRequest request) {

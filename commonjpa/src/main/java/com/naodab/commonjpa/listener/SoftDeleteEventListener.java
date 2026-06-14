@@ -1,7 +1,5 @@
 package com.naodab.commonjpa.listener;
 
-import java.time.LocalDateTime;
-
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.PreDeleteEvent;
 import org.hibernate.event.spi.PreDeleteEventListener;

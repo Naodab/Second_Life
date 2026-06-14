@@ -3,7 +3,6 @@ package com.naodab.productservice.services.impl;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -31,14 +30,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class FacilityServiceImpl implements FacilityService {
   FacilityRepository facilityRepository;
@@ -46,10 +43,6 @@ public class FacilityServiceImpl implements FacilityService {
   FacilitySpecification facilitySpecification;
   FacilityMapper facilityMapper;
   LocationClient locationClient;
-
-  @NonFinal
-  @Autowired
-  @Lazy
   FacilityService self;
 
   @NonFinal
@@ -59,6 +52,21 @@ public class FacilityServiceImpl implements FacilityService {
   @NonFinal
   @Value("${default.page-size:20}")
   int defaultPageSize;
+
+  public FacilityServiceImpl(
+      FacilityRepository facilityRepository,
+      ListingVariantRepository listingVariantRepository,
+      FacilitySpecification facilitySpecification,
+      FacilityMapper facilityMapper,
+      LocationClient locationClient,
+      @Lazy FacilityService self) {
+    this.facilityRepository = facilityRepository;
+    this.listingVariantRepository = listingVariantRepository;
+    this.facilitySpecification = facilitySpecification;
+    this.facilityMapper = facilityMapper;
+    this.locationClient = locationClient;
+    this.self = self;
+  }
 
   @Override
   public FacilityResponse createFacility(String profileId, FacilityCreateRequest request) {

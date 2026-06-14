@@ -307,10 +307,11 @@ class BookingOrderServiceImplTest {
     when(bookingOrderRepository.findActiveById(ORDER_ID)).thenReturn(Optional.of(order));
     when(productClients.listListingVariantIdsForOwner(PROFILE_ID)).thenReturn(List.of(LISTING_VARIANT_ID));
 
-    assertThatThrownBy(() -> bookingOrderService.updateBookingOrderStatus(
-        PROFILE_ID,
-        ORDER_ID,
-        BookingOrderStatusUpdateRequest.builder().status(BookingOrderStatus.CANCELLED).build()))
+    BookingOrderStatusUpdateRequest request = BookingOrderStatusUpdateRequest.builder()
+        .status(BookingOrderStatus.CANCELLED)
+        .build();
+
+    assertThatThrownBy(() -> bookingOrderService.updateBookingOrderStatus(PROFILE_ID, ORDER_ID, request))
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_STATUS_TRANSITION_NOT_ALLOWED);
 

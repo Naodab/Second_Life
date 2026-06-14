@@ -82,7 +82,9 @@ class InventoryReservationServiceImplTest {
             LISTING_VARIANT_ID, InventoryItem.InventoryMode.BUY))
         .thenReturn(Optional.of(1L));
 
-    assertThatThrownBy(() -> inventoryReservationService.createBuyReservation(sampleEvent()))
+    InventoryReservationCreateEvent event = sampleEvent();
+
+    assertThatThrownBy(() -> inventoryReservationService.createBuyReservation(event))
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_INVENTORY);
 

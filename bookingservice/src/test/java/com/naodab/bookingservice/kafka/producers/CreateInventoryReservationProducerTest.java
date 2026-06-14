@@ -1,7 +1,6 @@
 package com.naodab.bookingservice.kafka.producers;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,7 +38,7 @@ class CreateInventoryReservationProducerTest {
   @Test
   void sendCreateInventoryReservationEvent_validEvent_sendsWithListingVariantKey() {
     InventoryReservationCreateEvent event = sampleEvent("variant-1");
-    when(kafkaTemplate.send(eq(TOPIC), eq("variant-1"), eq(event)))
+    when(kafkaTemplate.send(TOPIC, "variant-1", event))
         .thenReturn(CompletableFuture.completedFuture(null));
 
     producer.sendCreateInventoryReservationEvent(event);

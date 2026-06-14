@@ -113,17 +113,15 @@ public final class PhonePricingRequestMapper {
       return attrs;
     }
     for (String line : lines) {
-      if (!StringUtils.hasText(line)) {
-        continue;
-      }
-      int idx = line.indexOf(':');
-      if (idx <= 0) {
-        continue;
-      }
-      String key = line.substring(0, idx).trim().toLowerCase(Locale.ROOT);
-      String value = line.substring(idx + 1).trim();
-      if (!value.isEmpty()) {
-        attrs.put(key, value);
+      if (StringUtils.hasText(line)) {
+        int idx = line.indexOf(':');
+        if (idx > 0) {
+          String key = line.substring(0, idx).trim().toLowerCase(Locale.ROOT);
+          String value = line.substring(idx + 1).trim();
+          if (!value.isEmpty()) {
+            attrs.put(key, value);
+          }
+        }
       }
     }
     return attrs;

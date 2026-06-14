@@ -82,7 +82,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
   private Account upsertAccount(OAuth2UserInfo userInfo, String providerKey, String oauthEntry) {
     AuthProvider authProvider = AuthProvider.valueOf(providerKey.toUpperCase());
-    boolean registerFlow = "register".equals(oauthEntry);
+    boolean registerFlow = OAUTH_ENTRY_REGISTER.equals(oauthEntry);
 
     Optional<Account> byProvider = accountRepository.findByAuthProviderAndProviderId(authProvider, userInfo.getId());
     if (byProvider.isPresent()) {

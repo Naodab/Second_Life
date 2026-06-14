@@ -10,10 +10,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.TreeSet;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import com.naodab.commonjpa.util.AppDateTimes;
@@ -26,7 +26,6 @@ import com.naodab.inventoryservice.repositories.InventoryReservationRepository;
 import com.naodab.inventoryservice.services.InventoryAvailabilityService;
 
 @Service
-@RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class InventoryAvailabilityServiceImpl implements InventoryAvailabilityService {
 
@@ -39,6 +38,16 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
 
   InventoryItemRepository inventoryItemRepository;
   InventoryReservationRepository inventoryReservationRepository;
+  InventoryAvailabilityService self;
+
+  public InventoryAvailabilityServiceImpl(
+      InventoryItemRepository inventoryItemRepository,
+      InventoryReservationRepository inventoryReservationRepository,
+      @Lazy InventoryAvailabilityService self) {
+    this.inventoryItemRepository = inventoryItemRepository;
+    this.inventoryReservationRepository = inventoryReservationRepository;
+    this.self = self;
+  }
 
   @Override
   @Transactional(readOnly = true)
@@ -202,11 +211,11 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
   @Override
   @Transactional(readOnly = true)
   public long getAvailableQuantity(String listingVariantId, InventoryItem.InventoryMode mode) {
-    long physical = getPhysicalStock(listingVariantId, mode);
+    long physical = self.getPhysicalStock(listingVariantId, mode);
     if (mode == InventoryItem.InventoryMode.RENT) {
       return physical;
     }
-    long reserved = getReservedQuantity(listingVariantId, mode);
+    long reserved = self.getReservedQuantity(listingVariantId, mode);
     return Math.max(0L, physical - reserved);
   }
 
@@ -222,7 +231,7 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
     if (!inventoryItemRepository.existsByListingVariantIdAndMode(listingVariantId, mode)) {
       throw new AppException(ErrorCode.INVENTORY_ITEM_NOT_FOUND);
     }
-    long available = getAvailableQuantity(listingVariantId, mode);
+    long available = self.getAvailableQuantity(listingVariantId, mode);
     if (requestedQuantity > available) {
       throw new AppException(ErrorCode.INSUFFICIENT_INVENTORY);
     }
@@ -240,7 +249,8 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
     if (requestedQuantity < 1L) {
       throw new AppException(ErrorCode.QUANTITY_MIN);
     }
-    Optional<Long> minOpt = findMinAvailableQuantityInOpenInterval(listingVariantId, mode, intervalStart, intervalEnd);
+    Optional<Long> minOpt = self.findMinAvailableQuantityInOpenInterval(
+        listingVariantId, mode, intervalStart, intervalEnd);
     if (minOpt.isEmpty()) {
       throw new AppException(ErrorCode.INVENTORY_ITEM_NOT_FOUND);
     }

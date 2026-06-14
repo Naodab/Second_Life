@@ -88,6 +88,7 @@ public class OAuth2AuthorizedRedirectUrisConfiguration {
         target.add(scheme + "://www." + host + portSuffix + GOOGLE_CALLBACK_SUFFIX);
       }
     } catch (IllegalArgumentException ignored) {
+      // Skip malformed redirect URI from configuration.
     }
   }
 }

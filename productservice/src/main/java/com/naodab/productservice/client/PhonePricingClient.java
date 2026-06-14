@@ -5,6 +5,7 @@ import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.dto.response.AiSuggestPriceResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -19,20 +20,23 @@ import java.util.Map;
 @Component
 public class PhonePricingClient {
 
-  private static final String SUGGEST_PATH = "/api/v1/ai/suggest-price/phone";
-
   private final RestClient restClient;
+  private final String aiServiceUrl;
+  private final String suggestPhonePath;
 
-  @Value("${external.ai-service.url:}")
-  private String aiServiceUrl;
-
-  public PhonePricingClient() {
-    this.restClient = RestClient.create();
-  }
-
-  public PhonePricingClient(RestClient restClient, String aiServiceUrl) {
+  @Autowired
+  public PhonePricingClient(
+      RestClient restClient,
+      @Value("${external.ai-service.url:}") String aiServiceUrl,
+      @Value("${external.ai-service.suggest-phone-path:/api/v1/ai/suggest-price/phone}") String suggestPhonePath) {
     this.restClient = restClient;
     this.aiServiceUrl = aiServiceUrl;
+    this.suggestPhonePath = suggestPhonePath;
+  }
+
+  /** Visible for unit tests. */
+  public PhonePricingClient(RestClient restClient, String aiServiceUrl) {
+    this(restClient, aiServiceUrl, "/api/v1/ai/suggest-price/phone");
   }
 
   public boolean isConfigured() {
@@ -40,7 +44,7 @@ public class PhonePricingClient {
   }
 
   public AiSuggestPriceResponse suggestPhonePrice(Map<String, Object> payload) {
-    String url = stripTrailingSlashes(aiServiceUrl) + SUGGEST_PATH;
+    String url = stripTrailingSlashes(aiServiceUrl) + suggestPhonePath;
     try {
       JsonNode body = restClient.post()
           .uri(url)
@@ -111,6 +115,7 @@ public class PhonePricingClient {
         return message.asText().trim();
       }
     } catch (Exception ignored) {
+      // AI service error body is not always JSON.
     }
     return "Không đủ thông tin để ước tính giá điện thoại.";
   }

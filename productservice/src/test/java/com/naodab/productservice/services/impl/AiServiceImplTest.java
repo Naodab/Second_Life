@@ -48,7 +48,7 @@ class AiServiceImplTest {
 
     PhonePricingClient phonePricingClient = new PhonePricingClient(restClient, "http://ai-service.test");
 
-    aiService = new AiServiceImpl(objectMapper, categoryRepository, attributeRepository, phonePricingClient);
+    aiService = new AiServiceImpl(objectMapper, categoryRepository, attributeRepository, phonePricingClient, null);
     ReflectionTestUtils.setField(aiService, "geminiApiKey", "test-key");
     ReflectionTestUtils.setField(aiService, "geminiModel", "gemini-test");
     ReflectionTestUtils.setField(aiService, "self", aiService);
@@ -115,7 +115,9 @@ class AiServiceImplTest {
         objectMapper,
         categoryRepository,
         attributeRepository,
-        new PhonePricingClient(RestClient.create(), ""));
+        new PhonePricingClient(RestClient.create(), ""),
+        null);
+    ReflectionTestUtils.setField(aiService, "self", aiService);
 
     AiSuggestPriceResponse response = aiService.suggestPrice(phoneRequest("BUY"));
 

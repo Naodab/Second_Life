@@ -45,15 +45,16 @@ class PhonePricingRequestMapperTest {
 
     Map<String, Object> payload = PhonePricingRequestMapper.toPayload(request);
 
-    assertThat(payload.get("subCategoryId")).isEqualTo("sub-phone");
-    assertThat(payload.get("brand")).isEqualTo("Apple");
-    assertThat(payload.get("storageGb")).isEqualTo(128.0);
-    assertThat(payload.get("ramGb")).isEqualTo(6.0);
-    assertThat(payload.get("condition")).isEqualTo("Good");
-    assertThat(payload.get("simLock")).isEqualTo("International");
-    assertThat(payload.get("screenInches")).isEqualTo(6.1);
-    assertThat(payload.get("manufactureYear")).isEqualTo(2022);
-    assertThat(payload.get("regionName")).isEqualTo("Tp Hồ Chí Minh");
+    assertThat(payload)
+        .containsEntry("subCategoryId", "sub-phone")
+        .containsEntry("brand", "Apple")
+        .containsEntry("storageGb", 128.0)
+        .containsEntry("ramGb", 6.0)
+        .containsEntry("condition", "Good")
+        .containsEntry("simLock", "International")
+        .containsEntry("screenInches", 6.1)
+        .containsEntry("manufactureYear", 2022)
+        .containsEntry("regionName", "Tp Hồ Chí Minh");
     assertThat(payload.get("description").toString()).contains("pin 95%");
   }
 }
