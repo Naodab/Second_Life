@@ -22,6 +22,8 @@ entryPoints:
 api:
   dashboard: true
   insecure: false
+  # Dashboard: /traefik/dashboard/ — API: /traefik/api/ (tránh conflict với SPA /api/v1)
+  basePath: /traefik
 
 certificatesResolvers:
   letsencrypt:

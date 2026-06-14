@@ -14,10 +14,6 @@ http:
         authRequestHeaders:
           - "Authorization"
 
-    traefik-dashboard-strip:
-      stripPrefix:
-        prefixes:
-          - "/traefik"
     traefik-dashboard-auth:
       basicAuth:
         usersFile: /etc/traefik/dashboard.htpasswd
@@ -198,7 +194,6 @@ http:
         certResolver: letsencrypt
       middlewares:
         - traefik-dashboard-auth
-        - traefik-dashboard-strip
       priority: 150
     ui-spa:
       rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/`) && !PathPrefix(`/traefik`)"
