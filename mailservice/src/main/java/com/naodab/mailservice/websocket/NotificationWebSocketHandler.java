@@ -44,7 +44,7 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
 
   @Override
   protected void handleTextMessage(WebSocketSession session, TextMessage message) {
-    // Ping/pong not required for MVP.
+    // Push-only channel; clients do not send commands.
   }
 
   private static String profileId(WebSocketSession session) {
@@ -61,7 +61,7 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
     try {
       session.close(CloseStatus.NOT_ACCEPTABLE);
     } catch (Exception ignored) {
-      // ignore
+      // Best-effort close when handshake attributes are invalid.
     }
   }
 }

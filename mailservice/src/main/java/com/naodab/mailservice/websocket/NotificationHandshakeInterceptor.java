@@ -55,7 +55,7 @@ public class NotificationHandshakeInterceptor implements HandshakeInterceptor {
       ServerHttpResponse response,
       WebSocketHandler wsHandler,
       Exception exception) {
-    // no-op
+    // No-op: handshake errors are handled in beforeHandshake.
   }
 
   private Optional<AuthForwardContext> resolveAuthContext(ServerHttpRequest request) {

@@ -122,9 +122,6 @@ public class ProfileClient {
     }
   }
 
-  /**
-   * Ensures a profile row exists for the email and returns its id (service-to-service).
-   */
   public Optional<String> ensureProfileIdForEmail(String email, String firstName, String lastName) {
     if (!StringUtils.hasText(email)) {
       return Optional.empty();

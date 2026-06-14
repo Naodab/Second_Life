@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -118,7 +119,7 @@ class AccountAdminServiceImplTest {
   @Test
   void getAccountById_whenDeleted_throwsNotFound() {
     Account account = activeAccount("acc-1", "profile-1");
-    account.setDeletedAt(LocalDateTime.now());
+    account.setDeletedAt(LocalDateTime.of(2030, Month.JANUARY, 1, 0, 0));
     when(accountRepository.findById("acc-1")).thenReturn(Optional.of(account));
 
     assertThatThrownBy(() -> accountAdminService.getAccountById("acc-1"))

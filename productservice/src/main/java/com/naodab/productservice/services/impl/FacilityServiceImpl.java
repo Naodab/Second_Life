@@ -4,11 +4,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.naodab.commonjpa.util.AppDateTimes;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.productservice.dto.request.FacilityCreateRequest;
@@ -28,14 +30,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class FacilityServiceImpl implements FacilityService {
   FacilityRepository facilityRepository;
@@ -43,6 +43,7 @@ public class FacilityServiceImpl implements FacilityService {
   FacilitySpecification facilitySpecification;
   FacilityMapper facilityMapper;
   LocationClient locationClient;
+  FacilityService self;
 
   @NonFinal
   @Value("${sort.facilities.default:created_at}")
@@ -51,6 +52,21 @@ public class FacilityServiceImpl implements FacilityService {
   @NonFinal
   @Value("${default.page-size:20}")
   int defaultPageSize;
+
+  public FacilityServiceImpl(
+      FacilityRepository facilityRepository,
+      ListingVariantRepository listingVariantRepository,
+      FacilitySpecification facilitySpecification,
+      FacilityMapper facilityMapper,
+      LocationClient locationClient,
+      @Lazy FacilityService self) {
+    this.facilityRepository = facilityRepository;
+    this.listingVariantRepository = listingVariantRepository;
+    this.facilitySpecification = facilitySpecification;
+    this.facilityMapper = facilityMapper;
+    this.locationClient = locationClient;
+    this.self = self;
+  }
 
   @Override
   public FacilityResponse createFacility(String profileId, FacilityCreateRequest request) {
@@ -63,11 +79,10 @@ public class FacilityServiceImpl implements FacilityService {
   }
 
   @Override
-  @Transactional
   public FacilityResponse getFacilityById(String id) {
     Facility facility = facilityRepository.findByIdAndDeletedAtIsNull(id)
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
-    recordView(facility.getId());
+    self.recordView(facility.getId());
     facility.setViewCount(nextCount(facility.getViewCount()));
     return facilityMapper.toFacilityResponse(facility);
   }
@@ -119,7 +134,7 @@ public class FacilityServiceImpl implements FacilityService {
     Facility facility = facilityRepository.findByIdAndDeletedAtIsNull(id)
         .orElseThrow(() -> new AppException(ErrorCode.FACILITY_NOT_FOUND));
 
-    facility.setDeletedAt(LocalDateTime.now());
+    facility.setDeletedAt(AppDateTimes.now());
     facilityRepository.save(facility);
   }
 

@@ -1,12 +1,12 @@
 package com.naodab.bookingservice.kafka.producers;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +38,7 @@ class CreateInventoryReservationProducerTest {
   @Test
   void sendCreateInventoryReservationEvent_validEvent_sendsWithListingVariantKey() {
     InventoryReservationCreateEvent event = sampleEvent("variant-1");
-    when(kafkaTemplate.send(eq(TOPIC), eq("variant-1"), eq(event)))
+    when(kafkaTemplate.send(TOPIC, "variant-1", event))
         .thenReturn(CompletableFuture.completedFuture(null));
 
     producer.sendCreateInventoryReservationEvent(event);
@@ -73,7 +73,7 @@ class CreateInventoryReservationProducerTest {
         .referenceId("order-1")
         .quantity(1)
         .mode("BUY")
-        .expiresAt(LocalDateTime.of(2026, 6, 1, 10, 0))
+        .expiresAt(LocalDateTime.of(2026, Month.JUNE, 1, 10, 0))
         .build();
   }
 }

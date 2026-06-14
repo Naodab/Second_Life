@@ -17,15 +17,14 @@ public final class SkuNormalizer {
     }
 
     String ascii = toAscii(source.trim());
-    String normalized = ascii.toUpperCase(Locale.ROOT)
-        .replaceAll("[^A-Z0-9]+", "-")
-        .replaceAll("(^-+)|(-+$)", "");
+    String normalized = ascii.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+", "-");
+    normalized = trimHyphens(normalized);
 
     if (normalized.isBlank()) {
       return "NA";
     }
     if (normalized.length() > MAX_PART_LENGTH) {
-      normalized = normalized.substring(0, MAX_PART_LENGTH).replaceAll("-+$", "");
+      normalized = trimHyphens(normalized.substring(0, MAX_PART_LENGTH));
     }
     return normalized.isBlank() ? "NA" : normalized;
   }
@@ -34,6 +33,18 @@ public final class SkuNormalizer {
     String replaced = input.replace('đ', 'd').replace('Đ', 'D');
     return Normalizer.normalize(replaced, Normalizer.Form.NFD)
         .replaceAll("\\p{M}+", "");
+  }
+
+  private static String trimHyphens(String value) {
+    int start = 0;
+    int end = value.length();
+    while (start < end && value.charAt(start) == '-') {
+      start++;
+    }
+    while (end > start && value.charAt(end - 1) == '-') {
+      end--;
+    }
+    return value.substring(start, end);
   }
 
   private static boolean hasText(String value) {

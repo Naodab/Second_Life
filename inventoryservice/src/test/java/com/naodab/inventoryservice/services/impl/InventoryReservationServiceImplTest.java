@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,7 @@ class InventoryReservationServiceImplTest {
 
   private static final String RESERVATION_ID = "order-1";
   private static final String LISTING_VARIANT_ID = "variant-1";
-  private static final LocalDateTime EXPIRES = LocalDateTime.of(2026, 6, 1, 10, 0);
+  private static final LocalDateTime EXPIRES = LocalDateTime.of(2026, Month.JUNE, 1, 10, 0);
 
   @Mock
   InventoryReservationRepository inventoryReservationRepository;
@@ -81,7 +82,9 @@ class InventoryReservationServiceImplTest {
             LISTING_VARIANT_ID, InventoryItem.InventoryMode.BUY))
         .thenReturn(Optional.of(1L));
 
-    assertThatThrownBy(() -> inventoryReservationService.createBuyReservation(sampleEvent()))
+    InventoryReservationCreateEvent event = sampleEvent();
+
+    assertThatThrownBy(() -> inventoryReservationService.createBuyReservation(event))
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_INVENTORY);
 

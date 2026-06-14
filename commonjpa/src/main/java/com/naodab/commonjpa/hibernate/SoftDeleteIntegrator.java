@@ -28,5 +28,7 @@ public class SoftDeleteIntegrator implements Integrator {
   @Override
   public void disintegrate(
       SessionFactoryImplementor sessionFactory,
-      SessionFactoryServiceRegistry serviceRegistry) {}
+      SessionFactoryServiceRegistry serviceRegistry) {
+    // Hibernate integrator lifecycle — no teardown required.
+  }
 }

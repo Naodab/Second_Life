@@ -61,10 +61,31 @@ public class AttributeServiceImpl implements AttributeService {
 
   @Override
   public List<AttributeResponse> getAllAttributes() {
-    return attributeRepository.findAll()
+    return attributeRepository.findAllWithValues()
         .stream()
         .map(attributeMapper::toAttributeResponse)
         .toList();
+  }
+
+  @Override
+  public List<AttributeResponse> getAttributesForSubCategory(String subCategoryId) {
+    List<Attribute> attributes = attributeRepository.findAllWithValues();
+    if (subCategoryId == null || subCategoryId.isBlank()) {
+      return attributes.stream().map(attributeMapper::toAttributeResponse).toList();
+    }
+    String scopedId = subCategoryId.trim();
+    return attributes.stream()
+        .filter(attribute -> isAttributeVisibleForSubCategory(attribute, scopedId))
+        .map(attributeMapper::toAttributeResponse)
+        .toList();
+  }
+
+  private static boolean isAttributeVisibleForSubCategory(Attribute attribute, String subCategoryId) {
+    List<String> scoped = attribute.getSubCategoryIds();
+    if (scoped == null || scoped.isEmpty()) {
+      return true;
+    }
+    return scoped.contains(subCategoryId);
   }
 
   @Override

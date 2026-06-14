@@ -1,14 +1,18 @@
 package com.naodab.productservice.models;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Transient;
 
 import java.util.ArrayList;
@@ -62,6 +66,12 @@ public class Attribute extends BaseEntity implements Persistable<String> {
 
   @Column(name = "name", nullable = false, unique = true)
   String name;
+
+  @Builder.Default
+  @ElementCollection(fetch = FetchType.EAGER)
+  @CollectionTable(name = "attribute_sub_categories", joinColumns = @JoinColumn(name = "attribute_id"))
+  @Column(name = "sub_category_id")
+  List<String> subCategoryIds = new ArrayList<>();
 
   @Builder.Default
   @OneToMany(mappedBy = "attribute", cascade = CascadeType.ALL, orphanRemoval = true)

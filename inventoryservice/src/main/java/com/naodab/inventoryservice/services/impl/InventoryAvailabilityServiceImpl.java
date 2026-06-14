@@ -10,12 +10,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.TreeSet;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+import com.naodab.commonjpa.util.AppDateTimes;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.inventoryservice.models.InventoryItem;
@@ -25,7 +26,6 @@ import com.naodab.inventoryservice.repositories.InventoryReservationRepository;
 import com.naodab.inventoryservice.services.InventoryAvailabilityService;
 
 @Service
-@RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class InventoryAvailabilityServiceImpl implements InventoryAvailabilityService {
 
@@ -38,6 +38,16 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
 
   InventoryItemRepository inventoryItemRepository;
   InventoryReservationRepository inventoryReservationRepository;
+  InventoryAvailabilityService self;
+
+  public InventoryAvailabilityServiceImpl(
+      InventoryItemRepository inventoryItemRepository,
+      InventoryReservationRepository inventoryReservationRepository,
+      @Lazy InventoryAvailabilityService self) {
+    this.inventoryItemRepository = inventoryItemRepository;
+    this.inventoryReservationRepository = inventoryReservationRepository;
+    this.self = self;
+  }
 
   @Override
   @Transactional(readOnly = true)
@@ -56,7 +66,7 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
                   listingVariantId,
                   mode,
                   ACTIVE_RESERVATION_STATUSES,
-                  LocalDateTime.now());
+                  AppDateTimes.now());
               return Math.max(0L, physical - reserved);
             });
   }
@@ -81,7 +91,7 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
           listingVariantId,
           mode,
           ACTIVE_RESERVATION_STATUSES,
-          LocalDateTime.now());
+          AppDateTimes.now());
       return Optional.of(Math.max(0L, physical - reserved));
     }
 
@@ -89,24 +99,28 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
     long q1 = intervalEnd.toEpochMilli();
 
     List<InventoryReservation> rows = inventoryReservationRepository.findRentalPeriodsByListingVariant(
-        listingVariantId, mode, ACTIVE_RESERVATION_STATUSES, LocalDateTime.now());
+        listingVariantId, mode, ACTIVE_RESERVATION_STATUSES, AppDateTimes.now());
 
     List<long[]> clipped = new ArrayList<>();
-    for (InventoryReservation r : rows) {
-      long qty = r.getQuantity() == null ? 1L : Math.max(1L, r.getQuantity());
-      Optional<long[]> iv = reservationToBlockedIntervalMillis(r);
-      if (iv.isEmpty()) {
-        continue;
-      }
-      long a = iv.get()[0];
-      long b = iv.get()[1];
-      if (!(a < q1 && b > q0)) {
-        continue;
-      }
-      clipped.add(new long[] { Math.max(a, q0), Math.min(b, q1), qty });
+    for (InventoryReservation reservation : rows) {
+      addClippedReservationInterval(clipped, reservation, q0, q1);
     }
 
     return Optional.of(Math.max(0L, minAvailableQuantityInOpenInterval(physical, clipped, q0, q1)));
+  }
+
+  private static void addClippedReservationInterval(
+      List<long[]> clipped, InventoryReservation reservation, long q0, long q1) {
+    long qty = reservation.getQuantity() == null ? 1L : Math.max(1L, reservation.getQuantity());
+    Optional<long[]> interval = reservationToBlockedIntervalMillis(reservation);
+    if (interval.isEmpty()) {
+      return;
+    }
+    long start = interval.get()[0];
+    long end = interval.get()[1];
+    if (start < q1 && end > q0) {
+      clipped.add(new long[] { Math.max(start, q0), Math.min(end, q1), qty });
+    }
   }
 
   static long minAvailableQuantityInOpenInterval(
@@ -124,17 +138,16 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
     for (int i = 0; i < timeline.length - 1; i++) {
       long seg0 = timeline[i];
       long seg1 = timeline[i + 1];
-      if (seg1 <= seg0) {
-        continue;
-      }
-      long mid = seg0 + (seg1 - seg0) / 2;
-      long used = 0L;
-      for (long[] c : clipped) {
-        if (mid >= c[0] && mid < c[1]) {
-          used += c[2];
+      if (seg1 > seg0) {
+        long mid = seg0 + (seg1 - seg0) / 2;
+        long used = 0L;
+        for (long[] c : clipped) {
+          if (mid >= c[0] && mid < c[1]) {
+            used += c[2];
+          }
         }
+        minFree = Math.min(minFree, physical - used);
       }
-      minFree = Math.min(minFree, physical - used);
     }
     return minFree;
   }
@@ -192,17 +205,17 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
         listingVariantId,
         mode,
         ACTIVE_RESERVATION_STATUSES,
-        LocalDateTime.now());
+        AppDateTimes.now());
   }
 
   @Override
   @Transactional(readOnly = true)
   public long getAvailableQuantity(String listingVariantId, InventoryItem.InventoryMode mode) {
-    long physical = getPhysicalStock(listingVariantId, mode);
+    long physical = self.getPhysicalStock(listingVariantId, mode);
     if (mode == InventoryItem.InventoryMode.RENT) {
       return physical;
     }
-    long reserved = getReservedQuantity(listingVariantId, mode);
+    long reserved = self.getReservedQuantity(listingVariantId, mode);
     return Math.max(0L, physical - reserved);
   }
 
@@ -218,7 +231,7 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
     if (!inventoryItemRepository.existsByListingVariantIdAndMode(listingVariantId, mode)) {
       throw new AppException(ErrorCode.INVENTORY_ITEM_NOT_FOUND);
     }
-    long available = getAvailableQuantity(listingVariantId, mode);
+    long available = self.getAvailableQuantity(listingVariantId, mode);
     if (requestedQuantity > available) {
       throw new AppException(ErrorCode.INSUFFICIENT_INVENTORY);
     }
@@ -236,7 +249,8 @@ public class InventoryAvailabilityServiceImpl implements InventoryAvailabilitySe
     if (requestedQuantity < 1L) {
       throw new AppException(ErrorCode.QUANTITY_MIN);
     }
-    Optional<Long> minOpt = findMinAvailableQuantityInOpenInterval(listingVariantId, mode, intervalStart, intervalEnd);
+    Optional<Long> minOpt = self.findMinAvailableQuantityInOpenInterval(
+        listingVariantId, mode, intervalStart, intervalEnd);
     if (minOpt.isEmpty()) {
       throw new AppException(ErrorCode.INVENTORY_ITEM_NOT_FOUND);
     }

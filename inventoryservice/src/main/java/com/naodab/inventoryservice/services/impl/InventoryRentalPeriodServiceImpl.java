@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
+import com.naodab.commonjpa.util.AppDateTimes;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 import com.naodab.inventoryservice.dto.response.RentalPeriodResponse;
@@ -37,7 +38,7 @@ public class InventoryRentalPeriodServiceImpl implements InventoryRentalPeriodSe
 
     return inventoryReservationRepository
         .findRentalPeriodsByListingVariant(
-            listingVariantId, InventoryItem.InventoryMode.RENT, BOOKED_STATUSES, LocalDateTime.now())
+            listingVariantId, InventoryItem.InventoryMode.RENT, BOOKED_STATUSES, AppDateTimes.now())
         .stream()
         .map(this::toResponse)
         .toList();

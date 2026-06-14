@@ -2,6 +2,8 @@ package com.naodab.commonjpa.entity;
 
 import java.time.LocalDateTime;
 
+import com.naodab.commonjpa.util.AppDateTimes;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
@@ -20,13 +22,13 @@ public abstract class BaseEntity {
 
   @PrePersist
   protected void onCreate() {
-    this.createdAt = LocalDateTime.now();
-    this.updatedAt = LocalDateTime.now();
+    this.createdAt = AppDateTimes.now();
+    this.updatedAt = AppDateTimes.now();
   }
 
   @PreUpdate
   protected void onUpdate() {
-    this.updatedAt = LocalDateTime.now();
+    this.updatedAt = AppDateTimes.now();
   }
 
   public LocalDateTime getCreatedAt() {

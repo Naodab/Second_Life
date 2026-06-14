@@ -38,7 +38,6 @@ export function persistVisitorLocation(payload: VisitorLocationPayload): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
-    /* ignore quota / privacy mode */
   }
 }
 
@@ -46,7 +45,6 @@ function markIpResolveAttempted(): void {
   try {
     sessionStorage.setItem(IP_ATTEMPT_SESSION_KEY, "1");
   } catch {
-    /* ignore private mode */
   }
 }
 
@@ -58,7 +56,6 @@ function hasIpResolveBeenAttempted(): boolean {
   }
 }
 
-/** Resolves approximate visitor location from IP and persists it. Returns true when stored. */
 export async function resolveVisitorLocationFromIp(): Promise<boolean> {
   const coords = await approximateCoordsFromIp();
   if (!coords) return false;
@@ -78,10 +75,6 @@ export async function resolveVisitorLocationFromIp(): Promise<boolean> {
   }
 }
 
-/**
- * Loads cached visitor location or resolves from IP at most once per browser session.
- * Concurrent callers share the same in-flight request.
- */
 export async function ensureVisitorLocationFromIp(): Promise<VisitorLocationPayload | null> {
   const cached = loadVisitorLocation();
   if (cached) return cached;

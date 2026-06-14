@@ -51,7 +51,7 @@ jobs:
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.deploy_all }}" == "true" ]]; then
             {
-              echo "services=auth-service,mail-service,profile-service,location-service,product-service,inventory-service,booking-service,second-life-ui,traefik"
+              echo "services=auth-service,mail-service,profile-service,location-service,product-service,ai-service,inventory-service,booking-service,second-life-ui,traefik"
               echo "has_changes=true"
               echo "run_init=false"
             } >>"$GITHUB_OUTPUT"

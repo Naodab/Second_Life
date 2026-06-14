@@ -24,8 +24,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
   public static final String OAUTH_ENTRY_COOKIE_NAME = "oauth_entry";
   private static final int COOKIE_EXPIRE_SECONDS = 180;
 
-  private final ConcurrentHashMap<String, OAuth2AuthorizationRequest> authorizationRequests =
-      new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, OAuth2AuthorizationRequest> authorizationRequests = new ConcurrentHashMap<>();
   private final ScheduledExecutorService evictor = Executors.newSingleThreadScheduledExecutor(r -> {
     Thread thread = new Thread(r, "oauth2-auth-request-evictor");
     thread.setDaemon(true);
@@ -42,10 +41,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
       }
     }
 
-    // Legacy cookie fallback (pre–state-cache deploys / rolling restarts).
-    return CookieUtils.getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME)
-        .map(cookie -> CookieUtils.deserialize(cookie, OAuth2AuthorizationRequest.class))
-        .orElse(null);
+    return null;
   }
 
   @Override
@@ -54,14 +50,13 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
       HttpServletRequest request,
       HttpServletResponse response) {
     if (authorizationRequest == null) {
-      CookieUtils.deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
-      CookieUtils.deleteCookie(request, response, REDIRECT_URI_PARAM_COOKIE_NAME);
-      CookieUtils.deleteCookie(request, response, OAUTH_ENTRY_COOKIE_NAME);
+      CookieUtils.deleteCookie(response, request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
+      CookieUtils.deleteCookie(response, request, REDIRECT_URI_PARAM_COOKIE_NAME);
+      CookieUtils.deleteCookie(response, request, OAUTH_ENTRY_COOKIE_NAME);
       return;
     }
 
-    // Drop legacy serialized cookie (Tomcat default 8KB header limit → HTTP 400 on Google callback).
-    CookieUtils.deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
+    CookieUtils.deleteCookie(response, request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
 
     String state = authorizationRequest.getState();
     if (StringUtils.hasText(state)) {
@@ -71,7 +66,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
 
     String redirectUriAfterLogin = request.getParameter(REDIRECT_URI_PARAM_COOKIE_NAME);
     if (redirectUriAfterLogin != null && !redirectUriAfterLogin.isBlank()) {
-      CookieUtils.addCookie(response, REDIRECT_URI_PARAM_COOKIE_NAME,
+      CookieUtils.addCookie(response, request, REDIRECT_URI_PARAM_COOKIE_NAME,
           redirectUriAfterLogin, COOKIE_EXPIRE_SECONDS);
     }
 
@@ -79,7 +74,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
     if (oauthEntry != null && !oauthEntry.isBlank()) {
       String normalized = oauthEntry.trim().toLowerCase();
       if ("login".equals(normalized) || "register".equals(normalized)) {
-        CookieUtils.addCookie(response, OAUTH_ENTRY_COOKIE_NAME, normalized, COOKIE_EXPIRE_SECONDS);
+        CookieUtils.addCookie(response, request, OAUTH_ENTRY_COOKIE_NAME, normalized, COOKIE_EXPIRE_SECONDS);
       }
     }
   }
@@ -98,9 +93,9 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
   public void removeAuthorizationRequestCookies(
       HttpServletRequest request,
       HttpServletResponse response) {
-    CookieUtils.deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
-    CookieUtils.deleteCookie(request, response, REDIRECT_URI_PARAM_COOKIE_NAME);
-    CookieUtils.deleteCookie(request, response, OAUTH_ENTRY_COOKIE_NAME);
+    CookieUtils.deleteCookie(response, request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
+    CookieUtils.deleteCookie(response, request, REDIRECT_URI_PARAM_COOKIE_NAME);
+    CookieUtils.deleteCookie(response, request, OAUTH_ENTRY_COOKIE_NAME);
   }
 
   @PreDestroy

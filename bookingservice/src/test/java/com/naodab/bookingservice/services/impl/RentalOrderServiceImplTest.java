@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,8 +51,8 @@ class RentalOrderServiceImplTest {
   private static final String CUSTOMER_ID = "customer-1";
   private static final String LISTING_VARIANT_ID = "variant-1";
   private static final String ORDER_ID = "order-1";
-  private static final LocalDateTime START_TIME = LocalDateTime.of(2026, 7, 1, 10, 0, 0);
-  private static final LocalDateTime END_TIME = LocalDateTime.of(2026, 7, 3, 10, 0, 0);
+  private static final LocalDateTime START_TIME = LocalDateTime.of(2026, Month.JULY, 1, 10, 0, 0);
+  private static final LocalDateTime END_TIME = LocalDateTime.of(2026, Month.JULY, 3, 10, 0, 0);
 
   @Mock
   RentalOrderRepository rentalOrderRepository;
@@ -133,7 +134,9 @@ class RentalOrderServiceImplTest {
     when(rentalOrderRepository.save(any(RentalOrder.class)))
         .thenThrow(new DataIntegrityViolationException("duplicate"));
 
-    assertThatThrownBy(() -> rentalOrderService.createRentalOrder(PROFILE_ID, sampleRequest(1)))
+    RentalOrderCreateRequest request = sampleRequest(1);
+
+    assertThatThrownBy(() -> rentalOrderService.createRentalOrder(PROFILE_ID, request))
         .isInstanceOf(DataIntegrityViolationException.class);
 
     verify(inventoryClients).createRentReservation(any());
@@ -145,7 +148,9 @@ class RentalOrderServiceImplTest {
     when(customerService.getOwnedCustomerEntity(PROFILE_ID, CUSTOMER_ID)).thenReturn(sampleCustomer());
     when(inventoryClients.getRentInventoryCount(LISTING_VARIANT_ID, START_TIME, END_TIME)).thenReturn(1L);
 
-    assertThatThrownBy(() -> rentalOrderService.createRentalOrder(PROFILE_ID, sampleRequest(2)))
+    RentalOrderCreateRequest request = sampleRequest(2);
+
+    assertThatThrownBy(() -> rentalOrderService.createRentalOrder(PROFILE_ID, request))
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_INVENTORY);
 
@@ -158,7 +163,9 @@ class RentalOrderServiceImplTest {
     when(customerService.getOwnedCustomerEntity(PROFILE_ID, CUSTOMER_ID)).thenReturn(sampleCustomer());
     when(inventoryClients.getRentInventoryCount(LISTING_VARIANT_ID, START_TIME, END_TIME)).thenReturn(null);
 
-    assertThatThrownBy(() -> rentalOrderService.createRentalOrder(PROFILE_ID, sampleRequest(1)))
+    RentalOrderCreateRequest request = sampleRequest(1);
+
+    assertThatThrownBy(() -> rentalOrderService.createRentalOrder(PROFILE_ID, request))
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INSUFFICIENT_INVENTORY);
 
@@ -348,10 +355,11 @@ class RentalOrderServiceImplTest {
     when(rentalOrderRepository.findActiveById(ORDER_ID)).thenReturn(Optional.of(order));
     when(productClients.listListingVariantIdsForOwner(PROFILE_ID)).thenReturn(List.of(LISTING_VARIANT_ID));
 
-    assertThatThrownBy(() -> rentalOrderService.updateRentalOrderStatus(
-        PROFILE_ID,
-        ORDER_ID,
-        RentalOrderStatusUpdateRequest.builder().status(RentalOrderStatus.CANCELLED).build()))
+    RentalOrderStatusUpdateRequest request = RentalOrderStatusUpdateRequest.builder()
+        .status(RentalOrderStatus.CANCELLED)
+        .build();
+
+    assertThatThrownBy(() -> rentalOrderService.updateRentalOrderStatus(PROFILE_ID, ORDER_ID, request))
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_STATUS_TRANSITION_NOT_ALLOWED);
 
@@ -365,10 +373,11 @@ class RentalOrderServiceImplTest {
     when(rentalOrderRepository.findActiveById(ORDER_ID)).thenReturn(Optional.of(order));
     when(productClients.listListingVariantIdsForOwner(PROFILE_ID)).thenReturn(List.of());
 
-    assertThatThrownBy(() -> rentalOrderService.updateRentalOrderStatus(
-        PROFILE_ID,
-        ORDER_ID,
-        RentalOrderStatusUpdateRequest.builder().status(RentalOrderStatus.CONFIRMED).build()))
+    RentalOrderStatusUpdateRequest request = RentalOrderStatusUpdateRequest.builder()
+        .status(RentalOrderStatus.CONFIRMED)
+        .build();
+
+    assertThatThrownBy(() -> rentalOrderService.updateRentalOrderStatus(PROFILE_ID, ORDER_ID, request))
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_NOT_FOUND);
 

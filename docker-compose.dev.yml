@@ -113,9 +113,23 @@ services:
   #         ignore:
   #           - "**/target/**"
 
+  ai-service:
+    develop:
+      watch:
+        - action: rebuild
+          path: ./aiservice/requirements.txt
+        - action: rebuild
+          path: ./aiservice/wsgi.py
+        - action: rebuild
+          path: ./aiservice/app
+          ignore:
+            - "**/__pycache__/**"
+            - "**/*.pyc"
+
   product-service:
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      AI_SERVICE_URL: http://ai-service:8090
     develop:
       watch:
         - action: rebuild

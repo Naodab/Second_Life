@@ -1,13 +1,12 @@
 package com.naodab.commonjpa.listener;
 
-import java.time.LocalDateTime;
-
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.PreDeleteEvent;
 import org.hibernate.event.spi.PreDeleteEventListener;
 
 import com.naodab.commonjpa.annotation.SoftDelete;
 import com.naodab.commonjpa.entity.BaseEntity;
+import com.naodab.commonjpa.util.AppDateTimes;
 
 public class SoftDeleteEventListener implements PreDeleteEventListener {
 
@@ -26,8 +25,8 @@ public class SoftDeleteEventListener implements PreDeleteEventListener {
     EventSource session = event.getSession();
     BaseEntity baseEntity = (BaseEntity) entity;
 
-    baseEntity.setDeletedAt(LocalDateTime.now());
-    baseEntity.setUpdatedAt(LocalDateTime.now());
+    baseEntity.setDeletedAt(AppDateTimes.now());
+    baseEntity.setUpdatedAt(AppDateTimes.now());
 
     session.merge(baseEntity);
 

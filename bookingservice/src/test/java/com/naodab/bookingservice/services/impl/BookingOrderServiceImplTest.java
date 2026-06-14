@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ class BookingOrderServiceImplTest {
   private static final String CUSTOMER_ID = "customer-1";
   private static final String LISTING_VARIANT_ID = "variant-1";
   private static final String ORDER_ID = "order-1";
-  private static final LocalDateTime PICKUP = LocalDateTime.of(2026, 6, 1, 10, 0, 0);
+  private static final LocalDateTime PICKUP = LocalDateTime.of(2026, Month.JUNE, 1, 10, 0, 0);
 
   @Mock
   BookingOrderRepository bookingOrderRepository;
@@ -306,10 +307,11 @@ class BookingOrderServiceImplTest {
     when(bookingOrderRepository.findActiveById(ORDER_ID)).thenReturn(Optional.of(order));
     when(productClients.listListingVariantIdsForOwner(PROFILE_ID)).thenReturn(List.of(LISTING_VARIANT_ID));
 
-    assertThatThrownBy(() -> bookingOrderService.updateBookingOrderStatus(
-        PROFILE_ID,
-        ORDER_ID,
-        BookingOrderStatusUpdateRequest.builder().status(BookingOrderStatus.CANCELLED).build()))
+    BookingOrderStatusUpdateRequest request = BookingOrderStatusUpdateRequest.builder()
+        .status(BookingOrderStatus.CANCELLED)
+        .build();
+
+    assertThatThrownBy(() -> bookingOrderService.updateBookingOrderStatus(PROFILE_ID, ORDER_ID, request))
         .isInstanceOf(AppException.class)
         .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_STATUS_TRANSITION_NOT_ALLOWED);
 

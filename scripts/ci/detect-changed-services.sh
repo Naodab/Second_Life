@@ -9,7 +9,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 ALL_BACKEND="auth-service mail-service profile-service location-service product-service inventory-service booking-service"
-ALL_DEPLOYABLE="${ALL_BACKEND} second-life-ui traefik"
+ALL_DEPLOYABLE="${ALL_BACKEND} ai-service second-life-ui traefik"
 
 resolve_base_head() {
   local base="${1:-}"
@@ -129,6 +129,9 @@ while IFS= read -r file; do
       ;;
     productservice/*)
       add_service product-service
+      ;;
+    aiservice/*)
+      add_service ai-service
       ;;
     inventoryservice/*)
       add_service inventory-service

@@ -60,11 +60,10 @@ public class ListingVariantInventoryController {
       }
     }
 
-    ListingVariantAvailabilityResponse body =
-        ListingVariantAvailabilityResponse.builder()
-            .tracked(tracked)
-            .availableQuantity(availableQty)
-            .build();
+    ListingVariantAvailabilityResponse body = ListingVariantAvailabilityResponse.builder()
+        .tracked(tracked)
+        .availableQuantity(availableQty)
+        .build();
 
     return ResponseEntity.ok(ApiResponse.<ListingVariantAvailabilityResponse>builder().data(body).build());
   }
@@ -91,25 +90,21 @@ public class ListingVariantInventoryController {
       throw new AppException(ErrorCode.INVALID_INPUT);
     }
 
-    // Read-only availability: always return min free quantity in the interval (never 409).
-    // Callers compare availableQuantity against requested quantity client-side.
     Long availableQty = null;
     boolean tracked = false;
-    var opt =
-        inventoryAvailabilityService.findMinAvailableQuantityInOpenInterval(
-            listingVariantId, mode, from, to);
+    var opt = inventoryAvailabilityService.findMinAvailableQuantityInOpenInterval(
+        listingVariantId, mode, from, to);
     if (opt.isPresent()) {
       tracked = true;
       availableQty = opt.get();
     }
 
-    ListingVariantIntervalAvailabilityResponse body =
-        ListingVariantIntervalAvailabilityResponse.builder()
-            .tracked(tracked)
-            .availableQuantity(availableQty)
-            .intervalStart(from)
-            .intervalEnd(to)
-            .build();
+    ListingVariantIntervalAvailabilityResponse body = ListingVariantIntervalAvailabilityResponse.builder()
+        .tracked(tracked)
+        .availableQuantity(availableQty)
+        .intervalStart(from)
+        .intervalEnd(to)
+        .build();
 
     return ResponseEntity.ok(ApiResponse.<ListingVariantIntervalAvailabilityResponse>builder().data(body).build());
   }

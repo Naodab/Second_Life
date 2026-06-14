@@ -173,6 +173,57 @@ def infer_brand_from_text(text: str) -> str:
         return enum_name
   return DEFAULT_BRAND_ENUM
 
+# Phone & tablet pricing dataset (cg 5010 + 5030 only)
+PHONE_TABLET_CG_CODES = (5010, 5030)
+
+PHONE_TABLET_CSV_COLUMNS: list[str] = [
+  "source",
+  "source_list_id",
+  "source_ad_id",
+  "title",
+  "description",
+  "price_vnd",
+  "price_string",
+  "listing_type",
+  "device_type",
+  "chotot_category_id",
+  "chotot_category_name",
+  "sl_category_id",
+  "sl_category_name",
+  "sl_sub_category_id",
+  "sl_sub_category_name",
+  "condition_code",
+  "condition_label",
+  "sl_condition",
+  "origin_code",
+  "origin_label",
+  "warranty_code",
+  "warranty_label",
+  "brand",
+  "model",
+  "storage_gb",
+  "ram_gb",
+  "screen_inches",
+  "processor",
+  "storage_type",
+  "sim_lock",
+  "color",
+  "manufacture_year",
+  "capacity",
+  "extra_attributes_json",
+  "region_name",
+  "area_name",
+  "ward_name",
+  "latitude",
+  "longitude",
+  "num_images",
+  "has_video",
+  "posted_at_ms",
+  "thumbnail_url",
+  "image_urls",
+  "crawled_at",
+]
+
 # CSV columns — fixed order for ML pipeline
 CSV_COLUMNS: list[str] = [
   "source",

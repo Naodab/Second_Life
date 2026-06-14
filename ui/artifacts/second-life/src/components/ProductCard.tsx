@@ -8,7 +8,6 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <Link href="/search">
       <div className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm ring-1 ring-transparent transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-xl hover:ring-primary/20">
-        {/* Image Container */}
         <div className="relative aspect-square overflow-hidden bg-muted">
           <img
             src={product.images[0]}
@@ -26,7 +25,6 @@ export function ProductCard({ product }: { product: Product }) {
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex flex-1 flex-col p-5">
           <div className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
             <span className="line-clamp-1 rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">{product.subCategoryName}</span>

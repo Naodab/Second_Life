@@ -4,15 +4,16 @@ Crawl data from the Tiki.vn API and save to JSON for seed_system.py.
 
 Output: import_real_data/data/raw_products.json
 
-Each product includes attribute value IDs aligned with attributes-seed.yml:
-  Condition, Color, Brand, Usage Type, Origin, Warranty, Region, Capacity
-plus manufactureYear on the product payload at import time.
+Category map được verify qua tiki_import_config (đồng bộ categories-seed.yml).
 
 Run (from import_real_data/):
   python3 crawl_tiki.py
+  python3 crawl_tiki.py --target 1500
+  python3 crawl_tiki.py --verify-only
 """
 from __future__ import annotations
 
+import argparse
 import json
 import random
 import logging
@@ -31,6 +32,8 @@ from attribute_maps import (
   detect_warranty,
   parse_manufacture_year,
 )
+from category_registry import normalize_product_categories
+from tiki_import_config import HEADERS, TIKI_PRODUCTS_API, crawl_tuples, verify_tiki_categories
 
 logging.basicConfig(
   level=logging.INFO,
@@ -38,41 +41,9 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-TIKI_API = "https://tiki.vn/api/v2/products"
 PAGE_SIZE = 40
-TARGET_TOTAL = 1000
+DEFAULT_TARGET = 1000
 OUTPUT_FILE = Path(__file__).parent / "data" / "raw_products.json"
-
-HEADERS = {
-  "User-Agent": (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36"
-  ),
-  "Accept": "application/json, text/plain, */*",
-  "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
-  "Referer": "https://tiki.vn/",
-}
-
-# Tiki category → Second Life sub-category
-CATEGORY_MAP = [
-  (1789, "sub-phone", "cat-electronics", "Điện thoại & Phụ kiện", "BUY"),
-  (1846, "sub-laptop", "cat-electronics", "Máy tính & Laptop", "BUY"),
-  (4221, "sub-tv", "cat-electronics", "Tivi & Màn hình", "BUY"),
-  (1962, "sub-camera", "cat-electronics", "Máy ảnh & Quay phim", "BUY"),
-  (1883, "sub-home-appliance", "cat-electronics", "Thiết bị gia dụng", "BUY"),
-  (931, "sub-women-clothing", "cat-fashion", "Quần áo nữ", "BUY"),
-  (915, "sub-men-clothing", "cat-fashion", "Quần áo nam", "BUY"),
-  (6000, "sub-shoes", "cat-fashion", "Giày dép", "BUY"),
-  (27498, "sub-bag", "cat-fashion", "Túi xách & Balo", "BUY"),
-  (2549, "sub-furniture-living", "cat-home", "Nội thất phòng khách", "BUY"),
-  (1703, "sub-kitchen", "cat-home", "Đồ dùng nhà bếp", "BUY"),
-  (1686, "sub-baby-stuff", "cat-mother-baby", "Đồ dùng cho bé", "BUY"),
-  (8594, "sub-fitness", "cat-sports", "Dụng cụ thể thao & Gym", "BUY"),
-  (316, "sub-books", "cat-books", "Sách cũ", "BUY"),
-  (2554, "sub-games", "cat-books", "Game & Console", "BUY"),
-  (44792, "sub-cosmetics", "cat-beauty", "Mỹ phẩm & Skincare", "BUY"),
-]
 
 REGION_POOL = [
   "Tp Hồ Chí Minh",
@@ -83,6 +54,14 @@ REGION_POOL = [
   "Hải Phòng",
   "Đồng Nai",
 ]
+
+
+def parse_args() -> argparse.Namespace:
+  p = argparse.ArgumentParser(description="Crawl Tiki.vn → raw_products.json")
+  p.add_argument("--target", type=int, default=DEFAULT_TARGET, help="Tổng số sản phẩm mục tiêu")
+  p.add_argument("--verify-only", action="store_true", help="Chỉ verify category map, không crawl")
+  p.add_argument("--skip-verify", action="store_true", help="Bỏ qua bước verify category Tiki")
+  return p.parse_args()
 
 
 def _secondhand_price(original_price: int) -> int:
@@ -134,7 +113,7 @@ def _extract_images(product: dict) -> list[str]:
 def fetch_category_page(cat_id: int, page: int) -> list[dict]:
   try:
     resp = requests.get(
-      TIKI_API,
+      TIKI_PRODUCTS_API,
       params={
         "limit": PAGE_SIZE,
         "category": cat_id,
@@ -178,7 +157,7 @@ def transform_product(
   if year is None:
     year = random.randint(2019, 2025)
 
-  return {
+  product = {
     "name": name[:255],
     "description": description,
     "primarySubCategoryId": sub_cat_id,
@@ -202,23 +181,39 @@ def transform_product(
       "original_price": original_price,
     },
   }
+  if not normalize_product_categories(product):
+    return None
+  return product
 
 
 def main() -> int:
+  args = parse_args()
+
+  if not args.skip_verify:
+    log.info("Verifying Tiki category map ↔ Second Life registry...")
+    verified = verify_tiki_categories(strict=True)
+    log.info("✓ %d/%d Tiki categories OK", len(verified), len(crawl_tuples()))
+    if args.verify_only:
+      for cat in verified:
+        log.info("  tiki=%d → %s (%s)", cat.tiki_id, cat.sub_category_id, cat.label)
+      return 0
+
+  category_map = crawl_tuples()
   OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-  per_cat = max(5, TARGET_TOTAL // len(CATEGORY_MAP))
-  log.info("Crawl Tiki: %d categories, ~%d/category (target %d)", len(CATEGORY_MAP), per_cat, TARGET_TOTAL)
+  target_total = max(50, args.target)
+  per_cat = max(5, target_total // len(category_map))
+  log.info("Crawl Tiki: %d categories, ~%d/category (target %d)", len(category_map), per_cat, target_total)
 
   all_products: list[dict] = []
   seen_ids: set[int] = set()
 
-  for cat_id, sub_cat_id, primary_cat_id, label, listing_type in CATEGORY_MAP:
-    if len(all_products) >= TARGET_TOTAL:
+  for cat_id, sub_cat_id, primary_cat_id, label, listing_type in category_map:
+    if len(all_products) >= target_total:
       break
 
-    target = min(per_cat, TARGET_TOTAL - len(all_products))
-    log.info("▶ [%s] cat=%d (~%d items)", label, cat_id, target)
+    target = min(per_cat, target_total - len(all_products))
+    log.info("▶ [%s] tiki=%d → %s (~%d items)", label, cat_id, sub_cat_id, target)
 
     cat_products: list[dict] = []
     page = 1
@@ -250,6 +245,7 @@ def main() -> int:
     json.dump(all_products, f, ensure_ascii=False, indent=2)
 
   log.info("Saved %d products → %s", len(all_products), OUTPUT_FILE)
+  log.info("Chạy tiếp: python3 fix_categories.py")
   return len(all_products)
 
 

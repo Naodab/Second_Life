@@ -50,6 +50,7 @@ class FacilityServiceImplTest {
   void setUp() {
     ReflectionTestUtils.setField(facilityService, "defaultSort", "created_at");
     ReflectionTestUtils.setField(facilityService, "defaultPageSize", 20);
+    ReflectionTestUtils.setField(facilityService, "self", facilityService);
   }
 
   @Test

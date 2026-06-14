@@ -14,6 +14,7 @@ import {
 import { getAllAttributes, type AttributeResponse } from "@/api/attributes";
 import { getAllCategories, type CategoryResponse } from "@/api/categories";
 import { analyzeProductImages } from "@/api/ai";
+import { filterAttributesBySubCategory } from "@/lib/attribute-filters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -182,8 +183,31 @@ export function AddProductPage({
     return result;
   }, [categories]);
 
+  const visibleAttributes = useMemo(
+    () => filterAttributesBySubCategory(attributes, form.primarySubCategoryId),
+    [attributes, form.primarySubCategoryId],
+  );
+
+  useEffect(() => {
+    const allowed = new Set(visibleAttributes.map((a) => a.id));
+    setForm((prev) => {
+      const nextSelected = prev.selectedAttributeIds.filter((id) => allowed.has(id));
+      if (
+        nextSelected.length === prev.selectedAttributeIds.length &&
+        nextSelected.every((id, i) => id === prev.selectedAttributeIds[i])
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        selectedAttributeIds: nextSelected,
+        variants: syncVariantAttributeSelections(prev.variants, nextSelected),
+      };
+    });
+  }, [visibleAttributes]);
+
   const selectedConcreteAttributeIds = useMemo(() => {
-    const validSet = new Set(attributes.map((a) => a.id));
+    const validSet = new Set(visibleAttributes.map((a) => a.id));
     const seen = new Set<string>();
     const result: string[] = [];
     for (const id of form.selectedAttributeIds) {
@@ -192,7 +216,7 @@ export function AddProductPage({
       result.push(id);
     }
     return result;
-  }, [attributes, form.selectedAttributeIds]);
+  }, [visibleAttributes, form.selectedAttributeIds]);
 
   const syncVariantAttributeSelections = (variants: VariantDraft[], attrIds: string[]): VariantDraft[] => {
     const allowed = new Set(attrIds);
@@ -250,7 +274,7 @@ export function AddProductPage({
   const variantPreviewRows = useMemo(() =>
     form.variants.map((variant) => {
       const attrParts = selectedConcreteAttributeIds.map((attrId) => {
-        const attr = attributes.find((a) => a.id === attrId);
+        const attr = visibleAttributes.find((a) => a.id === attrId);
         const valId = variant.selectedAttributeValueByAttributeId[attrId];
         const val = attr?.attributeValues?.find((v) => v.id === valId);
         return val ? normalizeSkuPart(val.code || val.value || val.id) : "NA";
@@ -263,7 +287,7 @@ export function AddProductPage({
           .filter(Boolean),
       };
     }),
-    [attributes, form.variants, productSkuPart, selectedConcreteAttributeIds, skuPrefix],
+    [visibleAttributes, form.variants, productSkuPart, selectedConcreteAttributeIds, skuPrefix],
   );
 
   const variantSignatureById = useMemo(() => {
@@ -729,10 +753,14 @@ export function AddProductPage({
             <p className="text-sm text-muted-foreground">Đang tải thuộc tính...</p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {attributes.length === 0 && (
-                <p className="text-xs text-muted-foreground">Chưa có thuộc tính khả dụng.</p>
+              {visibleAttributes.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {form.primarySubCategoryId
+                    ? "Chưa có thuộc tính khả dụng cho danh mục này."
+                    : "Chọn danh mục con chính (PRIMARY) để xem thuộc tính."}
+                </p>
               )}
-              {attributes.map((attr) => {
+              {visibleAttributes.map((attr) => {
                 const checked = form.selectedAttributeIds.includes(attr.id);
                 return (
                   <button
@@ -813,7 +841,7 @@ export function AddProductPage({
 
                 <div className="space-y-2">
                   {selectedConcreteAttributeIds.map((attrId) => {
-                    const attr = attributes.find((a) => a.id === attrId);
+                    const attr = visibleAttributes.find((a) => a.id === attrId);
                     const attrValues = attr?.attributeValues ?? [];
                     return (
                       <div key={`${variant.id}-${attrId}`} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-3">

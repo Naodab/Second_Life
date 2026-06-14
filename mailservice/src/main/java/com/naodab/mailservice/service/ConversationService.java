@@ -145,7 +145,7 @@ public class ConversationService {
     String normalizedProfileId = requireProfileId(profileId);
     if (normalizedProfileId.equals(conversation.getBuyerProfileId())) {
       conversation.setUnreadByBuyer(0);
-    } else if (isAdminSideViewer(conversation, normalizedProfileId, adminRole)) {
+    } else if (isAdminSideViewer(conversation, adminRole)) {
       conversation.setUnreadBySeller(0);
     } else if (normalizedProfileId.equals(conversation.getSellerProfileId())) {
       conversation.setUnreadBySeller(0);
@@ -236,10 +236,7 @@ public class ConversationService {
     return adminRole && document.getConversationType() == ConversationType.ADMIN;
   }
 
-  private static boolean isAdminSideViewer(
-      ConversationDocument document,
-      String profileId,
-      boolean adminRole) {
+  private static boolean isAdminSideViewer(ConversationDocument document, boolean adminRole) {
     return adminRole
         && document.getConversationType() == ConversationType.ADMIN
         && ConversationConstants.ADMIN_INBOX_PROFILE_ID.equals(document.getSellerProfileId());
@@ -287,7 +284,7 @@ public class ConversationService {
     long unreadCount;
     if (viewerProfileId.equals(resolved.getBuyerProfileId())) {
       unreadCount = resolved.getUnreadByBuyer();
-    } else if (isAdminSideViewer(resolved, viewerProfileId, adminRole)
+    } else if (isAdminSideViewer(resolved, adminRole)
         || ConversationConstants.ADMIN_INBOX_PROFILE_ID.equals(viewerProfileId)) {
       unreadCount = resolved.getUnreadBySeller();
     } else {

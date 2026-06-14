@@ -12,6 +12,8 @@ public interface AttributeService {
 
   List<AttributeResponse> getAllAttributes();
 
+  List<AttributeResponse> getAttributesForSubCategory(String subCategoryId);
+
   AttributeResponse getAttributeByName(String name);
 
   AttributeResponse addAttributeValue(String attributeId, List<String> values);

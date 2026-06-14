@@ -61,11 +61,9 @@ export function markInitialAttachSent(context: MessageDeepLinkContext): void {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(sent));
     }
   } catch {
-    // ignore storage errors
   }
 }
 
-/** @deprecated use wasInitialAttachSent */
 export function markDeepLinkHandled(context: MessageDeepLinkContext): boolean {
   return wasInitialAttachSent(context);
 }

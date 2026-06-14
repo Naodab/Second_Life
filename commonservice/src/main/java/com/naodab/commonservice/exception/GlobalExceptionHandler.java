@@ -22,6 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
   private static final List<String> ATTRIBUTE_KEYS = List.of("min", "max");
+  private static final String DATA_INTEGRITY_VIOLATION_CLASS =
+      "org.springframework.dao.DataIntegrityViolationException";
 
   @ExceptionHandler(AppException.class)
   public ResponseEntity<ApiResponse<?>> handleAppException(AppException ex) {
@@ -87,7 +89,7 @@ public class GlobalExceptionHandler {
 
   private static boolean isDataIntegrityViolation(Throwable ex) {
     for (Throwable t = ex; t != null; t = t.getCause()) {
-      if ("org.springframework.dao.DataIntegrityViolationException".equals(t.getClass().getName())) {
+      if (DATA_INTEGRITY_VIOLATION_CLASS.equals(t.getClass().getName())) { // NOSONAR java:S1872
         return true;
       }
     }

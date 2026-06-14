@@ -58,8 +58,6 @@ class CustomerControllerTest {
         .build();
   }
 
-  // ──────────────────── GET /customers ────────────────────
-
   @Test
   void listCustomers_missingProfileHeader_returnsBadRequest() throws Exception {
     mockMvc.perform(get("/customers"))
@@ -83,8 +81,6 @@ class CustomerControllerTest {
     verify(customerService).listCustomers(PROFILE_ID);
   }
 
-  // ──────────────────── POST /customers ────────────────────
-
   @Test
   void createCustomer_missingProfileHeader_returnsBadRequest() throws Exception {
     mockMvc.perform(post("/customers")
@@ -105,7 +101,7 @@ class CustomerControllerTest {
         .contentType(MediaType.APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(body)))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value(1062)); // REQUIRED_FIELD
+        .andExpect(jsonPath("$.code").value(1062));
 
     verify(customerService, never()).createCustomer(any(), any());
   }
@@ -120,7 +116,7 @@ class CustomerControllerTest {
         .contentType(MediaType.APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(body)))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value(1004)); // INVALID_EMAIL
+        .andExpect(jsonPath("$.code").value(1004));
 
     verify(customerService, never()).createCustomer(any(), any());
   }
@@ -140,8 +136,6 @@ class CustomerControllerTest {
 
     verify(customerService).createCustomer(eq(PROFILE_ID), any(CustomerUpsertRequest.class));
   }
-
-  // ──────────────────── PUT /customers/{id} ────────────────────
 
   @Test
   void updateCustomer_missingProfileHeader_returnsBadRequest() throws Exception {
@@ -170,8 +164,6 @@ class CustomerControllerTest {
     verify(customerService).updateCustomer(eq(PROFILE_ID), eq(CUSTOMER_ID), any(CustomerUpsertRequest.class));
   }
 
-  // ──────────────────── PUT /customers/{id}/default ────────────────────
-
   @Test
   void setDefaultCustomer_missingProfileHeader_returnsBadRequest() throws Exception {
     mockMvc.perform(put("/customers/{id}/default", CUSTOMER_ID))
@@ -194,8 +186,6 @@ class CustomerControllerTest {
 
     verify(customerService).setDefaultCustomer(PROFILE_ID, CUSTOMER_ID);
   }
-
-  // ──────────────────── helpers ────────────────────
 
   private static CustomerUpsertRequest validUpsertRequest() {
     return CustomerUpsertRequest.builder()

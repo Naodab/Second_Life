@@ -34,15 +34,14 @@ export type AiSuggestPriceRequest = {
   listingType: "BUY" | "RENT";
   variantLabel?: string;
   subCategoryNames?: string[];
+  primarySubCategoryId?: string;
+  subCategoryIds?: string[];
   attributeLines?: string[];
   manufactureYear?: number;
   rentUnit?: "HOUR" | "DAY" | "WEEK" | "MONTH";
   regionName?: string;
-  /** Seller's current asking price — AI compares in reasoning */
   currentListedPriceVnd?: number;
-  /** Base64 JPEG (no data-URL prefix) — preferred for Gemini vision */
   images?: string[];
-  /** Fallback: server fetches URLs when images omitted */
   imageUrls?: string[];
 };
 

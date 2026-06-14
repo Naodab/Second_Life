@@ -26,6 +26,8 @@ external:
     url: ${LOCATION_SERVICE_URL:http://localhost:8085/api/v1}
   inventory-service:
     url: ${INVENTORY_SERVICE_URL:http://localhost:8087/api/v1}
+  ai-service:
+    url: ${AI_SERVICE_URL:http://localhost:8090}
   cors_allowed_origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost}
 
 # Lấy key tại: https://aistudio.google.com/apikey

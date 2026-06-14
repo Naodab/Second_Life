@@ -38,6 +38,7 @@ import {
   buildSuggestPriceRequest,
   loadProductImagesForAi,
 } from "@/lib/ai-price-suggestion";
+import { isPhoneSubCategory } from "@/lib/attribute-filters";
 
 const DEFAULT_PRODUCT_THUMB =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop";
@@ -103,6 +104,10 @@ export function CreateListingPage({
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiPricing, setAiPricing] = useState(false);
   const [aiPriceByVariantId, setAiPriceByVariantId] = useState<Record<string, AiSuggestPriceResponse>>({});
+  const [selectedProductSubCategoryId, setSelectedProductSubCategoryId] = useState<string | null>(null);
+
+  const showPhoneAiPricing =
+    isPhoneSubCategory(selectedProductSubCategoryId) && listingType === "BUY";
 
   useEffect(() => {
     if (!initialFacilityId) return;
@@ -152,7 +157,6 @@ export function CreateListingPage({
               ];
             }
           } catch {
-            // product not found — keep list as-is
           }
         }
 
@@ -194,8 +198,9 @@ export function CreateListingPage({
       setVariants([]);
       setVariantsError(null);
       setSelectedVariantIds(new Set());
-        setPriceByVariantId({});
+      setPriceByVariantId({});
       setAiPriceByVariantId({});
+      setSelectedProductSubCategoryId(null);
       return;
     }
     let cancelled = false;
@@ -203,9 +208,13 @@ export function CreateListingPage({
       setVariantsLoading(true);
       setVariantsError(null);
       try {
-        const list = await getProductVariants(selectedProductId);
+        const [list, detail] = await Promise.all([
+          getProductVariants(selectedProductId),
+          getOwnedProductWithVariants(selectedProductId).catch(() => null),
+        ]);
         if (cancelled) return;
         setVariants(Array.isArray(list) ? list : []);
+        setSelectedProductSubCategoryId(detail?.primarySubCategory?.id ?? null);
         setSelectedVariantIds(new Set());
         setPriceByVariantId({});
         setAiPriceByVariantId({});
@@ -318,6 +327,8 @@ export function CreateListingPage({
           subCategoryNames: detail?.primarySubCategory?.name?.trim()
             ? [detail.primarySubCategory.name.trim()]
             : undefined,
+          primarySubCategoryId: detail?.primarySubCategory?.id ?? undefined,
+          subCategoryIds: detail?.primarySubCategory?.id ? [detail.primarySubCategory.id] : undefined,
           manufactureYear: detail?.manufactureYear ?? undefined,
           rentUnit: listingType === "RENT" ? firstDraft.rentUnit : undefined,
           regionName,
@@ -801,20 +812,22 @@ export function CreateListingPage({
                     <label className="text-sm font-semibold block">
                       {listingType === "BUY" ? "Giá bán theo loại (₫)" : "Giá thuê theo loại (₫)"}
                     </label>
-                    <button
-                      type="button"
-                      disabled={aiPricing || selectedVariantIds.size === 0}
-                      onClick={() => void handleSuggestPrices()}
-                      title="Ước tính giá thị trường đồ cũ bằng AI"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-background px-3 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50 disabled:pointer-events-none disabled:opacity-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
-                    >
-                      {aiPricing ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-3.5 h-3.5" />
-                      )}
-                      {aiPricing ? "Đang ước tính…" : "Gợi ý giá AI"}
-                    </button>
+                    {showPhoneAiPricing ? (
+                      <button
+                        type="button"
+                        disabled={aiPricing || selectedVariantIds.size === 0}
+                        onClick={() => void handleSuggestPrices()}
+                        title="Ước tính giá điện thoại bằng mô hình ML"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-background px-3 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50 disabled:pointer-events-none disabled:opacity-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
+                      >
+                        {aiPricing ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5" />
+                        )}
+                        {aiPricing ? "Đang ước tính…" : "Gợi ý giá AI"}
+                      </button>
+                    ) : null}
                   </div>
                   <div className="space-y-4">
                     {[...selectedVariantIds].map((vid) => {

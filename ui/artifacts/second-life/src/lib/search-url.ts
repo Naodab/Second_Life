@@ -67,7 +67,6 @@ export function searchPathsQueryEqual(a: string, b: string): boolean {
   return canonicalQueryString(qa) === canonicalQueryString(qb);
 }
 
-/** Map legacy / duplicate query keys to one canonical name (prevents URL sync loops). */
 function canonicalParamKey(rawKey: string): string {
   const key = rawKey.replace(/\[\]$/, "");
   switch (key) {
@@ -111,7 +110,6 @@ function canonicalQueryString(q: string): string {
     if (!value) continue;
     merged.set(key, value);
   }
-  // Default sort is omitted from desired paths; treat explicit default as absent.
   if (merged.get("sortBy") === "UPDATED_AT_DESC") {
     merged.delete("sortBy");
   }

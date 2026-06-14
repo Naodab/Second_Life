@@ -41,7 +41,6 @@ export type AuthErrorToast = {
 
 const LOGIN_INVALID_CREDENTIALS_MESSAGE = "Email hoặc mật khẩu không đúng.";
 
-/** User-facing copy for login failures — never expose raw HTTP / English API messages. */
 export function mapLoginError(err: unknown): AuthErrorToast {
   const code = readApiErrorCode(err);
 
@@ -73,7 +72,6 @@ export function mapLoginError(err: unknown): AuthErrorToast {
   };
 }
 
-/** User-facing copy for register failures — avoid raw HTTP messages in toasts. */
 export function mapRegisterError(err: unknown): AuthErrorToast {
   const code = readApiErrorCode(err);
 

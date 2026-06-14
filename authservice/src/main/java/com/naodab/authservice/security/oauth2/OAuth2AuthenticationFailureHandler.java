@@ -83,9 +83,15 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
       fallback = oAuth2Properties.getAuthorizedRedirectUris().stream()
           .filter(uri -> uri != null && !uri.isBlank())
           .findFirst()
-          .orElse("http://localhost:5173/oauth2/callback/google");
+          .orElse(null);
     }
-
+    if (fallback == null || fallback.isBlank()) {
+      log.error("OAuth2 fallback error detail (no redirect URI configured): {}", exception.getMessage());
+      return UriComponentsBuilder.fromPath("/login")
+          .queryParam("error", "authentication_error")
+          .build()
+          .toUriString();
+    }
     log.error("OAuth2 fallback error detail: {}", exception.getMessage());
     return UriComponentsBuilder.fromUriString(fallback)
         .queryParam("error", "authentication_error")

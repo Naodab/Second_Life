@@ -6,7 +6,10 @@ import com.naodab.authservice.models.AuthProvider;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 
-public class OAuth2UserInfoFactory {
+public final class OAuth2UserInfoFactory {
+
+  private OAuth2UserInfoFactory() {
+  }
 
   public static OAuth2UserInfo getOAuth2UserInfo(String registrationId,
       Map<String, Object> attributes) {

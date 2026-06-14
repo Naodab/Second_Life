@@ -10,7 +10,6 @@ export type ManageRouteParsed =
   | { tag: "product"; facilityId: string; productId: string }
   | { tag: "unpublished"; facilityId: string };
 
-/** @deprecated Use {@link manageProductsPath} — dashboard route removed. */
 export function manageDashboardPath(): string {
   return manageProductsPath();
 }

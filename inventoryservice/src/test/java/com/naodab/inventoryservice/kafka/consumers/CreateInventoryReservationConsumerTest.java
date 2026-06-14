@@ -3,6 +3,7 @@ package com.naodab.inventoryservice.kafka.consumers;
 import static org.mockito.Mockito.verify;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +31,7 @@ class CreateInventoryReservationConsumerTest {
             .listingVariantId("variant-1")
             .quantity(1)
             .mode("BUY")
-            .expiresAt(LocalDateTime.of(2026, 6, 1, 10, 0))
+            .expiresAt(LocalDateTime.of(2026, Month.JUNE, 1, 10, 0))
             .build();
 
     consumer.listen(event);

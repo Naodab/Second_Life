@@ -202,6 +202,34 @@ services:
     labels:
       - "traefik.enable=true"
 
+  ai-service:
+    image: ai-service:latest
+    restart: unless-stopped
+    build:
+      context: aiservice
+      dockerfile: Dockerfile
+    ports:
+      - "${SERVER_PORT_AI_SERVICE:-8090}:8090"
+    environment:
+      AISERVICE_HOST: "0.0.0.0"
+      AISERVICE_PORT: "8090"
+      AISERVICE_MODEL_DIR: /app/models/v10
+    volumes:
+      # Model artifacts are gitignored — mount from host after Colab export.
+      - ./aiservice/models:/app/models:ro
+    healthcheck:
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://127.0.0.1:8090/health -o /dev/null || exit 1",
+        ]
+    networks:
+      - second_life_network
+
   product-service:
     image: product-service:latest
     restart: unless-stopped
@@ -213,10 +241,13 @@ services:
     environment:
       SERVER_PORT_PRODUCT_SERVICE: "8086"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      AI_SERVICE_URL: http://ai-service:8090
     env_file:
       - .env
     depends_on:
       kafka:
+        condition: service_healthy
+      ai-service:
         condition: service_healthy
     healthcheck:
       <<: *spring-healthcheck

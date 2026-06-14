@@ -10,19 +10,24 @@ export type AttributeValueResponse = {
 export type AttributeResponse = {
   id: string;
   name: string;
+  subCategoryIds?: string[] | null;
   attributeValues?: AttributeValueResponse[] | null;
 };
 
-export async function getAllAttributes(): Promise<AttributeResponse[]> {
+export async function getAllAttributes(subCategoryId?: string | null): Promise<AttributeResponse[]> {
+  const query = subCategoryId?.trim()
+    ? `?subCategoryId=${encodeURIComponent(subCategoryId.trim())}`
+    : "";
   try {
-    const raw = await customFetch<ApiResponseEnvelope<AttributeResponse[]>>(`/api/v1/attributes`, {
+    const raw = await customFetch<ApiResponseEnvelope<AttributeResponse[]>>(`/api/v1/attributes${query}`, {
       method: "GET",
     });
     return unwrapApiData(raw);
   } catch {
-    const fallbackRaw = await customFetch<ApiResponseEnvelope<AttributeResponse[]>>(`/api/v1/attributes/`, {
-      method: "GET",
-    });
+    const fallbackRaw = await customFetch<ApiResponseEnvelope<AttributeResponse[]>>(
+      `/api/v1/attributes${query || "/"}`,
+      { method: "GET" },
+    );
     return unwrapApiData(fallbackRaw);
   }
 }

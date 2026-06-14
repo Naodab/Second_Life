@@ -53,10 +53,18 @@ RAW="${RAW//,/ }"
 read -ra SERVICES <<<"$RAW"
 
 needs_backend=false
+needs_ai_service=false
 for svc in "${SERVICES[@]}"; do
   case "$svc" in
-    auth-service|mail-service|profile-service|location-service|product-service|inventory-service|booking-service|traefik|second-life-ui)
+    auth-service|mail-service|profile-service|location-service|inventory-service|booking-service|traefik|second-life-ui)
       needs_backend=true
+      ;;
+    product-service)
+      needs_backend=true
+      needs_ai_service=true
+      ;;
+    ai-service)
+      needs_ai_service=true
       ;;
   esac
 done
@@ -64,6 +72,17 @@ done
 if [[ "$needs_backend" == true ]]; then
   echo "=== Đảm bảo kafka + redis đang chạy ==="
   "${COMPOSE[@]}" up -d kafka redis
+fi
+
+if [[ "$needs_ai_service" == true ]]; then
+  contains_ai=false
+  for svc in "${SERVICES[@]}"; do
+    [[ "$svc" == "ai-service" ]] && contains_ai=true
+  done
+  if [[ "$contains_ai" == false ]]; then
+    echo "=== Đảm bảo ai-service đang chạy (dependency của product-service) ==="
+    "${COMPOSE[@]}" up -d ai-service
+  fi
 fi
 
 BUILD_SERVICES=()
@@ -77,7 +96,7 @@ for svc in "${SERVICES[@]}"; do
     second-life-ui)
       BUILD_SERVICES+=("$svc")
       ;;
-    auth-service|mail-service|profile-service|location-service|product-service|inventory-service|booking-service)
+    auth-service|mail-service|profile-service|location-service|product-service|inventory-service|booking-service|ai-service)
       BUILD_SERVICES+=("$svc")
       ;;
     *)
@@ -91,7 +110,21 @@ if [[ ${#BUILD_SERVICES[@]} -gt 0 ]]; then
   echo "=== Build (${#BUILD_SERVICES[@]} services, parallel) ==="
   echo "${BUILD_SERVICES[*]}"
   DOCKER_BUILDKIT=1 COMPOSE_PARALLEL_LIMIT=2 "${COMPOSE[@]}" build --parallel "${BUILD_SERVICES[@]}"
-  for svc in "${BUILD_SERVICES[@]}"; do
+
+  UP_ORDER=()
+  for svc in ai-service product-service; do
+    for s in "${BUILD_SERVICES[@]}"; do
+      [[ "$s" == "$svc" ]] && UP_ORDER+=("$s")
+    done
+  done
+  for s in "${BUILD_SERVICES[@]}"; do
+  case "$s" in
+    ai-service|product-service) ;;
+    *) UP_ORDER+=("$s") ;;
+  esac
+  done
+
+  for svc in "${UP_ORDER[@]}"; do
     echo "=== Up: ${svc} ==="
     "${COMPOSE[@]}" up -d --no-deps "$svc"
   done

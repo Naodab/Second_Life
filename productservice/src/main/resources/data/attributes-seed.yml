@@ -212,6 +212,118 @@ attributes:
       - id: val-other
         value: "Other"
         code: "OTHER"
+      - id: val-realme
+        value: "Realme"
+        code: "REALME"
+      - id: val-oneplus
+        value: "OnePlus"
+        code: "ONEPLUS"
+
+  # --- Điện thoại (sub-phone) — chỉ hiện khi chọn danh mục Điện thoại ---
+  - id: attr-ram
+    name: "RAM"
+    subCategoryIds:
+      - sub-phone
+    attributeValues:
+      - id: val-ram-2gb
+        value: "2 GB"
+        code: "2GB"
+      - id: val-ram-3gb
+        value: "3 GB"
+        code: "3GB"
+      - id: val-ram-4gb
+        value: "4 GB"
+        code: "4GB"
+      - id: val-ram-6gb
+        value: "6 GB"
+        code: "6GB"
+      - id: val-ram-8gb
+        value: "8 GB"
+        code: "8GB"
+      - id: val-ram-12gb
+        value: "12 GB"
+        code: "12GB"
+      - id: val-ram-16gb
+        value: "16 GB"
+        code: "16GB"
+      - id: val-ram-32gb
+        value: "32 GB"
+        code: "32GB"
+
+  - id: attr-sim-lock
+    name: "SIM Lock"
+    subCategoryIds:
+      - sub-phone
+    attributeValues:
+      - id: val-sim-international
+        value: "Quốc tế"
+        code: "INTERNATIONAL"
+      - id: val-sim-locked
+        value: "Lock"
+        code: "LOCKED"
+      - id: val-sim-unlocked
+        value: "Ghép sim"
+        code: "UNLOCKED"
+      - id: val-sim-unknown
+        value: "Không rõ"
+        code: "UNKNOWN"
+
+  - id: attr-screen-size
+    name: "Screen Size"
+    subCategoryIds:
+      - sub-phone
+    attributeValues:
+      - id: val-screen-47
+        value: "4.7 inch"
+        code: "4.7"
+      - id: val-screen-54
+        value: "5.4 inch"
+        code: "5.4"
+      - id: val-screen-55
+        value: "5.5 inch"
+        code: "5.5"
+      - id: val-screen-58
+        value: "5.8 inch"
+        code: "5.8"
+      - id: val-screen-61
+        value: "6.1 inch"
+        code: "6.1"
+      - id: val-screen-64
+        value: "6.4 inch"
+        code: "6.4"
+      - id: val-screen-67
+        value: "6.7 inch"
+        code: "6.7"
+      - id: val-screen-68
+        value: "6.8 inch"
+        code: "6.8"
+      - id: val-screen-69
+        value: "6.9 inch"
+        code: "6.9"
+
+  - id: attr-battery-health
+    name: "Battery Health"
+    subCategoryIds:
+      - sub-phone
+    attributeValues:
+      - id: val-battery-50-79
+        value: "50–79%"
+        code: "50_79"
+      - id: val-battery-80-84
+        value: "80–84%"
+        code: "80_84"
+      - id: val-battery-85-89
+        value: "85–89%"
+        code: "85_89"
+      - id: val-battery-90-94
+        value: "90–94%"
+        code: "90_94"
+      - id: val-battery-95-100
+        value: "95–100%"
+        code: "95_100"
+      - id: val-battery-unknown
+        value: "Không rõ"
+        code: "UNKNOWN"
 
   - id: attr-origin
     name: "Origin"

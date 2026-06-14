@@ -1,13 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import {
-  ensureVisitorLocationFromIp,
-  loadVisitorLocation,
-  type VisitorLocationPayload,
-} from "@/lib/visitor-location";
+import { ensureVisitorLocationFromIp, loadVisitorLocation, type VisitorLocationPayload } from "@/lib/visitor-location";
 
 type VisitorLocationCtx = {
   location: VisitorLocationPayload | null;
-  /** False until the one-time IP resolve attempt finishes (cached hits resolve immediately). */
   locationResolveDone: boolean;
   reload: () => void;
 };

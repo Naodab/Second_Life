@@ -91,6 +91,7 @@ Secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_DEPLOY_PATH`; optional `VPS
 | `profileservice/` | profile-service |
 | `locationservice/` | location-service |
 | `productservice/` | product-service |
+| `aiservice/` | ai-service |
 | `inventoryservice/` | inventory-service |
 | `bookingservice/` | booking-service |
 | `ui/` | second-life-ui |
