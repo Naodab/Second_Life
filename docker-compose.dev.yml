@@ -2,8 +2,7 @@ services:
   traefik:
     ports: !override
       - "80:80"
-      # Dashboard: http://localhost:9080/dashboard/ hoặc http://localhost/traefik/dashboard/
-      - "127.0.0.1:9080:8080"
+      # Dashboard: http://localhost/dashboard/
     volumes:
       - ./traefik/traefik.dev.yml:/etc/traefik/traefik.yml
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml

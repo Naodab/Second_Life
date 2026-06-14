@@ -145,16 +145,25 @@ http:
       priority: 50
 
     traefik-dashboard:
-      rule: "PathPrefix(`/traefik`)"
+      rule: >-
+        PathPrefix(`/dashboard`)
+        || PathPrefix(`/api/http`)
+        || PathPrefix(`/api/tcp`)
+        || PathPrefix(`/api/udp`)
+        || PathPrefix(`/api/entrypoints`)
+        || PathPrefix(`/api/rawdata`)
+        || PathPrefix(`/api/platform`)
+        || Path(`/api/overview`)
+        || Path(`/api/version`)
       service: api@internal
       entryPoints:
         - web
-      priority: 100
+      priority: 250
 
     # Dev SPA — proxy to Vite on the host (npm run dev). Never catch /api/* (Traefik auto-priority
     # for PathPrefix(`/`) can beat auth-api@priority 1).
     ui-spa:
-      rule: "PathPrefix(`/`) && !PathPrefix(`/api`) && !PathPrefix(`/traefik`)"
+      rule: "PathPrefix(`/`) && !PathPrefix(`/api`)"
       service: vite-dev
       entryPoints:
         - web

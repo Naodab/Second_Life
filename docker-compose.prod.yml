@@ -18,6 +18,8 @@ services:
     # Compose expands ${ACME_EMAIL} from .env here (Traefik does not expand env in mounted traefik.yml).
     command:
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@secondlifeonline.xyz}
+      - --api.dashboard=true
+      - --api.insecure=false
     depends_on:
       auth-service:
         condition: service_healthy

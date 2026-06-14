@@ -15,7 +15,6 @@ entryPoints:
 api:
   dashboard: true
   insecure: false
-  basePath: /traefik
 
 providers:
   file:

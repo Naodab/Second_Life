@@ -186,7 +186,17 @@ http:
         - gateway-jwt
       priority: 100
     traefik-dashboard:
-      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/traefik`)"
+      rule: >-
+        (Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`))
+        && (PathPrefix(`/dashboard`)
+        || PathPrefix(`/api/http`)
+        || PathPrefix(`/api/tcp`)
+        || PathPrefix(`/api/udp`)
+        || PathPrefix(`/api/entrypoints`)
+        || PathPrefix(`/api/rawdata`)
+        || PathPrefix(`/api/platform`)
+        || Path(`/api/overview`)
+        || Path(`/api/version`))
       service: api@internal
       entryPoints:
         - websecure
@@ -194,9 +204,9 @@ http:
         certResolver: letsencrypt
       middlewares:
         - traefik-dashboard-auth
-      priority: 150
+      priority: 250
     ui-spa:
-      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/`) && !PathPrefix(`/traefik`)"
+      rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/`)"
       service: second-life-ui
       entryPoints:
         - websecure
