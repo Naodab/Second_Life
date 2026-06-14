@@ -10,7 +10,6 @@ http:
           - "role"
         authRequestHeaders:
           - "Authorization"
-
   routers:
     auth-api-options:
       rule: "(PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`)) && Method(`OPTIONS`)"
@@ -144,6 +143,22 @@ http:
       middlewares:
         - gateway-jwt
       priority: 50
+
+    traefik-dashboard:
+      rule: >-
+        PathPrefix(`/dashboard`)
+        || PathPrefix(`/api/http`)
+        || PathPrefix(`/api/tcp`)
+        || PathPrefix(`/api/udp`)
+        || PathPrefix(`/api/entrypoints`)
+        || PathPrefix(`/api/rawdata`)
+        || PathPrefix(`/api/platform`)
+        || Path(`/api/overview`)
+        || Path(`/api/version`)
+      service: api@internal
+      entryPoints:
+        - web
+      priority: 250
 
     # Dev SPA — proxy to Vite on the host (npm run dev). Never catch /api/* (Traefik auto-priority
     # for PathPrefix(`/`) can beat auth-api@priority 1).

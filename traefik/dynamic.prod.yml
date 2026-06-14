@@ -14,6 +14,10 @@ http:
         authRequestHeaders:
           - "Authorization"
 
+    traefik-dashboard-auth:
+      basicAuth:
+        usersFile: /etc/traefik/dashboard.htpasswd
+
   routers:
     auth-api-options:
       rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && (PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/oauth2`) || PathPrefix(`/api/v1/login/oauth2`)) && Method(`OPTIONS`)"
@@ -181,6 +185,26 @@ http:
       middlewares:
         - gateway-jwt
       priority: 100
+    traefik-dashboard:
+      rule: >-
+        (Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`))
+        && (PathPrefix(`/dashboard`)
+        || PathPrefix(`/api/http`)
+        || PathPrefix(`/api/tcp`)
+        || PathPrefix(`/api/udp`)
+        || PathPrefix(`/api/entrypoints`)
+        || PathPrefix(`/api/rawdata`)
+        || PathPrefix(`/api/platform`)
+        || Path(`/api/overview`)
+        || Path(`/api/version`))
+      service: api@internal
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - traefik-dashboard-auth
+      priority: 250
     ui-spa:
       rule: "(Host(`secondlifeonline.xyz`) || Host(`www.secondlifeonline.xyz`)) && PathPrefix(`/`)"
       service: second-life-ui

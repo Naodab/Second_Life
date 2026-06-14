@@ -1,10 +1,33 @@
 services:
   traefik:
-    ports:
-      - "9080:8080"
+    ports: !override
+      - "80:80"
+      # Dashboard: http://localhost/dashboard/
     volumes:
       - ./traefik/traefik.dev.yml:/etc/traefik/traefik.yml
       - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml
+
+  kafka:
+    # Không expose ra host — tránh HTTP probe (GET → InvalidReceiveException trong log).
+    # Services trong Docker dùng kafka:9092; xem topic tại http://localhost:9081
+    ports: !override []
+
+  kafka-ui:
+    # Dev only — không có trong docker-compose.prod.yml
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9081:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: second-life
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - second_life_network
 
   # auth-service:
   #   environment:

@@ -92,6 +92,11 @@ node_modules/
 kafka-logs/
 
 ######################################
+# Traefik (prod dashboard credentials — copy from dashboard.htpasswd.example)
+######################################
+traefik/dashboard.htpasswd
+
+######################################
 # Database local
 ######################################
 *.db

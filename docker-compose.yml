@@ -11,8 +11,7 @@ services:
     image: confluentinc/cp-kafka:7.6.0
     container_name: kafka
     restart: unless-stopped
-    ports:
-      - 9092:9092
+    # Chỉ in-network; dev overlay / prod overlay không publish ra host.
     environment:
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
       KAFKA_NODE_ID: 1
