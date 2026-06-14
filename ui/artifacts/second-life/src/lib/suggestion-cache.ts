@@ -9,7 +9,6 @@ interface CacheEntry {
   expires: number;
 }
 
-// Module-level in-memory cache — survives React remounts, cleared on hard refresh
 const memCache = new Map<string, CacheEntry>();
 
 function normalizeKey(keyword: string): string {
@@ -39,24 +38,20 @@ function writeToSession(key: string, entry: CacheEntry): void {
   try {
     sessionStorage.setItem(SESSION_KEY_PREFIX + key, JSON.stringify(entry));
   } catch {
-    // sessionStorage quota exceeded or unavailable — ignore
   }
 }
 
 export function getSuggestionCached(keyword: string): ListingSuggestionResponse[] | null {
   const key = normalizeKey(keyword);
 
-  // 1. Check in-memory
   const mem = memCache.get(key);
   if (mem) {
     if (!isExpired(mem)) return mem.data;
     memCache.delete(key);
   }
 
-  // 2. Check sessionStorage (survives in-page navigation / soft remounts)
   const session = readFromSession(key);
   if (session !== null) {
-    // Promote back to memory
     const entry: CacheEntry = { data: session, expires: Date.now() + CACHE_TTL_MS };
     memCache.set(key, entry);
     return session;
@@ -78,12 +73,9 @@ export function getSuggestionFromPrefix(
 ): ListingSuggestionResponse[] | null {
   const lower = normalizeKey(keyword);
 
-  // Direct cache hit
   const direct = getSuggestionCached(lower);
   if (direct !== null) return direct;
 
-  // Prefix scan: find any cached key that is a prefix of the typed keyword
-  // AND returned fewer items than the limit (exhausted results for that prefix)
   let bestMatch: { key: string; data: ListingSuggestionResponse[] } | null = null;
 
   for (const [key, entry] of memCache) {
@@ -96,7 +88,6 @@ export function getSuggestionFromPrefix(
       key.length < lower.length &&
       entry.data.length < limit
     ) {
-      // Pick the longest matching prefix for the most refined result
       if (!bestMatch || key.length > bestMatch.key.length) {
         bestMatch = { key, data: entry.data };
       }
@@ -104,11 +95,9 @@ export function getSuggestionFromPrefix(
   }
 
   if (bestMatch) {
-    // Filter the prefix results for the current (longer) keyword
     const filtered = bestMatch.data.filter((item) =>
       item.title.toLowerCase().includes(lower),
     );
-    // Cache the derived result too so future calls are even faster
     setSuggestionCached(lower, filtered);
     return filtered;
   }

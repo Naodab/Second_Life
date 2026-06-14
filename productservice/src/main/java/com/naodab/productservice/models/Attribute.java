@@ -67,12 +67,9 @@ public class Attribute extends BaseEntity implements Persistable<String> {
   @Column(name = "name", nullable = false, unique = true)
   String name;
 
-  /** Empty = áp dụng mọi danh mục con; có giá trị = chỉ hiện khi chọn sub-category tương ứng. */
   @Builder.Default
   @ElementCollection(fetch = FetchType.EAGER)
-  @CollectionTable(
-      name = "attribute_sub_categories",
-      joinColumns = @JoinColumn(name = "attribute_id"))
+  @CollectionTable(name = "attribute_sub_categories", joinColumns = @JoinColumn(name = "attribute_id"))
   @Column(name = "sub_category_id")
   List<String> subCategoryIds = new ArrayList<>();
 

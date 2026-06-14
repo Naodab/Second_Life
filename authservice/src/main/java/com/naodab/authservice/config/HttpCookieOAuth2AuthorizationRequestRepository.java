@@ -24,8 +24,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
   public static final String OAUTH_ENTRY_COOKIE_NAME = "oauth_entry";
   private static final int COOKIE_EXPIRE_SECONDS = 180;
 
-  private final ConcurrentHashMap<String, OAuth2AuthorizationRequest> authorizationRequests =
-      new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, OAuth2AuthorizationRequest> authorizationRequests = new ConcurrentHashMap<>();
   private final ScheduledExecutorService evictor = Executors.newSingleThreadScheduledExecutor(r -> {
     Thread thread = new Thread(r, "oauth2-auth-request-evictor");
     thread.setDaemon(true);
@@ -42,7 +41,6 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
       }
     }
 
-    // Legacy cookie fallback (pre–state-cache deploys / rolling restarts).
     return CookieUtils.getCookie(request, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME)
         .map(cookie -> CookieUtils.deserialize(cookie, OAuth2AuthorizationRequest.class))
         .orElse(null);
@@ -60,7 +58,6 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
       return;
     }
 
-    // Drop legacy serialized cookie (Tomcat default 8KB header limit → HTTP 400 on Google callback).
     CookieUtils.deleteCookie(request, response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME);
 
     String state = authorizationRequest.getState();

@@ -111,7 +111,6 @@ public class PhonePricingClient {
         return message.asText().trim();
       }
     } catch (Exception ignored) {
-      // fall through
     }
     return "Không đủ thông tin để ước tính giá điện thoại.";
   }

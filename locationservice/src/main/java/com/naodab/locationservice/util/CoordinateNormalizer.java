@@ -3,7 +3,6 @@ package com.naodab.locationservice.util;
 import com.naodab.commonservice.exception.AppException;
 import com.naodab.commonservice.exception.ErrorCode;
 
-/** Chuẩn hóa cặp (longitude, latitude) trước khi gọi MySQL ST_GeomFromText POINT(lat lon) SRID 4326. */
 public final class CoordinateNormalizer {
 
   private CoordinateNormalizer() {
@@ -38,7 +37,6 @@ public final class CoordinateNormalizer {
     return new LonLat(longitude, latitude);
   }
 
-  /** latitude/longitude theo tên param HTTP → LonLat. */
   public static LonLat fromHttpParams(float latitude, float longitude) {
     return normalize(longitude, latitude);
   }

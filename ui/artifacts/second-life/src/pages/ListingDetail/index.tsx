@@ -181,7 +181,6 @@ export default function ListingDetail() {
     return Math.min(dialogCatalogStock, q.availableQuantity);
   }, [buyAvailabilityQuery.data, dialogCatalogStock]);
 
-  /** Max concurrent rent units (catalog / physical stock). Interval overlap is checked separately. */
   const rentConcurrencyCap = useMemo(() => {
     const q = rentAvailabilityQuery.data;
     if (!q || !q.tracked || q.availableQuantity == null) {
@@ -263,22 +262,22 @@ export default function ListingDetail() {
     const line =
       mode === "buy"
         ? buildBuyCheckoutLine({
-            listingId: data.listing.id,
-            listingVariantId,
-            quantity: buyQty,
-            effectiveBuyStock,
-            dialogBuyUnitPrice,
-          })
+          listingId: data.listing.id,
+          listingVariantId,
+          quantity: buyQty,
+          effectiveBuyStock,
+          dialogBuyUnitPrice,
+        })
         : buildRentCheckoutLine({
-            listingId: data.listing.id,
-            listingVariantId,
-            quantity: rentQty,
-            dialogRentUnitPrice,
-            rentWindow,
-            rentValidityOk: rentValidity.ok,
-            rentRangeBlocked,
-            rentUnit,
-          });
+          listingId: data.listing.id,
+          listingVariantId,
+          quantity: rentQty,
+          dialogRentUnitPrice,
+          rentWindow,
+          rentValidityOk: rentValidity.ok,
+          rentRangeBlocked,
+          rentUnit,
+        });
 
     if (!line) return;
 
@@ -445,25 +444,25 @@ export default function ListingDetail() {
             />
 
             {subId === "sub-phone" && listing.listingType === "BUY" ? (
-            <ListingAiPriceSection
-              productName={product.name}
-              productDescription={product.description}
-              listingTitle={listing.title}
-              listingDescription={listing.description}
-              listingType={listing.listingType}
-              rentUnit={rentUnit}
-              primarySubCategoryId={subId}
-              subCategoryName={subName}
-              specAttributes={specAttributes}
-              manufactureYear={product.manufactureYear}
-              locationLine={locationLine}
-              currentListedPriceVnd={currentListedPriceVnd > 0 ? currentListedPriceVnd : undefined}
-              medias={product.medias}
-              thumbnailUrl={product.thumbnailUrl}
-              variantLabel={variantLabel}
-              cachedAiPriceVnd={cachedAiPriceVnd ?? undefined}
-              imageUrls={detailImageUrls.length > 0 ? detailImageUrls.slice(0, 2) : undefined}
-            />
+              <ListingAiPriceSection
+                productName={product.name}
+                productDescription={product.description}
+                listingTitle={listing.title}
+                listingDescription={listing.description}
+                listingType={listing.listingType}
+                rentUnit={rentUnit}
+                primarySubCategoryId={subId}
+                subCategoryName={subName}
+                specAttributes={specAttributes}
+                manufactureYear={product.manufactureYear}
+                locationLine={locationLine}
+                currentListedPriceVnd={currentListedPriceVnd > 0 ? currentListedPriceVnd : undefined}
+                medias={product.medias}
+                thumbnailUrl={product.thumbnailUrl}
+                variantLabel={variantLabel}
+                cachedAiPriceVnd={cachedAiPriceVnd ?? undefined}
+                imageUrls={detailImageUrls.length > 0 ? detailImageUrls.slice(0, 2) : undefined}
+              />
             ) : null}
           </div>
         </div>
@@ -471,15 +470,15 @@ export default function ListingDetail() {
         {facility?.id ? (
           <div className="mt-10">
             <ListingFacilitySection
-            facility={facility}
-            listingContext={{
-              listingId: listing.id,
-              listingVariantId,
-              title: listing.title || product.name,
-              thumbnailUrl: heroImage || product.thumbnailUrl,
-              listingType: listing.listingType,
-              price: listing.listingType === "RENT" ? rentPrice : buyPrice,
-            }}
+              facility={facility}
+              listingContext={{
+                listingId: listing.id,
+                listingVariantId,
+                title: listing.title || product.name,
+                thumbnailUrl: heroImage || product.thumbnailUrl,
+                listingType: listing.listingType,
+                price: listing.listingType === "RENT" ? rentPrice : buyPrice,
+              }}
             />
           </div>
         ) : null}

@@ -31,9 +31,7 @@ type Props = {
   variantSelection: Record<string, string>;
   onVariantSelectionChange: (axisKey: string, valueId: string) => void;
   rentUnit: RentUnit;
-  /** Base rent stock for overlap checks in the scheduler (does not lock date inputs). */
   schedulerStock: number;
-  /** Max quantity for selected window (after range availability). */
   lineStock: number;
   lineUnitRentPrice: number;
   rentQty: number;

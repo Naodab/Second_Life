@@ -14,21 +14,11 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class AiSuggestPriceResponse {
-
-  /** Recommended price in VND (buy price or rent fee per unit). */
   Long suggestedPriceVnd;
-
   Long priceMinVnd;
-
   Long priceMaxVnd;
-
-  /** HIGH, MEDIUM, or LOW */
   String confidence;
-
-  /** Short Vietnamese explanation. */
   String reasoningBrief;
-
   String listingType;
-
   String rentUnit;
 }

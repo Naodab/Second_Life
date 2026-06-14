@@ -104,6 +104,21 @@
       "name": "protected_paths.DELETE",
       "type": "java.util.List<java.lang.String>",
       "description": "Protected paths for DELETE method"
+    },
+    {
+      "name": "external.gateway_url",
+      "type": "java.lang.String",
+      "description": "Gateway URL"
+    },
+    {
+      "name": "product-service.url",
+      "type": "java.lang.String",
+      "description": "Product service URL"
+    },
+    {
+      "name": "booking-service.url",
+      "type": "java.lang.String",
+      "description": "Booking service URL"
     }
   ]
 }

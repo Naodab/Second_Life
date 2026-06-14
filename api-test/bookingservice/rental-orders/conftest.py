@@ -5,7 +5,6 @@ import pytest
 import requests
 from dotenv import load_dotenv
 
-# Load .env từ thư mục gốc api-test (2 cấp lên từ file này)
 _env_file = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(_env_file)
 

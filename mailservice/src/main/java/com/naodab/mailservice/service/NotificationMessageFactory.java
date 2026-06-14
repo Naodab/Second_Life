@@ -147,7 +147,6 @@ public class NotificationMessageFactory {
     return status.trim().toUpperCase();
   }
 
-  /** Expands stored app paths for email hrefs. */
   public String toAbsoluteLink(String link) {
     if (!StringUtils.hasText(link)) {
       return link;

@@ -168,7 +168,6 @@ export async function fetchListingSuggestions(
   const trimmed = keyword.trim();
   if (trimmed.length < 2) return [];
 
-  // Serve from cache or derive from a shorter cached prefix (skips network call)
   const cached = getSuggestionFromPrefix(trimmed, limit);
   if (cached !== null) return cached;
 

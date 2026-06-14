@@ -7,7 +7,6 @@ export type FacilityMapSource = Pick<
   FacilityResponse,
   "linkGoogleMap" | "latitude" | "longitude" | "address"
 > & {
-  /** Địa chỉ đầy đủ (số nhà + phường + tỉnh) — ưu tiên geocode chính xác hơn lat/lng tỉnh. */
   searchAddress?: string;
 };
 
@@ -41,7 +40,6 @@ function extractQueryFromLink(link: string): string | null {
       return q;
     }
   } catch {
-    // ignore malformed URL
   }
 
   const match = link.match(COORDINATES_IN_URL);
@@ -61,7 +59,6 @@ export function buildGoogleMapsEmbedUrl(facility: FacilityMapSource): string | n
   const lng = facility.longitude;
   const hasCoords = lat != null && lng != null && isValidCoordinate(lat, lng);
 
-  // Ưu tiên địa chỉ cụ thể từ link / form — chính xác hơn lat/lng cấp tỉnh trong DB.
   const placeQuery = linkQuery || searchAddress;
   if (placeQuery) {
     return buildEmbedUrl(placeQuery, hasCoords ? lat : undefined, hasCoords ? lng : undefined);

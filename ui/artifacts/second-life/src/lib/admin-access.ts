@@ -17,7 +17,6 @@ export function isAdminMarketplaceRestrictedPath(path: string): boolean {
   );
 }
 
-/** Post-login / returnTo target safe for admin (browse + /admin only). */
 export function resolveAdminSafePath(path: string | null | undefined, isAdmin: boolean): string {
   const safe = sanitizeReturnTo(path);
   if (!isAdmin) {

@@ -7,7 +7,6 @@ export type CheckoutLineInput = {
   rentalStart?: string;
   rentalEnd?: string;
   rentUnit?: "HOUR" | "DAY" | "WEEK" | "MONTH";
-  /** Cart row id — used to remove from cart after successful checkout. */
   cartItemId?: string;
 };
 

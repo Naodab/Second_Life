@@ -3,7 +3,6 @@ package com.naodab.authservice.config;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -89,7 +88,6 @@ public class OAuth2AuthorizedRedirectUrisConfiguration {
         target.add(scheme + "://www." + host + portSuffix + GOOGLE_CALLBACK_SUFFIX);
       }
     } catch (IllegalArgumentException ignored) {
-      // skip invalid origin
     }
   }
 }

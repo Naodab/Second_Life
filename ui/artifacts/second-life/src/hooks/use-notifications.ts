@@ -2,14 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Cookies from "js-cookie";
 
-import {
-  fetchUnreadNotificationCount,
-  listNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-  resolveNotificationWebSocketUrl,
-  type NotificationResponse,
-} from "@/api/notifications";
+import { fetchUnreadNotificationCount, listNotifications, markAllNotificationsRead, markNotificationRead, resolveNotificationWebSocketUrl, type NotificationResponse } from "@/api/notifications";
 import type { ConversationResponse, MessageResponse } from "@/api/conversations";
 import {
   applyRealtimeMessage,
@@ -24,7 +17,6 @@ import { useAuth } from "@/context/AuthContext";
 
 const NOTIFICATIONS_KEY = ["notifications"] as const;
 const UNREAD_COUNT_KEY = ["notifications", "unread-count"] as const;
-/** Realtime notification/message toasts auto-dismiss after 10s if untouched. */
 export const REALTIME_ALERT_TOAST_DURATION_MS = 10_000;
 
 export type UiNotification = {
@@ -83,8 +75,8 @@ function showNotificationAlert(
     className: hasLink ? "cursor-pointer" : undefined,
     onClick: hasLink
       ? () => {
-          openNotificationLink(ui, navigate, queryClient);
-        }
+        openNotificationLink(ui, navigate, queryClient);
+      }
       : undefined,
   });
 }
@@ -154,7 +146,6 @@ function applyRealtimeNotification(
   }
 }
 
-/** Mount once at app root so WebSocket + toast work on every page (including seller hub). */
 export function useNotificationRealtimeSync(navigate: (path: string) => void) {
   const { isLoggedIn, user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
@@ -203,7 +194,6 @@ export function useNotificationRealtimeSync(navigate: (path: string) => void) {
           );
         }
       } catch {
-        // ignore malformed websocket payloads
       }
     };
 

@@ -157,7 +157,6 @@ export function CreateListingPage({
               ];
             }
           } catch {
-            // product not found — keep list as-is
           }
         }
 
@@ -199,7 +198,7 @@ export function CreateListingPage({
       setVariants([]);
       setVariantsError(null);
       setSelectedVariantIds(new Set());
-        setPriceByVariantId({});
+      setPriceByVariantId({});
       setAiPriceByVariantId({});
       setSelectedProductSubCategoryId(null);
       return;
@@ -814,20 +813,20 @@ export function CreateListingPage({
                       {listingType === "BUY" ? "Giá bán theo loại (₫)" : "Giá thuê theo loại (₫)"}
                     </label>
                     {showPhoneAiPricing ? (
-                    <button
-                      type="button"
-                      disabled={aiPricing || selectedVariantIds.size === 0}
-                      onClick={() => void handleSuggestPrices()}
-                      title="Ước tính giá điện thoại bằng mô hình ML"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-background px-3 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50 disabled:pointer-events-none disabled:opacity-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
-                    >
-                      {aiPricing ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-3.5 h-3.5" />
-                      )}
-                      {aiPricing ? "Đang ước tính…" : "Gợi ý giá AI"}
-                    </button>
+                      <button
+                        type="button"
+                        disabled={aiPricing || selectedVariantIds.size === 0}
+                        onClick={() => void handleSuggestPrices()}
+                        title="Ước tính giá điện thoại bằng mô hình ML"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-background px-3 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-50 disabled:pointer-events-none disabled:opacity-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-950/40"
+                      >
+                        {aiPricing ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5" />
+                        )}
+                        {aiPricing ? "Đang ước tính…" : "Gợi ý giá AI"}
+                      </button>
                     ) : null}
                   </div>
                   <div className="space-y-4">

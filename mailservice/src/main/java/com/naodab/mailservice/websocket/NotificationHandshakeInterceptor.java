@@ -55,7 +55,6 @@ public class NotificationHandshakeInterceptor implements HandshakeInterceptor {
       ServerHttpResponse response,
       WebSocketHandler wsHandler,
       Exception exception) {
-    // no-op
   }
 
   private Optional<AuthForwardContext> resolveAuthContext(ServerHttpRequest request) {

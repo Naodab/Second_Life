@@ -1,6 +1,5 @@
 import type { AttributeResponse } from "@/api/attributes";
 
-/** Attributes with empty subCategoryIds apply to all sub-categories. */
 export function filterAttributesBySubCategory(
   attributes: AttributeResponse[],
   subCategoryId?: string | null,

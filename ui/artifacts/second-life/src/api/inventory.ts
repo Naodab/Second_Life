@@ -75,7 +75,6 @@ export async function fetchListingVariantAvailabilityInRange(
     });
     return unwrapApiData(raw);
   } catch (err) {
-    // Legacy servers throw 409 when quantity exceeds interval stock; treat as zero available.
     if (isInsufficientStockError(err)) {
       return { tracked: true, availableQuantity: 0 };
     }

@@ -2,15 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 
 import { listConversations } from "@/api/conversations";
 import { useAuth } from "@/context/AuthContext";
-import {
-  conversationsRoleKey,
-  sumConversationUnread,
-} from "@/lib/conversations-cache";
+import { conversationsRoleKey, sumConversationUnread } from "@/lib/conversations-cache";
 
 export function useConversationUnreadCounts() {
   const { user, isAdmin } = useAuth();
   const profileId = user?.id?.trim() ?? "";
-  /** Regular users only — admin must use role=admin inbox, not buyer/seller/admin-support. */
   const userMessagingEnabled = Boolean(profileId) && !isAdmin;
 
   const adminInboxQuery = useQuery({
