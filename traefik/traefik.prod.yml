@@ -20,7 +20,7 @@ entryPoints:
     address: ":443"
 
 api:
-  dashboard: false
+  dashboard: true
   insecure: false
 
 certificatesResolvers:
