@@ -26,6 +26,55 @@ ALL_ATTRIBUTE_IDS = [
   ATTR_CAPACITY,
 ]
 
+ATTR_RAM = "attr-ram"
+ATTR_SIM_LOCK = "attr-sim-lock"
+ATTR_SCREEN_SIZE = "attr-screen-size"
+ATTR_BATTERY_HEALTH = "attr-battery-health"
+
+PHONE_ATTRIBUTE_IDS = ALL_ATTRIBUTE_IDS + [
+  ATTR_RAM,
+  ATTR_SIM_LOCK,
+  ATTR_SCREEN_SIZE,
+  ATTR_BATTERY_HEALTH,
+]
+
+RAM_GB_MAP = {
+  2: "val-ram-2gb",
+  3: "val-ram-3gb",
+  4: "val-ram-4gb",
+  6: "val-ram-6gb",
+  8: "val-ram-8gb",
+  12: "val-ram-12gb",
+  16: "val-ram-16gb",
+  32: "val-ram-32gb",
+}
+
+SIM_LOCK_MAP = {
+  "quốc tế": "val-sim-international",
+  "quoc te": "val-sim-international",
+  "international": "val-sim-international",
+  "lock": "val-sim-locked",
+  "locked": "val-sim-locked",
+  "ghép sim": "val-sim-unlocked",
+  "ghep sim": "val-sim-unlocked",
+  "sim ghép": "val-sim-unlocked",
+  "unlocked": "val-sim-unlocked",
+}
+
+SCREEN_SIZE_OPTIONS: list[tuple[float, str]] = [
+  (4.7, "val-screen-47"),
+  (5.4, "val-screen-54"),
+  (5.5, "val-screen-55"),
+  (5.8, "val-screen-58"),
+  (6.1, "val-screen-61"),
+  (6.4, "val-screen-64"),
+  (6.7, "val-screen-67"),
+  (6.8, "val-screen-68"),
+  (6.9, "val-screen-69"),
+]
+
+BATTERY_PCT_RE = re.compile(r"pin\s*(\d{1,3})\s*%", re.I)
+
 USAGE_TYPE_MAP = {
   "BUY": "val-sell",
   "RENT": "val-rent",
@@ -253,8 +302,69 @@ def parse_manufacture_year(raw: str | int | None) -> Optional[int]:
   return year
 
 
+def attribute_ids_for_sub_category(sub_category_id: str) -> list[str]:
+  if sub_category_id == "sub-phone":
+    return PHONE_ATTRIBUTE_IDS
+  return ALL_ATTRIBUTE_IDS
+
+
+def detect_ram_val_id(ram_gb: str | int | float | None) -> str:
+  if ram_gb is None or str(ram_gb).strip() == "":
+    return "val-ram-8gb"
+  try:
+    n = int(float(str(ram_gb).strip()))
+  except ValueError:
+    return "val-ram-8gb"
+  if n in RAM_GB_MAP:
+    return RAM_GB_MAP[n]
+  closest = min(RAM_GB_MAP.keys(), key=lambda gb: abs(gb - n))
+  return RAM_GB_MAP[closest]
+
+
+def detect_sim_lock_val_id(sim_lock: str) -> str:
+  key = _norm(sim_lock)
+  if key in SIM_LOCK_MAP:
+    return SIM_LOCK_MAP[key]
+  for token, val_id in SIM_LOCK_MAP.items():
+    if token in key:
+      return val_id
+  return "val-sim-unknown"
+
+
+def detect_screen_val_id(screen_inches: str | int | float | None) -> str:
+  if screen_inches is None or str(screen_inches).strip() == "":
+    return "val-screen-61"
+  try:
+    inches = float(str(screen_inches).strip())
+  except ValueError:
+    return "val-screen-61"
+  _, val_id = min(SCREEN_SIZE_OPTIONS, key=lambda item: abs(item[0] - inches))
+  return val_id
+
+
+def detect_battery_health_val_id(text: str) -> str:
+  match = BATTERY_PCT_RE.search(text or "")
+  if not match:
+    return "val-battery-unknown"
+  pct = int(match.group(1))
+  if pct >= 95:
+    return "val-battery-95-100"
+  if pct >= 90:
+    return "val-battery-90-94"
+  if pct >= 85:
+    return "val-battery-85-89"
+  if pct >= 80:
+    return "val-battery-80-84"
+  if pct >= 50:
+    return "val-battery-50-79"
+  return "val-battery-unknown"
+
+
 def build_variant(raw: dict, listing_type: str) -> dict:
   """Build ProductVariantCreateRequest with full pricing-related attributes."""
+  if raw.get("primarySubCategoryId") == "sub-phone":
+    return build_phone_variant(raw, listing_type)
+
   text = f"{raw.get('name', '')} {raw.get('description', '')}"
   usage_val = USAGE_TYPE_MAP.get(listing_type, "val-sell")
   return {
@@ -267,5 +377,27 @@ def build_variant(raw: dict, listing_type: str) -> dict:
       raw.get("warranty_val_id") or detect_warranty(raw.get("warranty_label", "")),
       raw.get("region_val_id") or detect_region(raw.get("region_name", "")),
       raw.get("capacity_val_id") or detect_capacity(raw.get("capacity", "")),
+    ]
+  }
+
+
+def build_phone_variant(raw: dict, listing_type: str) -> dict:
+  text = f"{raw.get('name', '')} {raw.get('description', '')}"
+  usage_val = USAGE_TYPE_MAP.get(listing_type, "val-sell")
+  capacity_text = raw.get("capacity") or raw.get("storage_gb") or ""
+  return {
+    "attributeValueIds": [
+      raw.get("condition_val_id") or detect_condition(text, raw.get("sl_condition", "")),
+      raw.get("color_val_id") or detect_color(text),
+      raw.get("brand_val_id") or detect_brand(text, raw.get("brand", "")),
+      usage_val,
+      raw.get("origin_val_id") or detect_origin(raw.get("origin_label", "")),
+      raw.get("warranty_val_id") or detect_warranty(raw.get("warranty_label", "")),
+      raw.get("region_val_id") or detect_region(raw.get("region_name", "")),
+      raw.get("capacity_val_id") or detect_capacity(capacity_text),
+      raw.get("ram_val_id") or detect_ram_val_id(raw.get("ram_gb")),
+      raw.get("sim_lock_val_id") or detect_sim_lock_val_id(raw.get("sim_lock", "")),
+      raw.get("screen_val_id") or detect_screen_val_id(raw.get("screen_inches")),
+      raw.get("battery_health_val_id") or detect_battery_health_val_id(text),
     ]
   }

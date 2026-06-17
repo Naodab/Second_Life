@@ -23,6 +23,11 @@ function trimParam(raw: string | null | undefined): string | undefined {
   return t ? t : undefined;
 }
 
+function normalizeKeyword(raw: string | null | undefined): string {
+  if (!raw) return "";
+  return raw.trim().replace(/\s+/g, " ");
+}
+
 function readFirstSearchParam(searchParams: URLSearchParams, baseKey: string): string | undefined {
   const values = [...searchParams.getAll(`${baseKey}[]`), ...searchParams.getAll(baseKey)].filter(Boolean);
   for (const v of values) {
@@ -85,7 +90,7 @@ export function parseSearchFilters(search: string): SearchFilters {
       trimParam(searchParams.get("WardCode")) ??
       trimParam(searchParams.get("wardCode")) ??
       trimParam(searchParams.get("ward")),
-    keyword: (searchParams.get("keyword") || searchParams.get("q") || "").trim(),
+    keyword: normalizeKeyword(searchParams.get("keyword") || searchParams.get("q") || ""),
     sortBy: parseSortParam(searchParams.get("sortBy")),
     priceMin: parseCommaNumber(searchParams.get("priceMin") ?? "") ?? undefined,
     priceMax: parseCommaNumber(searchParams.get("priceMax") ?? "") ?? undefined,
@@ -127,7 +132,7 @@ export function filtersFromSidebarState(input: {
     subCategoryId: input.subCategoryId,
     provinceCode: input.provinceCode,
     wardCode: input.wardCode,
-    keyword: input.keyword.trim(),
+    keyword: normalizeKeyword(input.keyword),
     sortBy: input.sortBy,
     priceMin: input.priceMinNum,
     priceMax: input.priceMaxNum,

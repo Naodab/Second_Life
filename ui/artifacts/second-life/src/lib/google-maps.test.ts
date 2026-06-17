@@ -20,6 +20,17 @@ describe("google-maps helpers", () => {
     expect(url).toContain("ll=21.03%2C105.85");
   });
 
+  it("prefers coordinates parsed from link over swapped stored lat/lng", () => {
+    const url = buildGoogleMapsEmbedUrl({
+      linkGoogleMap: "https://www.google.com/maps/place/Ho+Chi+Minh/@10.762622,106.660172,17z",
+      latitude: 106.660172,
+      longitude: 10.762622,
+      address: "",
+    });
+    expect(url).toContain("q=10.762622%2C106.660172");
+    expect(url).toContain("ll=10.762622%2C106.660172");
+  });
+
   it("builds embed URL from latitude and longitude when no address query", () => {
     const url = buildGoogleMapsEmbedUrl({
       linkGoogleMap: "",

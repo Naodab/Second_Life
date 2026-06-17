@@ -36,7 +36,7 @@ export function ListingCard({ row }: { row: ListingItemResponse }) {
 
   return (
     <Link href={href}>
-      <div className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm ring-1 ring-transparent transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-xl hover:ring-primary/20">
+      <div className="group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm ring-1 ring-transparent transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-xl hover:ring-primary/20">
         <div className="relative aspect-square overflow-hidden bg-muted">
           <img
             src={(row.thumbnailImage && row.thumbnailImage.trim()) || DEFAULT_THUMB}
@@ -58,44 +58,44 @@ export function ListingCard({ row }: { row: ListingItemResponse }) {
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col p-5">
+        <div className="flex min-w-0 flex-1 flex-col p-5">
           {(subCat || row.productName) ? (
-            <div className="mb-2 flex min-h-[1.25rem] flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <div className="mb-2 flex min-h-[1.25rem] min-w-0 items-center gap-2 text-xs text-muted-foreground">
               {subCat ? (
-                <span className="line-clamp-1 rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                <span className="max-w-[45%] shrink-0 truncate rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">
                   {subCat}
                 </span>
               ) : null}
-              {subCat && row.productName ? <span aria-hidden className="text-border">•</span> : null}
+              {subCat && row.productName ? <span aria-hidden className="shrink-0 text-border">•</span> : null}
               {row.productName ? (
-                <span className="line-clamp-1 font-medium text-foreground/80">SP: {row.productName}</span>
+                <span className="min-w-0 flex-1 truncate font-medium text-foreground/80">SP: {row.productName}</span>
               ) : null}
             </div>
           ) : null}
 
-          <h3 className="mb-3 flex-1 text-base font-bold leading-tight text-foreground line-clamp-2 transition-colors group-hover:text-primary">
+          <h3 className="mb-3 line-clamp-2 min-w-0 flex-1 break-words text-base font-bold leading-tight text-foreground transition-colors group-hover:text-primary">
             {row.title}
           </h3>
 
           <div className="mt-auto space-y-2">
             {(row.listingType === "BUY" || row.listingType === "RENT") && band ? (
               row.listingType === "RENT" ? (
-                <div className="flex items-center gap-2">
-                  <CalendarClock className="h-4 w-4 text-secondary" />
-                  <span className="font-bold text-secondary-foreground">
+                <div className="flex min-w-0 items-center gap-2">
+                  <CalendarClock className="h-4 w-4 shrink-0 text-secondary" />
+                  <span className="min-w-0 truncate font-bold text-secondary-foreground">
                     {band} <span className="text-xs font-normal text-muted-foreground">(khoảng giá)</span>
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-lg font-bold text-foreground">{band}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <ShoppingBag className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 truncate text-lg font-bold text-foreground">{band}</span>
                 </div>
               )
             ) : band ? (
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                <span className="text-lg font-bold text-foreground">{band}</span>
+              <div className="flex min-w-0 items-center gap-2">
+                <ShoppingBag className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 truncate text-lg font-bold text-foreground">{band}</span>
               </div>
             ) : null}
           </div>

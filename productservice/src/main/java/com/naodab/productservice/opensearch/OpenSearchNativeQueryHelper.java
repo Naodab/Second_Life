@@ -23,12 +23,16 @@ import org.opensearch.data.client.osc.NativeQuery;
 import org.opensearch.data.client.osc.NativeQueryBuilder;
 import org.springframework.data.domain.Pageable;
 import org.springframework.util.StringUtils;
+
+import com.naodab.productservice.util.SearchKeywordNormalizer;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public final class OpenSearchNativeQueryHelper {
 
   private static final String DEFAULT_GEO_FIELD = "location";
+  private static final String VARIANT_SKUS_FIELD = "variantSkus";
 
   private static final Set<String> KNOWN_SCALAR_FILTER_FIELDS = Set.of(
       "ownerId",
@@ -103,25 +107,81 @@ public final class OpenSearchNativeQueryHelper {
     if (!StringUtils.hasText(keyword) || searchFields == null || searchFields.length == 0) {
       return;
     }
-    String trimmed = keyword.trim();
-    List<String> fields = Arrays.asList(searchFields);
-    if (trimmed.indexOf(' ') >= 0) {
-      mustQueries.add(Query.of(root -> root.bool(b -> {
-        b.must(Query.of(q -> q.multiMatch(mm -> mm
-            .query(trimmed)
-            .type(TextQueryType.CrossFields)
-            .operator(Operator.And)
-            .fields(fields))));
-        b.should(Query.of(q -> q.multiMatch(mm -> mm
-            .query(trimmed)
-            .type(TextQueryType.Phrase)
-            .fields(fields)
-            .boost(2.0f))));
-        return b;
-      })));
+    String normalized = SearchKeywordNormalizer.normalize(keyword);
+    if (!StringUtils.hasText(normalized)) {
       return;
     }
-    addKeywordMultiMatchMust(mustQueries, trimmed, TextQueryType.BestFields, searchFields);
+
+    List<String> textFields = new ArrayList<>();
+    boolean includeSkuField = false;
+    for (String field : searchFields) {
+      if (VARIANT_SKUS_FIELD.equals(stripFieldBoost(field))) {
+        includeSkuField = true;
+      } else {
+        textFields.add(field);
+      }
+    }
+
+    Query keywordQuery = SearchKeywordNormalizer.isMultiToken(normalized)
+        ? multiTokenTextKeywordQuery(normalized, textFields)
+        : singleTokenKeywordQuery(normalized, textFields, includeSkuField);
+    if (keywordQuery != null) {
+      mustQueries.add(keywordQuery);
+    }
+  }
+
+  private static String stripFieldBoost(String field) {
+    int boostIndex = field.indexOf('^');
+    return boostIndex >= 0 ? field.substring(0, boostIndex) : field;
+  }
+
+  private static Query multiTokenTextKeywordQuery(String normalized, List<String> textFields) {
+    if (textFields.isEmpty()) {
+      return null;
+    }
+    return Query.of(root -> root.bool(b -> {
+      b.must(Query.of(q -> q.multiMatch(mm -> mm
+          .query(normalized)
+          .type(TextQueryType.CrossFields)
+          .operator(Operator.And)
+          .fields(textFields))));
+      b.should(Query.of(q -> q.multiMatch(mm -> mm
+          .query(normalized)
+          .type(TextQueryType.Phrase)
+          .fields(textFields)
+          .boost(2.0f))));
+      return b;
+    }));
+  }
+
+  private static Query singleTokenKeywordQuery(
+      String normalized,
+      List<String> textFields,
+      boolean includeSkuField) {
+    Query textQuery = textFields.isEmpty()
+        ? null
+        : Query.of(q -> q.multiMatch(mm -> mm
+            .query(normalized)
+            .type(TextQueryType.BestFields)
+            .fields(textFields)));
+    Query skuQuery = includeSkuField && SearchKeywordNormalizer.looksLikeSkuToken(normalized)
+        ? variantSkuWildcardQuery(normalized)
+        : null;
+
+    if (textQuery != null && skuQuery != null) {
+      return Query.of(root -> root.bool(b -> {
+        b.should(textQuery);
+        b.should(skuQuery);
+        b.minimumShouldMatch("1");
+        return b;
+      }));
+    }
+    return textQuery != null ? textQuery : skuQuery;
+  }
+
+  private static Query variantSkuWildcardQuery(String normalized) {
+    String pattern = SearchKeywordNormalizer.wildcardContainsPattern(normalized);
+    return Query.of(q -> q.wildcard(w -> w.field(VARIANT_SKUS_FIELD).value(pattern)));
   }
 
   public static void addTermIfTextPresent(List<Query> filterQueries, String fieldName, String value) {
@@ -353,6 +413,7 @@ public final class OpenSearchNativeQueryHelper {
         "listingDescription",
         "description",
         "primarySubCategoryName^2",
+        "facilityName^2",
         "attributeValues",
         "variantSkus",
     };

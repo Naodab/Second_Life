@@ -100,8 +100,8 @@ public class FacilityMapper {
     Pattern coordinatesPattern = Pattern.compile(AppRegexp.COORDINATES_REGEX);
     Matcher matcher = coordinatesPattern.matcher(linkGoogleMap);
     if (matcher.find()) {
-      String latitude = matcher.group(2);
-      String longitude = matcher.group(1);
+      String latitude = matcher.group(1);
+      String longitude = matcher.group(2);
       facility.setLatitude(Float.parseFloat(latitude));
       facility.setLongitude(Float.parseFloat(longitude));
     }

@@ -36,6 +36,7 @@ import com.naodab.productservice.models.Facility;
 import com.naodab.productservice.models.Listing;
 import com.naodab.productservice.models.ListingVariant;
 import com.naodab.productservice.opensearch.OpenSearchSortBy;
+import com.naodab.productservice.util.SearchKeywordNormalizer;
 import com.naodab.productservice.models.Product;
 import com.naodab.productservice.models.Product.ProductStatus;
 import com.naodab.productservice.models.ListingVariant.RentUnit;
@@ -222,7 +223,7 @@ public class ListingServiceImpl implements ListingService {
     if (!StringUtils.hasText(r.getKeyword())) {
       r.setKeyword(null);
     } else {
-      r.setKeyword(r.getKeyword().trim());
+      r.setKeyword(SearchKeywordNormalizer.normalize(r.getKeyword()));
     }
     ListingSearchRequestNormalizer.normalizeCategoryScope(r);
     r.setProvinceCode(trimToNull(r.getProvinceCode()));
@@ -265,12 +266,13 @@ public class ListingServiceImpl implements ListingService {
   @Override
   @Cacheable(value = CacheConfig.SUGGESTIONS_CACHE, key = "#keyword?.trim().toLowerCase() + '_' + (#limit == null ? 8 : T(java.lang.Math).min(#limit, 20))")
   public List<ListingSuggestionResponse> suggestSearch(String keyword, Integer limit) {
-    if (!StringUtils.hasText(keyword)) {
+    String normalized = SearchKeywordNormalizer.normalize(keyword);
+    if (!StringUtils.hasText(normalized)) {
       return Collections.emptyList();
     }
     int cap = limit == null || limit < 1 ? 8 : Math.min(limit, 20);
     ListingSearchRequest r = ListingSearchRequest.builder()
-        .keyword(keyword.trim())
+        .keyword(normalized)
         .page(0)
         .pageSize(Math.min(cap * 4, 40))
         .sortBy(OpenSearchSortBy.RELEVANCE)

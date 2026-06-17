@@ -29,11 +29,6 @@ export function ListingSimilarSection({ show, listingType, similarInfinite, simi
         <div>
           <div className="mb-2 h-1 w-10 rounded-full bg-primary/50 dark:bg-primary/40" aria-hidden />
           <h2 className="text-xl font-display font-bold tracking-tight text-foreground sm:text-2xl">Tin đăng tương tự</h2>
-          <p className="text-sm text-muted-foreground mt-1 max-w-xl leading-relaxed">
-            Gợi ý theo danh mục, tên sản phẩm và khu vực của tin đang xem (cùng{" "}
-            {listingType === "RENT" ? "hình thức thuê" : "hình thức bán"}
-            ).
-          </p>
         </div>
       </div>
 

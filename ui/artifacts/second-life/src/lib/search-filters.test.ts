@@ -39,4 +39,9 @@ describe("search-filters", () => {
     const b = parseSearchFilters("?q=test&type=BUY");
     expect(searchFiltersEqual(a, b)).toBe(true);
   });
+
+  it("normalizes keyword whitespace from URL", () => {
+    const filters = parseSearchFilters("?keyword=m%C3%A1y+++%E1%BA%A3nh");
+    expect(filters.keyword).toBe("máy ảnh");
+  });
 });

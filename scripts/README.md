@@ -109,7 +109,28 @@ Chợ Tốt categories are mapped to the Second Life taxonomy in `chotot_config.
 
 ## 2. Crawl + import demo data into the DB
 
-### Step 2a – Crawl JSON (Tiki)
+### Step 2a – Build JSON (điện thoại từ pricing, ~3000)
+
+Điện thoại **không** crawl từ Chợ Tốt — dùng `pricing/data/phone_tablet_dataset.csv` (đủ RAM, storage, sim lock cho AI pricing).
+
+```bash
+cd import_real_data
+
+# Chỉ 3000 điện thoại từ pricing (mặc định)
+python3 import_phones_from_pricing.py
+
+# Hoặc qua crawl_chotot (mặc định: 0 category khác + 3000 phones)
+python3 crawl_chotot.py
+
+# Thêm sản phẩm khác (không phải điện thoại) từ Chợ Tốt
+python3 crawl_chotot.py --target 500 --phones 3000 --merge-phones
+```
+
+**Output:** `import_real_data/data/raw_products.json`
+
+> Cần `phone_tablet_dataset.csv` — crawl trong `scripts/pricing/` nếu chưa có.
+
+### Step 2a (cũ) – Crawl JSON (Tiki)
 
 ```bash
 cd import_real_data
@@ -165,7 +186,11 @@ python3 purge_seed_products.py --dry-run
 python3 purge_seed_products.py --confirm --also-tiki-images \
   --export-sql purge_seed_products.generated.sql
 
-# 3. Crawl lại (khuyến nghị Chợ Tốt thay Tiki) + import
+# 3. Crawl lại (khuyến nghị phones từ pricing) + import
+python3 import_phones_from_pricing.py --limit 3000
+python3 seed_system.py
+
+# Hoặc crawl_chotot (mặc định 3000 phones, không crawl điện thoại Chợ Tốt)
 python3 crawl_chotot.py
 python3 seed_system.py
 

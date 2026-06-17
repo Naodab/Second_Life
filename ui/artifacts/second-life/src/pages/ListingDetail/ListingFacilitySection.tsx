@@ -7,7 +7,7 @@ import { facilityAvatarUrl } from "@/api/facility";
 import type { FacilityOverviewDto } from "@/api/listing";
 import { useAuth } from "@/context/AuthContext";
 import { formatFacilityAddress, resolveFacilityPlaceNames } from "@/lib/facility-display";
-import { facilityHasMap } from "@/lib/google-maps";
+import { buildFacilityMapSource, facilityHasMap } from "@/lib/google-maps";
 import { cn } from "@/lib/utils";
 import { buildMessagesHref } from "@/lib/message-navigation";
 
@@ -72,13 +72,7 @@ export function ListingFacilitySection({ facility, listingContext, className, hi
     return buildMessagesHref({ facilityId: facility.id });
   })();
 
-  const mapFacility = {
-    linkGoogleMap: facility.linkGoogleMap ?? "",
-    latitude: null,
-    longitude: null,
-    address: facility.address ?? "",
-    searchAddress: fullAddress,
-  };
+  const mapFacility = buildFacilityMapSource(facility, fullAddress);
   const showMap = facilityHasMap(mapFacility);
 
   return (
