@@ -293,6 +293,8 @@ export type FacilityOverviewDto = {
   address?: string | null;
   provinceCode?: string | null;
   wardCode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   averageRating?: number | null;
   orderCount?: number | null;
   viewCount?: number | null;

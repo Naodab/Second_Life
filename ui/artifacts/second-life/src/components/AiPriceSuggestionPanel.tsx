@@ -19,6 +19,8 @@ type Props = {
   onApply?: () => void;
   applyLabel?: string;
   compact?: boolean;
+  /** Hide price range and confidence — for buyer-facing detail page */
+  minimal?: boolean;
 };
 
 export function AiPriceSuggestionPanel({
@@ -29,6 +31,7 @@ export function AiPriceSuggestionPanel({
   onApply,
   applyLabel = "Dùng gợi ý",
   compact,
+  minimal,
 }: Props) {
   if (!suggestion.suggestedPriceVnd) {
     return (
@@ -64,12 +67,12 @@ export function AiPriceSuggestionPanel({
         <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 dark:text-violet-300" aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="font-semibold tabular-nums">
-            Gợi ý AI: {formatCurrency(suggestion.suggestedPriceVnd)}
+            Gợi ý: {formatCurrency(suggestion.suggestedPriceVnd)}
             {rentSuffix}
-            {suggestion.priceMinVnd && suggestion.priceMaxVnd
+            {!minimal && suggestion.priceMinVnd && suggestion.priceMaxVnd
               ? ` (${formatCurrency(suggestion.priceMinVnd)} – ${formatCurrency(suggestion.priceMaxVnd)})`
               : ""}
-            {suggestion.confidence ? ` · ${confidenceLabelVi(suggestion.confidence)}` : ""}
+            {!minimal && suggestion.confidence ? ` · ${confidenceLabelVi(suggestion.confidence)}` : ""}
           </p>
           {listedCompare}
           {suggestion.reasoningBrief ? (

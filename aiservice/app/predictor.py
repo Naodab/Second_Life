@@ -285,5 +285,5 @@ class PhonePricePredictor:
         cond = condition or "Good"
         return (
             f"Ước tính {price:,} ₫ cho {brand} {model_name} "
-            f"({cond}, ~{age_years:.0f} năm) theo mô hình ML v10 trên dữ liệu Chợ Tốt."
+            f"({cond}, ~{age_years:.0f} năm)."
         )

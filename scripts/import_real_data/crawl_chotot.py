@@ -3,12 +3,13 @@
 Crawl data from the Chợ Tốt API and save to JSON.
 Output: import_real_data/data/raw_products.json
 
-Dùng mã category đúng (pricing/chotot_config) + category_remap + fix_categories.
+Điện thoại KHÔNG crawl từ Chợ Tốt — lấy từ pricing/phone_tablet_dataset.csv (mặc định 3000).
 
 Run (from import_real_data/):
   python3 crawl_chotot.py
-  python3 crawl_chotot.py --target 5000
-  python3 crawl_chotot.py --target 3000 --per-cat 150
+  python3 crawl_chotot.py --phones 3000
+  python3 crawl_chotot.py --target 500 --phones 3000 --merge-phones
+  python3 import_phones_from_pricing.py --limit 3000   # chỉ phones, không crawl
 """
 from __future__ import annotations
 
@@ -36,6 +37,7 @@ from category_registry import normalize_product_categories
 from chotot_import_config import (
   CHOTOT_API_LIST,
   DEFAULT_PER_CATEGORY,
+  DEFAULT_PHONE_TARGET,
   DEFAULT_TARGET_TOTAL,
   HEADERS,
   IMPORT_CATEGORIES,
@@ -61,8 +63,24 @@ OUTPUT_FILE = Path(__file__).parent / "data" / "raw_products.json"
 
 
 def parse_args() -> argparse.Namespace:
-  p = argparse.ArgumentParser(description="Crawl Chợ Tốt → raw_products.json")
-  p.add_argument("--target", type=int, default=DEFAULT_TARGET_TOTAL, help="Tổng sản phẩm mục tiêu")
+  p = argparse.ArgumentParser(description="Crawl Chợ Tốt → raw_products.json (+ phones từ pricing)")
+  p.add_argument(
+    "--target",
+    type=int,
+    default=DEFAULT_TARGET_TOTAL,
+    help="Tổng sản phẩm crawl Chợ Tốt (không gồm điện thoại, 0 = bỏ qua crawl)",
+  )
+  p.add_argument(
+    "--phones",
+    type=int,
+    default=DEFAULT_PHONE_TARGET,
+    help="Số điện thoại lấy từ pricing CSV (0 = không import phones)",
+  )
+  p.add_argument(
+    "--merge-phones",
+    action="store_true",
+    help="Giữ sản phẩm không phải điện thoại đã có trong output khi thêm phones",
+  )
   p.add_argument(
     "--per-cat",
     type=int,
@@ -216,44 +234,62 @@ def main() -> int:
   args.output.parent.mkdir(parents=True, exist_ok=True)
 
   categories = IMPORT_CATEGORIES
-  per_cat = args.per_cat or max(1, args.target // len(categories))
+  per_cat = args.per_cat or (max(1, args.target // len(categories)) if args.target > 0 else 0)
   strict = not args.no_strict
 
   log.info(
-    "Crawl %d categories, ~%d/category, target ~%d, strict=%s",
-    len(categories),
-    per_cat,
+    "Chợ Tốt crawl target=%d (no phones), pricing phones=%d, strict=%s",
     args.target,
+    args.phones,
     strict,
   )
 
   all_products: list[dict] = []
 
-  for cat in categories:
-    if len(all_products) >= args.target:
-      break
-    remaining = args.target - len(all_products)
-    fetch_count = min(per_cat, remaining)
-    log.info("▶ [%s] cg=%d → %s, fetch %d...", cat.label, cat.chotot_cg, cat.sub_category_id, fetch_count)
-    ads = fetch_category(cat.chotot_cg, cat.label, fetch_count)
+  if args.target > 0:
+    for cat in categories:
+      if len(all_products) >= args.target:
+        break
+      remaining = args.target - len(all_products)
+      fetch_count = min(per_cat, remaining) if per_cat else remaining
+      log.info("▶ [%s] cg=%d → %s, fetch %d...", cat.label, cat.chotot_cg, cat.sub_category_id, fetch_count)
+      ads = fetch_category(cat.chotot_cg, cat.label, fetch_count)
 
-    added = 0
-    for ad in ads:
-      product = transform_ad(ad, cat)
-      if product:
-        all_products.append(product)
-        added += 1
+      added = 0
+      for ad in ads:
+        product = transform_ad(ad, cat)
+        if product:
+          all_products.append(product)
+          added += 1
 
-    log.info("  ✓ %d valid / %d ads, total: %d", added, len(ads), len(all_products))
-    time.sleep(random.uniform(0.8, 1.5))
+      log.info("  ✓ %d valid / %d ads, total: %d", added, len(ads), len(all_products))
+      time.sleep(random.uniform(0.8, 1.5))
 
-  before_dedupe = len(all_products)
-  all_products = dedupe_products(all_products)
-  log.info("Dedupe: %d → %d", before_dedupe, len(all_products))
+    before_dedupe = len(all_products)
+    all_products = dedupe_products(all_products)
+    log.info("Dedupe: %d → %d", before_dedupe, len(all_products))
 
-  log.info("▶ Re-classify categories (strict=%s)...", strict)
-  all_products, fix_stats = apply_category_fix(all_products, strict=strict)
-  log_stats(fix_stats, all_products)
+    log.info("▶ Re-classify categories (strict=%s)...", strict)
+    all_products, fix_stats = apply_category_fix(all_products, strict=strict)
+    log_stats(fix_stats, all_products)
+
+  if args.phones > 0:
+    from import_phones_from_pricing import build_phone_products, load_phone_rows, merge_with_existing
+
+    rows = load_phone_rows(Path(__file__).resolve().parent.parent / "pricing" / "data" / "phone_tablet_dataset.csv")
+    phones = build_phone_products(rows, args.phones, shuffle=True)
+    if args.merge_phones or args.target > 0:
+      # Ghi tạm crawl rồi merge phones (loại sub-phone cũ nếu có)
+      if all_products:
+        args.output.write_text(json.dumps(all_products, ensure_ascii=False, indent=2), encoding="utf-8")
+      all_products = merge_with_existing(args.output, phones)
+    else:
+      all_products = phones
+    log.info("▶ Added %d phones from pricing (total %d)", len(phones), len(all_products))
+
+  if not all_products:
+    log.error("Không có sản phẩm — tăng --phones hoặc --target")
+    return 0
 
   with open(args.output, "w", encoding="utf-8") as f:
     json.dump(all_products, f, ensure_ascii=False, indent=2)

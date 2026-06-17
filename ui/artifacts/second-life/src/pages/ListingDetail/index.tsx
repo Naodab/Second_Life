@@ -24,10 +24,8 @@ import { ListingFacilitySection } from "./ListingFacilitySection";
 import { ListingProductSummary } from "./ListingProductSummary";
 import { ListingRentDialog } from "./ListingRentDialog";
 import { type RentScheduleValidityPayload, type RentScheduleWindow } from "./ListingRentScheduler";
-import { ListingReviewsSection } from "./ListingReviewsSection";
 import { ListingSimilarSection } from "./ListingSimilarSection";
 import { ListingAiPriceSection } from "./ListingAiPriceSection";
-import { ReviewMediaLightbox } from "./ReviewMediaLightbox";
 import { mergeVariantRows, priceBandLabel } from "./listing-detail-utils";
 import {
   buildListingVariantAxes,
@@ -37,7 +35,6 @@ import {
   lineRentUnitPrice,
   productVariantStock,
 } from "./listing-variant-selection";
-import type { ListingReviewRow } from "./types";
 import {
   buildBuyCartPayload,
   buildBuyCheckoutLine,
@@ -46,6 +43,7 @@ import {
   shouldOpenRentModalForQuickAdd,
 } from "./listing-detail-actions";
 import { useListingDetailPage } from "./useListingDetailPage";
+import { normalizeRentUnitForUi } from "@/lib/rent-units";
 
 export default function ListingDetail() {
   const [, params] = useRoute("/listing/:id");
@@ -74,7 +72,6 @@ export default function ListingDetail() {
   const [rentQty, setRentQty] = useState(1);
   const [rentWindow, setRentWindow] = useState<RentScheduleWindow | null>(null);
   const [rentValidity, setRentValidity] = useState<RentScheduleValidityPayload>({ ok: false, billUnits: 0 });
-  const [reviewLightbox, setReviewLightbox] = useState<{ media: string[]; idx: number } | null>(null);
   const [variantSelection, setVariantSelection] = useState<Record<string, string>>({});
 
   const { addToCart, isAdding } = useCart();
@@ -83,8 +80,6 @@ export default function ListingDetail() {
   const marketplaceActionsEnabled = canUseMarketplaceActions(isAdmin);
   const { toast } = useToast();
   const [, navigate] = useLocation();
-
-  const reviews: ListingReviewRow[] = [];
 
   const variantAxes = useMemo(() => (data ? buildListingVariantAxes(data) : []), [data]);
 
@@ -254,7 +249,7 @@ export default function ListingDetail() {
     setVariantSelection((prev) => ({ ...prev, [axisKey]: valueId }));
   };
 
-  const rentUnit = anchorVariantRow?.lv.rentUnit ?? "DAY";
+  const rentUnit = normalizeRentUnitForUi(anchorVariantRow?.lv.rentUnit ?? "DAY");
 
   const handleCheckoutNow = (mode: "buy" | "rent") => {
     if (!requireAuth() || !data) return;
@@ -424,7 +419,7 @@ export default function ListingDetail() {
               listingType={listing.listingType}
               specAttributes={specAttributes}
               avgRating={avgRating}
-              reviewCount={reviews.length}
+              reviewCount={0}
               totalStock={totalStock}
               locationLine={locationLine}
               outOfStock={outOfStock}
@@ -482,12 +477,6 @@ export default function ListingDetail() {
             />
           </div>
         ) : null}
-
-        <ListingReviewsSection
-          avgRating={avgRating}
-          reviews={reviews}
-          onOpenReviewMedia={(media, idx) => setReviewLightbox({ media, idx })}
-        />
 
         <ListingSimilarSection
           show={showSimilarBlock}
@@ -557,9 +546,6 @@ export default function ListingDetail() {
         addToCartLoading={isAdding}
       />
 
-      {reviewLightbox ? (
-        <ReviewMediaLightbox media={reviewLightbox.media} startIdx={reviewLightbox.idx} onClose={() => setReviewLightbox(null)} />
-      ) : null}
     </div>
   );
 }

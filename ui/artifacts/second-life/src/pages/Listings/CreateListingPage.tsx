@@ -39,6 +39,7 @@ import {
   loadProductImagesForAi,
 } from "@/lib/ai-price-suggestion";
 import { isPhoneSubCategory } from "@/lib/attribute-filters";
+import { SELECTABLE_RENT_UNIT_OPTIONS, isSelectableRentUnit, normalizeRentUnitForUi } from "@/lib/rent-units";
 
 const DEFAULT_PRODUCT_THUMB =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=480&fit=crop";
@@ -51,12 +52,6 @@ type ProductPickOption = {
   thumb: string;
   status?: ProductStatus;
 };
-
-const RENT_UNIT_OPTIONS: { value: RentUnit; label: string }[] = [
-  { value: "HOUR", label: "Mỗi giờ" },
-  { value: "DAY", label: "Mỗi ngày" },
-  { value: "MONTH", label: "Mỗi tháng" },
-];
 
 type VariantPriceDraft = {
   quantity: string;
@@ -277,7 +272,12 @@ export function CreateListingPage({
   ) => {
     setPriceByVariantId((prev) => ({
       ...prev,
-      [vid]: { ...(prev[vid] ?? emptyVariantDraft()), [field]: value },
+      [vid]: {
+        ...(prev[vid] ?? emptyVariantDraft()),
+        [field]: field === "rentUnit" && typeof value === "string" && !isSelectableRentUnit(value as RentUnit)
+          ? "DAY"
+          : value,
+      },
     }));
   };
 
@@ -330,7 +330,7 @@ export function CreateListingPage({
           primarySubCategoryId: detail?.primarySubCategory?.id ?? undefined,
           subCategoryIds: detail?.primarySubCategory?.id ? [detail.primarySubCategory.id] : undefined,
           manufactureYear: detail?.manufactureYear ?? undefined,
-          rentUnit: listingType === "RENT" ? firstDraft.rentUnit : undefined,
+          rentUnit: listingType === "RENT" ? normalizeRentUnitForUi(firstDraft.rentUnit) : undefined,
           regionName,
           currentListedPriceVnd: listedDraftPrice,
           images: productImages.length > 0 ? productImages : undefined,
@@ -467,7 +467,7 @@ export function CreateListingPage({
           productVariantId: vid,
           quantity: qty,
           rentPrice: n,
-          rentUnit: draft.rentUnit,
+          rentUnit: normalizeRentUnitForUi(draft.rentUnit),
           isActive: true,
         });
       }
@@ -802,7 +802,7 @@ export function CreateListingPage({
                 <p className="text-xs text-muted-foreground">
                   {listingType === "BUY"
                     ? "Với bán: nhập số lượng và giá mỗi loại (₫)."
-                    : "Với thuê: nhập số lượng, giá thuê và đơn vị (giờ / ngày / tuần / tháng) cho từng loại."}
+                    : "Với thuê: nhập số lượng, giá thuê và đơn vị (giờ / ngày) cho từng loại."}
                 </p>
               </div>
 
@@ -916,7 +916,7 @@ export function CreateListingPage({
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent position="popper" className="rounded-xl border-emerald-100 dark:border-emerald-900/50">
-                                    {RENT_UNIT_OPTIONS.map((o) => (
+                                    {SELECTABLE_RENT_UNIT_OPTIONS.map((o) => (
                                       <SelectItem key={o.value} value={o.value}>
                                         {o.label}
                                       </SelectItem>

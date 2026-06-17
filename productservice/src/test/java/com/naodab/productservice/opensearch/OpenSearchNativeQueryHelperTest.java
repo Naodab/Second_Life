@@ -27,6 +27,27 @@ class OpenSearchNativeQueryHelperTest {
   }
 
   @Test
+  void addKeywordSearchMust_singleSkuLikeToken_usesBoolWithWildcard() {
+    List<Query> must = new ArrayList<>();
+    OpenSearchNativeQueryHelper.addKeywordSearchMust(must, "ip-13-128", "title^3", "variantSkus");
+    assertThat(must).hasSize(1);
+    Query root = must.get(0);
+    assertThat(root.isBool()).isTrue();
+    assertThat(root.bool().should()).hasSize(2);
+    assertThat(root.bool().minimumShouldMatch()).isEqualTo("1");
+  }
+
+  @Test
+  void addKeywordSearchMust_normalizesWhitespaceBeforeMultiToken() {
+    List<Query> must = new ArrayList<>();
+    OpenSearchNativeQueryHelper.addKeywordSearchMust(must, "  máy   ảnh  ", "title^3", "name^3");
+    assertThat(must).hasSize(1);
+    Query root = must.get(0);
+    assertThat(root.isBool()).isTrue();
+    assertThat(root.bool().must().get(0).multiMatch().query()).isEqualTo("máy ảnh");
+  }
+
+  @Test
   void addKeywordSearchMust_multiToken_wrapsCrossFieldsAndPhraseInBool() {
     List<Query> must = new ArrayList<>();
     OpenSearchNativeQueryHelper.addKeywordSearchMust(must, "máy ảnh", "title^3", "name^3");
@@ -41,8 +62,8 @@ class OpenSearchNativeQueryHelperTest {
   }
 
   @Test
-  void listingKeywordSearchFields_includesPrimarySubCategoryName() {
+  void listingKeywordSearchFields_includesPrimarySubCategoryNameAndFacilityName() {
     assertThat(OpenSearchNativeQueryHelper.listingKeywordSearchFields())
-        .contains("primarySubCategoryName^2");
+        .contains("primarySubCategoryName^2", "facilityName^2");
   }
 }

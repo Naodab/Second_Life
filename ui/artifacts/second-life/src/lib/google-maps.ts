@@ -32,6 +32,19 @@ function buildEmbedUrl(query: string, lat?: number, lng?: number): string {
   return url.toString();
 }
 
+function extractCoordsFromLink(link: string): { lat: number; lng: number } | null {
+  const match = link.match(COORDINATES_IN_URL);
+  if (!match) {
+    return null;
+  }
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  if (!isValidCoordinate(lat, lng)) {
+    return null;
+  }
+  return { lat, lng };
+}
+
 function extractQueryFromLink(link: string): string | null {
   try {
     const url = new URL(link);
@@ -50,13 +63,27 @@ function extractQueryFromLink(link: string): string | null {
   return null;
 }
 
+export function buildFacilityMapSource(
+  facility: FacilityMapSource,
+  searchAddress?: string | null,
+): FacilityMapSource {
+  return {
+    linkGoogleMap: facility.linkGoogleMap?.trim() ?? "",
+    latitude: facility.latitude ?? null,
+    longitude: facility.longitude ?? null,
+    address: facility.address?.trim() ?? "",
+    searchAddress: searchAddress?.trim() || facility.searchAddress?.trim() || undefined,
+  };
+}
+
 export function buildGoogleMapsEmbedUrl(facility: FacilityMapSource): string | null {
   const link = facility.linkGoogleMap?.trim();
   const linkQuery = link ? extractQueryFromLink(link) : null;
+  const linkCoords = link ? extractCoordsFromLink(link) : null;
   const searchAddress = facility.searchAddress?.trim() || facility.address?.trim() || null;
 
-  const lat = facility.latitude;
-  const lng = facility.longitude;
+  const lat = linkCoords?.lat ?? facility.latitude;
+  const lng = linkCoords?.lng ?? facility.longitude;
   const hasCoords = lat != null && lng != null && isValidCoordinate(lat, lng);
 
   const placeQuery = linkQuery || searchAddress;
@@ -82,8 +109,9 @@ export function buildGoogleMapsOpenUrl(facility: FacilityMapSource): string | nu
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchAddress)}`;
   }
 
-  const lat = facility.latitude;
-  const lng = facility.longitude;
+  const linkCoords = facility.linkGoogleMap ? extractCoordsFromLink(facility.linkGoogleMap) : null;
+  const lat = linkCoords?.lat ?? facility.latitude;
+  const lng = linkCoords?.lng ?? facility.longitude;
   if (lat != null && lng != null && isValidCoordinate(lat, lng)) {
     return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
   }

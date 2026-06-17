@@ -181,10 +181,10 @@ function SearchSuggestionPanel({
             key={s.id}
             type="button"
             role="option"
-            className="flex w-full cursor-pointer truncate px-4 py-2.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+            className="flex w-full min-w-0 cursor-pointer px-4 py-2.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
             onClick={() => onPickListing(s)}
           >
-            {s.title}
+            <span className="block truncate">{s.title}</span>
           </button>
         ))
       )}

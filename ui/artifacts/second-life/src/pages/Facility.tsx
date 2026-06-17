@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getFacilityById, facilityAvatarUrl } from "@/api/facility";
 import { searchListings } from "@/api/listing";
 import { formatFacilityAddress, resolveFacilityPlaceNames } from "@/lib/facility-display";
-import { facilityHasMap } from "@/lib/google-maps";
+import { buildFacilityMapSource, facilityHasMap } from "@/lib/google-maps";
 import { mapApiError } from "@/lib/api-error";
 import { useAuth } from "@/context/AuthContext";
 
@@ -147,7 +147,7 @@ export default function FacilityPage() {
   const chatHref = isOwnFacility
     ? buildMessagesHref({ facilityId: facility.id, tab: "customers" })
     : buildMessagesHref({ facilityId: facility.id });
-  const showMap = facilityHasMap({ ...facility, searchAddress: fullAddress });
+  const showMap = facilityHasMap(buildFacilityMapSource(facility, fullAddress));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/25 pb-20 dark:to-muted/15">
@@ -230,7 +230,7 @@ export default function FacilityPage() {
 
             {showMap ? (
               <FacilityMapEmbed
-                facility={{ ...facility, searchAddress: fullAddress }}
+                facility={buildFacilityMapSource(facility, fullAddress)}
                 className="w-full shrink-0 lg:w-72 xl:w-80"
               />
             ) : null}

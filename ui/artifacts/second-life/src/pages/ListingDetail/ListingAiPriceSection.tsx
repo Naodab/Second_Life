@@ -105,10 +105,8 @@ export function ListingAiPriceSection({
     <div className="mb-8 space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Giá thị trường AI</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Ước tính bằng mô hình ML v10 (dữ liệu Chợ Tốt) — tham khảo khi mua/bán điện thoại.
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Gợi ý giá</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Tham khảo khi mua/bán điện thoại.</p>
         </div>
         <button
           type="button"
@@ -121,20 +119,18 @@ export function ListingAiPriceSection({
           )}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {loading ? "Đang phân tích…" : suggestion ? "Làm mới gợi ý giá" : "Xem giá gợi ý AI"}
+          {loading ? "Đang phân tích…" : suggestion ? "Làm mới" : "Xem gợi ý giá"}
         </button>
       </div>
 
       {showCachedHint ? (
         <p className="text-xs text-muted-foreground">
-          Gợi ý lúc đăng bài:{" "}
+          Gợi ý lúc đăng:{" "}
           <span className="font-medium tabular-nums text-foreground">
             {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(
               cachedAiPriceVnd,
             )}
           </span>
-          {" · "}
-          Nhấn nút trên để cập nhật theo thị trường hiện tại.
         </p>
       ) : null}
 
@@ -144,6 +140,7 @@ export function ListingAiPriceSection({
           listingType={listingType}
           rentUnit={rentUnit}
           currentListedPriceVnd={currentListedPriceVnd}
+          minimal
         />
       ) : null}
     </div>

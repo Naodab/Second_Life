@@ -19,7 +19,7 @@ from pathlib import Path
 
 import requests
 
-from attribute_maps import ALL_ATTRIBUTE_IDS, build_variant
+from attribute_maps import attribute_ids_for_sub_category, build_variant
 from seed_api import load_existing_facilities
 
 GATEWAY = "http://localhost:80/api/v1"
@@ -181,7 +181,7 @@ def import_products(api: APIClient, raw_products: list[dict], facilities: list[d
       "description":          (raw.get("description") or name)[:8000],
       "primarySubCategoryId": raw.get("primarySubCategoryId", "sub-phone"),
       "subCategoryIds":       raw.get("subCategoryIds", ["sub-phone"]),
-      "attributeIds":         ALL_ATTRIBUTE_IDS,
+      "attributeIds":         attribute_ids_for_sub_category(raw.get("primarySubCategoryId", "")),
       "variants":             [build_variant(raw, listing_type)],
     }
     if raw.get("manufactureYear"):

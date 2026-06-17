@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CalendarDays, Leaf } from "lucide-react";
 import type { RentUnit } from "@/api/listing";
+import { normalizeRentUnitForUi } from "@/lib/rent-units";
 import { cn } from "@/lib/utils";
-import { addHours, addMonths, format, startOfDay, startOfMonth } from "date-fns";
+import { addHours, format, startOfDay } from "date-fns";
 
 import {
   billableRentUnits,
@@ -22,7 +23,6 @@ export type RentScheduleValidityPayload =
   | { ok: false; billUnits: 0; error?: string }
   | { ok: true; billUnits: number; hint?: string | null };
 
-const MONTH_SHORT = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"] as const;
 
 type Props = {
   rentUnit: RentUnit;
@@ -63,9 +63,10 @@ export function ListingRentScheduler({
   onWindowChange,
   onValidityChange,
 }: Props) {
+  const effectiveRentUnit = normalizeRentUnitForUi(rentUnit);
   const cap = Math.max(0, Math.floor(concurrencyCap));
-  const stepBase = stepMsForRentUnit(rentUnit);
-  const scheduleDayUnit = rentUnit === "WEEK" ? "DAY" : rentUnit;
+  const stepBase = stepMsForRentUnit(effectiveRentUnit);
+  const scheduleDayUnit = effectiveRentUnit === "WEEK" ? "DAY" : effectiveRentUnit;
 
   const hourDayControlled = hourDayProp !== undefined && onHourDayChange !== undefined;
   const [hourDayInternal, setHourDayInternal] = useState<Date>(() => startOfDay(new Date()));
@@ -87,9 +88,6 @@ export function ListingRentScheduler({
   const [dayStartStr, setDayStartStr] = useState("");
   const [dayEndStr, setDayEndStr] = useState("");
 
-  const [rentYear, setRentYear] = useState<number>(() => new Date().getFullYear());
-  const [monthStartBoundary, setMonthStartBoundary] = useState<number | null>(null);
-
   useEffect(() => {
     if (!hourDayControlled) {
       setHourDayInternal(startOfDay(new Date()));
@@ -97,8 +95,6 @@ export function ListingRentScheduler({
     setHourStartBoundary(null);
     setDayStartStr("");
     setDayEndStr("");
-    setRentYear(new Date().getFullYear());
-    setMonthStartBoundary(null);
     onWindowChange(null);
     onValidityChange({ ok: false, billUnits: 0 });
   }, [resetKey, hourDayControlled, onValidityChange, onWindowChange]);
@@ -123,10 +119,10 @@ export function ListingRentScheduler({
         });
         return;
       }
-      const bill = billableRentUnits(rentUnit, win.startMs, win.endExclusiveMs);
+      const bill = billableRentUnits(effectiveRentUnit, win.startMs, win.endExclusiveMs);
       onValidityChange({ ok: true, billUnits: bill, hint: null });
     },
-    [bookings, cap, onValidityChange, rentQty, rentUnit, scheduleDayUnit, stepBase],
+    [bookings, cap, effectiveRentUnit, onValidityChange, rentQty, scheduleDayUnit, stepBase],
   );
 
   const applyWindow = useCallback(
@@ -139,7 +135,7 @@ export function ListingRentScheduler({
 
   const prevHourDayMsRef = useRef<number | null>(null);
   useEffect(() => {
-    if (rentUnit !== "HOUR") {
+    if (effectiveRentUnit !== "HOUR") {
       prevHourDayMsRef.current = null;
       return;
     }
@@ -150,11 +146,11 @@ export function ListingRentScheduler({
     if (prev === current) return;
     setHourStartBoundary(null);
     applyWindow(null);
-  }, [hourDay, rentUnit, applyWindow]);
+  }, [hourDay, effectiveRentUnit, applyWindow]);
 
   useEffect(() => {
     runValidation(parentWindowPayload);
-  }, [parentWindowPayload, rentQty, bookings, cap, rentUnit, runValidation]);
+  }, [parentWindowPayload, rentQty, bookings, cap, effectiveRentUnit, runValidation]);
 
   useEffect(() => {
     if (scheduleDayUnit !== "DAY") return;
@@ -242,57 +238,7 @@ export function ListingRentScheduler({
     [applyWindow, bookings, cap, dayStartMs, hourStartBoundary, rentQty],
   );
 
-  const onMonthIndexClick = useCallback(
-    (monthIdx: number) => {
-      if (monthStartBoundary === null) {
-        setMonthStartBoundary(monthIdx);
-        applyWindow(null);
-        return;
-      }
-
-      if (monthIdx < monthStartBoundary) {
-        setMonthStartBoundary(monthIdx);
-        applyWindow(null);
-        return;
-      }
-
-      if (monthIdx === monthStartBoundary) {
-        const startMs = startOfMonth(new Date(rentYear, monthIdx, 1)).getTime();
-        const endExclusive = addMonths(startOfMonth(new Date(rentYear, monthIdx, 1)), 1).getTime();
-        if (!intervalHasCapacity(bookings, startMs, endExclusive, cap, rentQty, 86400000)) return;
-        setMonthStartBoundary(null);
-        applyWindow({ startMs, endExclusiveMs: endExclusive });
-        return;
-      }
-
-      const lo = Math.min(monthStartBoundary, monthIdx);
-      const hi = Math.max(monthStartBoundary, monthIdx);
-      const startMs = startOfMonth(new Date(rentYear, lo, 1)).getTime();
-      const endExclusive = addMonths(startOfMonth(new Date(rentYear, hi, 1)), 1).getTime();
-
-      if (!intervalHasCapacity(bookings, startMs, endExclusive, cap, rentQty, 86400000)) return;
-      setMonthStartBoundary(null);
-      applyWindow({ startMs, endExclusiveMs: endExclusive });
-    },
-    [applyWindow, bookings, cap, monthStartBoundary, rentQty, rentYear],
-  );
-
-  const isMonthIndexInConfirmedRange = useCallback(
-    (idx: number) => {
-      const w = parentWindowPayload;
-      if (!w || rentUnit !== "MONTH") return false;
-      const start = new Date(w.startMs);
-      if (start.getFullYear() !== rentYear) return false;
-      const lastInclusive = new Date(w.endExclusiveMs - 1);
-      if (lastInclusive.getFullYear() !== rentYear) return false;
-      const lo = start.getMonth();
-      const hi = lastInclusive.getMonth();
-      return idx >= lo && idx <= hi;
-    },
-    [parentWindowPayload, rentUnit, rentYear],
-  );
-
-  if (rentUnit === "HOUR") {
+  if (effectiveRentUnit === "HOUR") {
     const hourStripLabel = scheduleResourceLabel.trim() || "Khung chọn giờ thuê";
 
     return (
@@ -387,79 +333,6 @@ export function ListingRentScheduler({
                 })}
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (rentUnit === "MONTH") {
-    return (
-      <div className="space-y-3">
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-b from-muted/25 to-background shadow-inner dark:border-border/45 dark:from-muted/15 dark:to-card">
-          <div className="flex flex-wrap items-center gap-3 border-b border-border/40 px-4 py-3 dark:border-border/35">
-            <span className="text-sm font-medium text-muted-foreground">Năm</span>
-            <input
-              type="number"
-              className={cn(
-                "h-10 w-28 rounded-xl border-2 bg-muted/30 px-3 text-base font-bold tabular-nums outline-none",
-                "border-border/50 shadow-sm transition-colors",
-                "hover:border-border/80",
-                "focus:border-primary/50 focus:ring-2 focus:ring-primary/20",
-                "disabled:cursor-not-allowed disabled:opacity-50",
-                "dark:bg-muted/20",
-              )}
-              min={2000}
-              max={2100}
-              value={rentYear}
-              onChange={(ev) => {
-                const v = Number(ev.target.value);
-                if (!Number.isFinite(v)) return;
-                setRentYear(Math.min(2100, Math.max(2000, Math.floor(v))));
-                setMonthStartBoundary(null);
-                applyWindow(null);
-              }}
-            />
-          </div>
-          <div className="hide-scrollbar max-w-full overflow-x-auto overscroll-x-contain px-3 pb-4 pt-3 touch-pan-x [-webkit-overflow-scrolling:touch]">
-            <table className="w-max border-separate border-spacing-1 text-sm sm:text-base">
-              <tbody>
-                <tr>
-                  {MONTH_SHORT.map((label, idx) => {
-                    const inDraft = monthStartBoundary === idx;
-                    const inConfirmed = isMonthIndexInConfirmedRange(idx);
-                    return (
-                      <td key={label} className="p-0 align-middle text-center">
-                        <button
-                          type="button"
-                          onClick={() => onMonthIndexClick(idx)}
-                          title={label}
-                          className={cn(
-                            "flex min-h-[3rem] w-full min-w-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-xl border px-1 py-2 text-sm font-medium transition-colors disabled:opacity-35 disabled:pointer-events-none sm:min-h-[3.25rem] sm:min-w-[3.75rem] sm:text-base",
-                            "border-border/70 bg-muted/20 hover:bg-accent/70",
-                            inDraft && "ring-2 ring-inset ring-orange-500 border-orange-500/50 bg-orange-500/10",
-                            inConfirmed &&
-                            !inDraft &&
-                            "border-emerald-600/35 bg-emerald-400/20 dark:border-emerald-500/40 dark:bg-emerald-600/20",
-                          )}
-                        >
-                          <span>{label}</span>
-                          {(inDraft || inConfirmed) && (
-                            <Leaf
-                              className={cn(
-                                "h-3.5 w-3.5 shrink-0",
-                                inDraft ? "text-orange-600 dark:text-orange-400" : "text-emerald-600 dark:text-emerald-400",
-                              )}
-                              aria-hidden
-                            />
-                          )}
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
-              </tbody>
-            </table>
           </div>
         </div>
       </div>

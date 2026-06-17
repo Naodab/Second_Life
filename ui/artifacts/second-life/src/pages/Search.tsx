@@ -141,6 +141,7 @@ export default function Search() {
   const [hoverCategoryId, setHoverCategoryId] = useState<string | null>(null);
   const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number } | null>(null);
   const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchPageScrollReadyRef = useRef(false);
   const { data: categories, isFetched: categoriesFetched } = useCategories();
 
   const [listings, setListings] = useState<ListingItemResponse[]>([]);
@@ -412,6 +413,14 @@ export default function Search() {
     }
     setSearchPage(0);
   }, [searchFilterDepsKey]);
+
+  useEffect(() => {
+    if (!searchPageScrollReadyRef.current) {
+      searchPageScrollReadyRef.current = true;
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [searchPage]);
 
   useEffect(() => {
     return () => {
